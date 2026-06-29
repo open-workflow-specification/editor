@@ -22,6 +22,7 @@ import { exportToMermaid } from "@/core";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/download";
 import type { Specification } from "@serverlessworkflow/sdk";
+import { toast } from "@/hooks/useToast";
 
 export function MermaidActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
   const { t } = useI18n();
@@ -51,8 +52,11 @@ export function MermaidActions({ model }: { model: Specification.Workflow }): Re
         copyTimeoutRef.current = null;
       }, 2000);
     } catch (error) {
-      console.error("Failed to copy mermaid code:", error);
-      // TODO: Create component to show errors to users
+      toast({
+        variant: "error",
+        title: t("toast.clipboard.error"),
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
@@ -66,9 +70,13 @@ export function MermaidActions({ model }: { model: Specification.Workflow }): Re
         .substring(0, 200);
       const filename = `${sanitizedName}.mmd`;
       downloadFile(mermaidCode, filename);
+      toast({ variant: "success", title: t("toast.download.success") });
     } catch (error) {
-      console.error("Failed to download mermaid file:", error);
-      // TODO: Create component to show errors to users
+      toast({
+        variant: "error",
+        title: t("toast.download.error"),
+        description: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
