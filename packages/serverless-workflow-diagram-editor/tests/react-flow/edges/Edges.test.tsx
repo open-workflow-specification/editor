@@ -27,6 +27,7 @@ import {
   createPathFromWayPoints,
   getWayPointsMidpoint,
 } from "../../../src/react-flow/edges/Edges";
+import { ZINDEX } from "../../../src/react-flow/zIndexConstants";
 import * as RF from "@xyflow/react";
 
 describe("React Flow custom edge types", () => {
@@ -496,5 +497,93 @@ describe("EdgeLabel positioning", () => {
     });
 
     expect(JSON.stringify(result)).toContain(`translate(${labelX}px,${labelY}px)`);
+  });
+});
+
+describe("EdgeLabel z-index behavior", () => {
+  it.each([
+    {
+      selected: false,
+      expectedZIndex: ZINDEX.EDGE_LABEL_REGULAR,
+      description: "applies regular label z-index when selected=false",
+    },
+    {
+      selected: true,
+      expectedZIndex: ZINDEX.EDGE_LABEL_SELECTED,
+      description: "applies selected label z-index when selected=true",
+    },
+    {
+      selected: undefined,
+      expectedZIndex: ZINDEX.EDGE_LABEL_REGULAR,
+      description: "applies default regular label z-index when selected=undefined",
+    },
+  ])("$description", ({ selected, expectedZIndex }) => {
+    const result = EdgeLabel({
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 100,
+      targetY: 100,
+      data: { label: "Test Label" },
+      selected,
+    });
+
+    const resultString = JSON.stringify(result);
+    expect(resultString).toContain(`"zIndex":${expectedZIndex}`);
+  });
+
+  it("applies default regular label z-index when selected prop is not provided", () => {
+    const result = EdgeLabel({
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 100,
+      targetY: 100,
+      data: { label: "Test Label" },
+    });
+
+    const resultString = JSON.stringify(result);
+    expect(resultString).toContain(`"zIndex":${ZINDEX.EDGE_LABEL_REGULAR}`);
+  });
+
+  describe("integration with edge components", () => {
+    it.each([
+      { component: DefaultEdge, edgeType: "default", edgeClass: "", selected: true },
+      { component: ErrorEdge, edgeType: "error", edgeClass: "error", selected: true },
+      { component: ConditionEdge, edgeType: "condition", edgeClass: "condition", selected: true },
+      { component: DefaultEdge, edgeType: "default", edgeClass: "", selected: false },
+      { component: ErrorEdge, edgeType: "error", edgeClass: "error", selected: false },
+      { component: ConditionEdge, edgeType: "condition", edgeClass: "condition", selected: false },
+    ])(
+      "$edgeType edge applies selected class when selected=$selected",
+      ({ component: Component, edgeClass, selected }) => {
+        const { container } = render(
+          <RF.ReactFlowProvider>
+            <Component
+              id="e1"
+              source="n1"
+              target="n2"
+              sourceX={0}
+              sourceY={0}
+              targetX={100}
+              targetY={100}
+              sourcePosition={RF.Position.Right}
+              targetPosition={RF.Position.Left}
+              data={{ label: "Test Label" }}
+              selected={selected}
+            />
+          </RF.ReactFlowProvider>,
+        );
+
+        // Verify the edge path is rendered with correct selected class
+        const pathSelector = edgeClass ? `path.edge-line.${edgeClass}` : "path.edge-line";
+        const path = container.querySelector(pathSelector);
+        expect(path).toBeInTheDocument();
+
+        if (selected) {
+          expect(path).toHaveClass("selected");
+        } else {
+          expect(path).not.toHaveClass("selected");
+        }
+      },
+    );
   });
 });

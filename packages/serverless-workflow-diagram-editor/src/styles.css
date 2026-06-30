@@ -46,6 +46,9 @@
   .dec-root {
     @apply dec:h-full;
 
+    /* Z-index layering for edges and labels */
+    --dec-zindex-edge-label-regular: 1000;
+
     --dec-error-accent: #ef4444;
     --dec-error-glow: rgba(239, 68, 68, 0.35);
     --dec-edge-selected: #aea6a6;

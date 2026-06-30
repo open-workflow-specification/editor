@@ -18,6 +18,13 @@
 
 /* react flow overrides */
 @layer react-flow-overrides {
+  /* Elevate the edge-label renderer container above nodes.
+     React Flow renders .react-flow__edgelabel-renderer before NodeRenderer
+     in the DOM, so without an explicit z-index it is painted behind nodes. */
+  .dec-root .react-flow__edgelabel-renderer {
+    z-index: var(--dec-zindex-edge-label-regular);
+  }
+
   .dec-root .diagram-background {
     --xy-background-pattern-color: #ccc;
     background-color: #e5e4e2;

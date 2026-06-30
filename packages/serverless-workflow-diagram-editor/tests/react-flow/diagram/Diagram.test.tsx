@@ -24,6 +24,7 @@ import { en } from "../../../src/i18n/locales/en";
 import { ReactFlowProvider, ReactFlow } from "@xyflow/react";
 import * as RF from "@xyflow/react";
 import * as autoLayoutModule from "../../../src/react-flow/diagram/autoLayout";
+import { ZINDEX } from "../../../src/react-flow/zIndexConstants";
 
 // Mock ReactFlow to capture props
 vi.mock("@xyflow/react", async () => {
@@ -183,27 +184,51 @@ describe("Diagram Component", () => {
     });
   });
 
-  describe("onEdgesChange with zIndex updates", () => {
-    it("should provide onEdgesChange callback to ReactFlow", async () => {
-      renderDiagram({ isReadOnly: false });
+  it("should disable automatic edge elevation on select", async () => {
+    renderDiagram({ isReadOnly: false });
 
-      // Wait for initial render
-      await waitFor(() => {
-        expect(applyAutoLayoutSpy).toHaveBeenCalled();
-      });
-
-      // Get the onEdgesChange callback from ReactFlow mock
-      const mockReactFlow = vi.mocked(ReactFlow);
-      const lastCall = mockReactFlow.mock.calls.at(-1);
-      expect(lastCall).toBeDefined();
-      const reactFlowProps = lastCall![0];
-      const onEdgesChange = reactFlowProps.onEdgesChange;
-
-      expect(onEdgesChange).toBeDefined();
-      expect(typeof onEdgesChange).toBe("function");
+    // Wait for ReactFlow to be called
+    await waitFor(() => {
+      expect(ReactFlow).toHaveBeenCalled();
     });
 
-    it("should apply zIndex correctly when edges are updated", async () => {
+    // Verify that ReactFlow was called with elevateEdgesOnSelect={false}
+    const mockReactFlow = vi.mocked(ReactFlow);
+    const lastCall = mockReactFlow.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const reactFlowProps = lastCall![0];
+    expect(reactFlowProps.elevateEdgesOnSelect).toBe(false);
+
+    await waitFor(() => {
+      expect(applyAutoLayoutSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("edge z-index management", () => {
+    it("should apply correct z-index to edges based on selection state", async () => {
+      applyAutoLayoutSpy.mockResolvedValueOnce({
+        nodes: [],
+        edges: [
+          { id: "edge1", source: "n1", target: "n2", selected: false },
+          { id: "edge2", source: "n2", target: "n3", selected: false },
+        ],
+      });
+
+      renderDiagram({ isReadOnly: false });
+
+      await waitFor(() => {
+        const lastCall = vi.mocked(ReactFlow).mock.calls.at(-1);
+        expect(lastCall).toBeDefined();
+        expect(lastCall![0].edges).toHaveLength(2);
+      });
+
+      // All unselected edges should have zIndex: 0
+      const edges = vi.mocked(ReactFlow).mock.calls.at(-1)![0].edges!;
+      expect(edges.find((e: RF.Edge) => e.id === "edge1")?.zIndex).toBe(ZINDEX.EDGE_REGULAR);
+      expect(edges.find((e: RF.Edge) => e.id === "edge2")?.zIndex).toBe(ZINDEX.EDGE_REGULAR);
+    });
+
+    it("should elevate selected edge above regular edges but below labels", async () => {
       applyAutoLayoutSpy.mockResolvedValueOnce({
         nodes: [],
         edges: [
@@ -232,8 +257,39 @@ describe("Diagram Component", () => {
       await waitFor(() => {
         const edges = vi.mocked(ReactFlow).mock.calls.at(-1)![0].edges!;
 
-        expect(edges.find((e: RF.Edge) => e.id === "edge1")?.zIndex).toBe(1000);
-        expect(edges.find((e: RF.Edge) => e.id === "edge2")?.zIndex).toBe(1000);
+        // Selected edges should have elevated z-index (above regular edges, below labels)
+        expect(edges.find((e: RF.Edge) => e.id === "edge1")?.zIndex).toBe(ZINDEX.EDGE_SELECTED);
+        expect(edges.find((e: RF.Edge) => e.id === "edge2")?.zIndex).toBe(ZINDEX.EDGE_SELECTED);
+      });
+    });
+
+    it("should maintain z-index hierarchy: regular edges (0) < selected edges (100) < labels (1000+)", async () => {
+      applyAutoLayoutSpy.mockResolvedValueOnce({
+        nodes: [],
+        edges: [
+          { id: "edge1", source: "n1", target: "n2", selected: true },
+          { id: "edge2", source: "n2", target: "n3", selected: false },
+        ],
+      });
+
+      renderDiagram({ isReadOnly: false });
+
+      await waitFor(() => {
+        const lastCall = vi.mocked(ReactFlow).mock.calls.at(-1);
+        expect(lastCall).toBeDefined();
+        const edges = lastCall![0].edges!;
+
+        // Verify z-index hierarchy
+        const selectedEdge = edges.find((e: RF.Edge) => e.id === "edge1");
+        const regularEdge = edges.find((e: RF.Edge) => e.id === "edge2");
+
+        expect(selectedEdge?.zIndex).toBe(ZINDEX.EDGE_SELECTED);
+        expect(regularEdge?.zIndex).toBe(ZINDEX.EDGE_REGULAR);
+
+        // Hierarchy in the test
+        // Regular edges: 0
+        // Selected edges: 100
+        // Edge labels: 1000+ (tested in Edges.test.tsx)
       });
     });
   });

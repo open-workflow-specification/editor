@@ -26,12 +26,19 @@ import { useDiagramEditorContext } from "../../store/DiagramEditorContext";
 import { buildDiagramElements } from "./diagramBuilder";
 import { applyAutoLayout } from "./autoLayout";
 import { SidePanelTrigger } from "@/side-panel/SidePanelTrigger";
+import { ZINDEX } from "../zIndexConstants";
 
 const FIT_VIEW_OPTIONS: RF.FitViewOptions = {
   maxZoom: 1,
   minZoom: 0.1,
   duration: 400,
 };
+
+const applyEdgeZIndex = <T extends RF.Edge>(edges: T[]): T[] =>
+  edges.map((edge) => ({
+    ...edge,
+    zIndex: edge.selected ? ZINDEX.EDGE_SELECTED : ZINDEX.EDGE_REGULAR,
+  }));
 
 /**
  * Diagram component API
@@ -73,12 +80,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
     (changes) => {
       setEdges((edgesSnapshot) => {
         const updatedEdges = RF.applyEdgeChanges(changes, edgesSnapshot);
-
-        // Update zIndex for selected edges to bring them to front
-        return updatedEdges.map((edge) => ({
-          ...edge,
-          zIndex: edge.selected ? 1000 : 0,
-        }));
+        return applyEdgeZIndex(updatedEdges);
       });
     },
     [setEdges],
@@ -107,7 +109,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
           // Only update if this effect is still active (not cancelled by cleanup)
           if (isActive && !abortController?.signal.aborted) {
             setNodes(nodes);
-            setEdges(edges);
+            setEdges(applyEdgeZIndex(edges));
 
             // Queue fitView to run after React updates the DOM
             fitViewTimeoutId = setTimeout(() => reactFlowInstance.fitView(), 0);
@@ -175,6 +177,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
           },
         }}
         data-testid={"react-flow-canvas"}
+        elevateEdgesOnSelect={false}
         nodesDraggable={!isReadOnly}
         nodesConnectable={!isReadOnly}
       >
