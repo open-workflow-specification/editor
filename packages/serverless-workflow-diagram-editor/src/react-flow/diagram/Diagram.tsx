@@ -195,12 +195,6 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
           >
             M
           </RF.ControlButton>
-          <RF.ControlButton
-            onClick={() => setMinimapVisible(!minimapVisible)}
-            aria-label={minimapVisible ? "Hide minimap" : "Show minimap"}
-          >
-            M
-          </RF.ControlButton>
         </RF.Controls>
         <RF.Background className="diagram-background" variant={RF.BackgroundVariant.Cross} />
       </RF.ReactFlow>

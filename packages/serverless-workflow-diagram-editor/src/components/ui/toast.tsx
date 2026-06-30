@@ -77,6 +77,9 @@ const ToastItem = React.memo(
     return (
       <ToastPrimitive.Root
         open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) onDismiss(id);
+        }}
         data-slot="toast"
         className={cn(
           "dec:pointer-events-auto dec:relative dec:flex dec:w-full dec:min-w-[320px] dec:max-w-[680px] dec:items-start dec:gap-4 dec:rounded-[14px] dec:border dec:border-l-4 dec:px-7 dec:py-6 dec:shadow-[0_18px_38px_rgba(22,23,24,0.12),0_8px_16px_rgba(22,23,24,0.08)] dec:transition-all dec:data-[state=open]:animate-in dec:data-[state=closed]:animate-out dec:data-[state=closed]:fade-out-80 dec:data-[state=closed]:slide-out-to-left-full dec:data-[state=open]:slide-in-from-top-full",

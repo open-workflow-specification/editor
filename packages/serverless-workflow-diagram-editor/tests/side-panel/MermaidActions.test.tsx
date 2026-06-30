@@ -31,6 +31,7 @@ describe("MermaidActions", () => {
   const MERMAID_CODE = "mermaid code";
 
   afterEach(() => {
+    toastMock.mockClear();
     vi.restoreAllMocks();
   });
 
