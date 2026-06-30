@@ -78,11 +78,21 @@ export function MermaidActions({ model }: { model: Specification.Workflow }): Re
 
   return (
     <>
-      <Button onClick={handleCopyMermaid} variant="outline" size="sm">
+      <Button
+        onClick={handleCopyMermaid}
+        variant="outline"
+        size="sm"
+        className="dec:cursor-pointer"
+      >
         {isCopied ? <ClipboardCheck /> : <ClipboardPen />}
         {isCopied ? t("sidebar.exportMermaid.copied") : t("sidebar.exportMermaid.copy")}
       </Button>
-      <Button onClick={handleDownloadMermaid} variant="outline" size="sm">
+      <Button
+        onClick={handleDownloadMermaid}
+        variant="outline"
+        size="sm"
+        className="dec:cursor-pointer"
+      >
         <Download />
         {t("sidebar.exportMermaid.download")}
       </Button>

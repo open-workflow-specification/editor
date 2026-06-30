@@ -65,6 +65,27 @@
     min-width: 0 !important;
     min-height: 0 !important;
   }
+
+  /* minimap */
+  .dec-root .react-flow__minimap{
+    --xy-minimap-background-color: var(--dec-minimap-bg);
+    --xy-minimap-mask-background-color: var(--dec-minimap-mask);
+    --xy-minimap-mask-stroke-color: var(--dec-minimap-viewport);
+    --xy-minimap-node-background-color: var(--dec-minimap-node);
+    --xy-minimap-node-stroke-color: var(--dec-minimap-node-stroke);
+    --xy-minimap-node-stroke-width: 2;
+    
+    border: 1px solid var(--dec-minimap-border);
+    border-radius:8px;
+    box-shadow: 0 4px 12px var(--dec-minimap-shadow);
+    overflow: hidden;
+}
+
+  .dec-root .react-flow__minimap-node {
+    fill: var(--dec-minimap-node);
+    stroke: var(--dec-minimap-node-stroke);
+    stroke-width: 2;
+}
 }
 
 /* custom nodes */

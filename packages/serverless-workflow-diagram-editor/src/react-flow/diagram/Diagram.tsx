@@ -178,7 +178,9 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
         nodesDraggable={!isReadOnly}
         nodesConnectable={!isReadOnly}
       >
-        {minimapVisible && <RF.MiniMap pannable zoomable position={"top-right"} />}
+        {minimapVisible && (
+          <RF.MiniMap pannable zoomable position={"bottom-left"} maskStrokeWidth={2} />
+        )}
 
         <RF.Panel position="top-right">
           <SidePanelTrigger />
