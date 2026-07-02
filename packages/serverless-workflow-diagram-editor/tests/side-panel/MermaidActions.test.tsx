@@ -24,7 +24,7 @@ import { WORKFLOW_WITH_METADATA_JSON } from "../fixtures/workflows";
 import * as clipboard from "../../src/lib/clipboard";
 import * as core from "../../src/core";
 import * as download from "../../src/lib/download";
-import * as toastHook from "../../src/hooks/useToast";
+import * as sonner from "sonner";
 
 describe("MermaidActions", () => {
   const toastMock = vi.fn();
@@ -57,7 +57,8 @@ describe("MermaidActions", () => {
     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
     vi.spyOn(clipboard, "copyToClipboard").mockRejectedValue(new Error("Clipboard error"));
     vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
-    vi.spyOn(toastHook, "toast").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
     renderWithProviders(<MermaidActions model={model!} />, { model });
 
@@ -67,11 +68,7 @@ describe("MermaidActions", () => {
 
     await user.click(copyButton);
 
-    expect(toastMock).toHaveBeenCalledWith({
-      variant: "error",
-      title: expect.any(String),
-      description: "Clipboard error",
-    });
+    expect(toastMock).toHaveBeenCalledWith(expect.any(String), { description: "Clipboard error" });
   });
 
   it("should call downloadMermaidFile and show success toast when download button is clicked", async () => {
@@ -79,7 +76,8 @@ describe("MermaidActions", () => {
     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
     const downloadSpy = vi.spyOn(download, "downloadFile").mockImplementation(() => {});
     vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
-    vi.spyOn(toastHook, "toast").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
     renderWithProviders(<MermaidActions model={model!} />, { model });
 
@@ -90,10 +88,7 @@ describe("MermaidActions", () => {
     await user.click(downloadButton);
 
     expect(downloadSpy).toHaveBeenCalledWith(MERMAID_CODE, "test-wf.mmd");
-    expect(toastMock).toHaveBeenCalledWith({
-      variant: "success",
-      title: expect.any(String),
-    });
+    expect(toastMock).toHaveBeenCalledWith(expect.any(String));
   });
 
   it("should show error toast when download fails", async () => {
@@ -103,7 +98,8 @@ describe("MermaidActions", () => {
       throw new Error("Download error");
     });
     vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
-    vi.spyOn(toastHook, "toast").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
     renderWithProviders(<MermaidActions model={model!} />, { model });
 
@@ -113,10 +109,6 @@ describe("MermaidActions", () => {
 
     await user.click(downloadButton);
 
-    expect(toastMock).toHaveBeenCalledWith({
-      variant: "error",
-      title: expect.any(String),
-      description: "Download error",
-    });
+    expect(toastMock).toHaveBeenCalledWith(expect.any(String), { description: "Download error" });
   });
 });

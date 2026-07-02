@@ -1,0 +1,39 @@
+/*
+ * Copyright 2021-Present The Serverless Workflow Specification Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@layer sonner {
+  [data-sonner-toaster] { --width: 300px !important; }
+  [data-sonner-toast] { background: #ffffff !important; border-radius: 10px !important; border: 1px solid #e9edf4 !important; }
+  [data-sonner-toast][data-type="success"] { border-left: 4px solid #22c55e !important; }
+  [data-sonner-toast][data-type="error"]   { border-left: 4px solid #ef4444 !important; }
+  [data-sonner-toast][data-type="warning"] { border-left: 4px solid #f97316 !important; }
+  [data-sonner-toast][data-type="info"]    { border-left: 4px solid #3b82f6 !important; }
+  .dark [data-sonner-toast] { background: #2d3748 !important; color: #ffffff !important; border-top-color: #4a5568 !important; border-right-color: #4a5568 !important; border-bottom-color: #4a5568 !important; }
+  .dark [data-sonner-toast] [data-title], .dark [data-sonner-toast] [data-description] { color: #ffffff !important; }
+  [data-sonner-toast] [data-close-button] {
+    position: absolute !important;
+    top: 50% !important;
+    right: 12px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #6b7280;
+    cursor: pointer;
+  }
+  .dark [data-sonner-toast] [data-close-button] { color: #ffffff; }
+}

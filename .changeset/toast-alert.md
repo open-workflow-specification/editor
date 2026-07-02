@@ -2,4 +2,4 @@
 "@serverlessworkflow/diagram-editor": minor
 ---
 
-add toast notification system
+add toast alert system through shadcn Sonner

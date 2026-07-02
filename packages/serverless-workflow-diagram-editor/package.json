@@ -48,7 +48,9 @@
     "clsx": "catalog:",
     "elkjs": "catalog:",
     "js-yaml": "catalog:",
+    "next-themes": "catalog:",
     "radix-ui": "catalog:",
+    "sonner": "catalog:",
     "use-sync-external-store": "catalog:"
   },
   "devDependencies": {
