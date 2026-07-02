@@ -74,25 +74,25 @@
   }
 
   /* minimap */
-  .dec-root .react-flow__minimap{
+  .dec-root .react-flow__minimap {
     --xy-minimap-background-color: var(--dec-minimap-bg);
     --xy-minimap-mask-background-color: var(--dec-minimap-mask);
     --xy-minimap-mask-stroke-color: var(--dec-minimap-viewport);
     --xy-minimap-node-background-color: var(--dec-minimap-node);
     --xy-minimap-node-stroke-color: var(--dec-minimap-node-stroke);
     --xy-minimap-node-stroke-width: 2;
-    
+
     border: 1px solid var(--dec-minimap-border);
-    border-radius:8px;
+    border-radius: 8px;
     box-shadow: 0 4px 12px var(--dec-minimap-shadow);
     overflow: hidden;
-}
+  }
 
   .dec-root .react-flow__minimap-node {
     fill: var(--dec-minimap-node);
     stroke: var(--dec-minimap-node-stroke);
     stroke-width: 2;
-}
+  }
 }
 
 /* custom nodes */
@@ -106,44 +106,6 @@
 
   .dec-root.dark .node-label-container {
     @apply dec:text-white;
-  }
-
-  .dec-root .custom-node-container {
-    @apply dec:rounded-[5px] 
-            dec:bg-white 
-            dec:border dec:border-black 
-            dec:transition-[border,box-shadow] 
-            dec:h-full 
-            dec:w-full;
-  }
-
-  .dec-root.dark .custom-node-container {
-    @apply dec:bg-[#2d3748]
-            dec:border-[#e5e4e2];
-  }
-
-  .dec-root .custom-node-container:hover {
-    @apply dec:hover:border dec:hover:border-black 
-            dec:hover:shadow-[0_0_10px_rgba(0,65,208,0.3)] 
-            dec:hover:h-full 
-            dec:hover:w-full;
-  }
-
-  .dec-root.dark .custom-node-container:hover {
-    @apply dec:hover:border-[#5dafd5] 
-            dec:hover:shadow-[0_0_10px_rgba(255,255,255,0.3)];
-  }
-
-  .dec-root .custom-node-container.selected {
-    @apply dec:bg-[#aebbd5] 
-            dec:border dec:border-black 
-            dec:shadow-[0_0_10px_rgba(1,79,248,0.3)];
-  }
-
-  .dec-root.dark .custom-node-container.selected {
-    @apply dec:bg-[#727676] 
-            dec:border-[#4324dc] 
-            dec:shadow-[0_0_10px_rgba(255,255,255,0.3)];
   }
 
   /* Hover + selection are shared by every interactive node (leaf + container) */
@@ -316,13 +278,21 @@
   .dec-root .dec-task-node-badge,
   .dec-root .dec-task-node-badge-custom {
     color: color-mix(in srgb, var(--task-node-color) 60%, black);
-    background-color: color-mix(in srgb, var(--task-node-color) 12%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--task-node-color) 12%,
+      transparent
+    );
   }
 
   .dec-root.dark .dec-task-node-badge,
   .dec-root.dark .dec-task-node-badge-custom {
     color: color-mix(in srgb, var(--task-node-color) 18%, white);
-    background-color: color-mix(in srgb, var(--task-node-color) 40%, transparent);
+    background-color: color-mix(
+      in srgb,
+      var(--task-node-color) 40%,
+      transparent
+    );
   }
 
   .dec-root .dec-task-node-badge {
@@ -429,7 +399,53 @@
     stroke-width: 2.25;
   }
 
-    /* end validation errors */
+  /* end validation errors */
+
+  .dec-root .dec-start-end-node {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .dec-root .dec-start-node, .dec-root .dec-end-node{
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+
+    @apply dec:border
+     dec:border-slate-400
+     dec:bg-slate-100;
+  }
+
+  .dec-root .dec-end-node-inner {
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+
+    @apply dec:border
+     dec:border-slate-400
+     dec:bg-slate-100;
+  }
+
+  .dec-root.dark .dec-start-node,
+  .dec-root.dark .dec-end-node {
+    @apply dec:border
+     dec:border-slate-600
+     dec:bg-slate-800
+     dec:text-slate-300;
+  }
+
+  .dec-root.dark .dec-end-node-inner {
+    @apply dec:border
+     dec:border-slate-600
+     dec:bg-slate-800;
+  }
 }
 
 /* custom edges */
@@ -442,7 +458,7 @@
 
 .dec-root .edge-line.error {
   stroke: var(--dec-error-accent);
-  @apply  dec:[stroke-dasharray:5_5];
+  @apply dec:[stroke-dasharray:5_5];
 }
 
 .dec-root .edge-line.condition {
@@ -465,14 +481,14 @@
 /* Selected edge shadow effect - lighter for light mode */
 .dec-root .edge-line.selected {
   filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.8))
-          drop-shadow(0 0 6px rgba(59, 130, 246, 0.4))
-          drop-shadow(0 0 12px rgba(59, 130, 246, 0.2));
+    drop-shadow(0 0 6px rgba(59, 130, 246, 0.4))
+    drop-shadow(0 0 12px rgba(59, 130, 246, 0.2));
 }
 
 .dec-root.dark .edge-line.selected {
   filter: drop-shadow(0 0 3px rgb(59 130 246))
-          drop-shadow(0 0 8px rgb(59 130 246))
-          drop-shadow(0 0 16px rgba(59, 130, 246, 0.8));
+    drop-shadow(0 0 8px rgb(59 130 246))
+    drop-shadow(0 0 16px rgba(59, 130, 246, 0.8));
 }
 
 /* custom edge labels */
