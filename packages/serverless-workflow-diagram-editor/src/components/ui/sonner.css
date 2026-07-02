@@ -15,15 +15,15 @@
  */
 
 @layer sonner {
-  [data-sonner-toaster] { --width: 300px !important; }
-  [data-sonner-toast] { background: #ffffff !important; border-radius: 10px !important; border: 1px solid #e9edf4 !important; }
-  [data-sonner-toast][data-type="success"] { border-left: 4px solid #22c55e !important; }
-  [data-sonner-toast][data-type="error"]   { border-left: 4px solid #ef4444 !important; }
-  [data-sonner-toast][data-type="warning"] { border-left: 4px solid #f97316 !important; }
-  [data-sonner-toast][data-type="info"]    { border-left: 4px solid #3b82f6 !important; }
-  .dark [data-sonner-toast] { background: #2d3748 !important; color: #ffffff !important; border-top-color: #4a5568 !important; border-right-color: #4a5568 !important; border-bottom-color: #4a5568 !important; }
-  .dark [data-sonner-toast] [data-title], .dark [data-sonner-toast] [data-description] { color: #ffffff !important; }
-  [data-sonner-toast] [data-close-button] {
+  .dec-root [data-sonner-toaster] { --width: 300px !important; }
+  .dec-root [data-sonner-toast] { background: #ffffff !important; border-radius: 10px !important; border: 1px solid #e9edf4 !important; }
+  .dec-root [data-sonner-toast][data-type="success"] { border-left: 4px solid #22c55e !important; }
+  .dec-root [data-sonner-toast][data-type="error"]   { border-left: 4px solid #ef4444 !important; }
+  .dec-root [data-sonner-toast][data-type="warning"] { border-left: 4px solid #f97316 !important; }
+  .dec-root [data-sonner-toast][data-type="info"]    { border-left: 4px solid #3b82f6 !important; }
+  .dec-root.dark [data-sonner-toast] { background: #2d3748 !important; color: #ffffff !important; border-top-color: #4a5568 !important; border-right-color: #4a5568 !important; border-bottom-color: #4a5568 !important; }
+  .dec-root.dark [data-sonner-toast] [data-title], .dec-root.dark [data-sonner-toast] [data-description] { color: #ffffff !important; }
+  .dec-root [data-sonner-toast] [data-close-button] {
     position: absolute !important;
     top: 50% !important;
     right: 12px !important;
@@ -35,5 +35,5 @@
     color: #6b7280;
     cursor: pointer;
   }
-  .dark [data-sonner-toast] [data-close-button] { color: #ffffff; }
+  .dec-root.dark [data-sonner-toast] [data-close-button] { color: #ffffff; }
 }
