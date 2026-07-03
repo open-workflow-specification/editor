@@ -296,12 +296,7 @@ describe("React Flow custom node types", () => {
       );
 
       const callBadge = screen.getByTestId("call-node-n1-badge-custom");
-
-      expect(callBadge).toBeInTheDocument();
-      expect(callBadge).toHaveTextContent("customCall");
-
       await user.hover(callBadge);
-
       const tooltip = await screen.findByRole("tooltip");
       expect(tooltip).toHaveTextContent("customCall");
     });

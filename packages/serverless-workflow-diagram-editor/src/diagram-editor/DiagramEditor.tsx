@@ -114,18 +114,16 @@ export const DiagramEditor = (props: DiagramEditorProps) => {
                     isReadOnly={props.isReadOnly}
                     locale={locale}
                   >
-                    <TooltipProvider>
-                      <SidebarProvider defaultOpen={false}>
-                        <div className="dec-diagram-content">
-                          <DiagramEditorContent
-                            diagramRef={diagramRef}
-                            diagramDivRef={diagramDivRef}
-                            colorMode={resolvedColorMode}
-                          />
-                        </div>
-                        <SidePanel />
-                      </SidebarProvider>
-                    </TooltipProvider>
+                    <SidebarProvider defaultOpen={false}>
+                      <div className="dec-diagram-content">
+                        <DiagramEditorContent
+                          diagramRef={diagramRef}
+                          diagramDivRef={diagramDivRef}
+                          colorMode={resolvedColorMode}
+                        />
+                      </div>
+                      <SidePanel />
+                    </SidebarProvider>
                   </DiagramEditorContextProvider>
                 </ReactFlowProvider>
               </DiagramEditorErrorBoundary>

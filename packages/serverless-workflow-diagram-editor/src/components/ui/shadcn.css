@@ -25,9 +25,9 @@
 */
 
 .dec-root {
-  --background: hsl(0 0% 100%);
+  --tooltip-background: hsl(0 0% 100%);
 
-  --foreground: hsl(222.2 84% 4.9%);
+  --tooltip-foreground: hsl(222.2 84% 4.9%);
 
   --sidebar: hsl(0 0% 98%);
 
@@ -47,9 +47,9 @@
 }
 
 .dec-root.dark {
-  --background: hsl(222.2 84% 4.9%);
+  --tooltip-background: hsl(222.2 84% 4.9%);
 
-  --foreground: hsl(210 40% 98%);
+  --tooltip-foreground: hsl(210 40% 98%);
 
   --sidebar: #2d3748;
 
@@ -69,9 +69,9 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-tooltip-background: var(--tooltip-background);
   
-  --color-foreground: var(--foreground);
+  --color-tooltip-foreground: var(--tooltip-foreground);
 
   --color-sidebar: var(--sidebar);
 
