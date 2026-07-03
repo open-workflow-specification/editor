@@ -62,6 +62,8 @@
     --dec-minimap-node-stroke: #64748b;
     --dec-minimap-border: #cbd5e1;
     --dec-minimap-shadow: rgba(15, 23, 42, 0.12);
+    
+    /* toast */
     --dec-toast-bg: #ffffff;
     --dec-toast-border: #e9edf4;
     --dec-toast-success: #22c55e;
@@ -85,6 +87,8 @@
     --dec-minimap-node-stroke: #cbd5e1;
     --dec-minimap-border: #2d3748;
     --dec-minimap-shadow: rgba(0, 0, 0, 0.5);
+    
+    /* toast */
     --dec-toast-bg: #2d3748;
     --dec-toast-border: #4a5568;
     --dec-toast-success: #4ade80;
