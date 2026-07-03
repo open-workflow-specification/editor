@@ -13,16 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+ 
+ @reference "../../styles.css";
 
 @layer sonner {
+  /* sonner defaults unlayered, so these overrides need !important */
   .dec-root [data-sonner-toaster] { --width: 300px !important; }
-  .dec-root [data-sonner-toast] { background: #ffffff !important; border-radius: 10px !important; border: 1px solid #e9edf4 !important; }
-  .dec-root [data-sonner-toast][data-type="success"] { border-left: 4px solid #22c55e !important; }
-  .dec-root [data-sonner-toast][data-type="error"]   { border-left: 4px solid #ef4444 !important; }
-  .dec-root [data-sonner-toast][data-type="warning"] { border-left: 4px solid #f97316 !important; }
-  .dec-root [data-sonner-toast][data-type="info"]    { border-left: 4px solid #3b82f6 !important; }
-  .dec-root.dark [data-sonner-toast] { background: #2d3748 !important; color: #ffffff !important; border-top-color: #4a5568 !important; border-right-color: #4a5568 !important; border-bottom-color: #4a5568 !important; }
-  .dec-root.dark [data-sonner-toast] [data-title], .dec-root.dark [data-sonner-toast] [data-description] { color: #ffffff !important; }
+  .dec-root [data-sonner-toast] { background: var(--dec-toast-bg) !important; border-radius: 10px !important; border: 1px solid var(--dec-toast-border) !important; }
+  .dec-root [data-sonner-toast][data-type="success"] { border-left: 4px solid var(--dec-toast-success) !important; }
+  .dec-root [data-sonner-toast][data-type="error"]   { border-left: 4px solid var(--dec-error-accent) !important; }
+  .dec-root [data-sonner-toast][data-type="warning"] { border-left: 4px solid var(--dec-toast-warning) !important; }
+  .dec-root [data-sonner-toast][data-type="info"]    { border-left: 4px solid var(--dec-toast-info) !important; }
+  .dec-root [data-sonner-toast] [data-title], .dec-root [data-sonner-toast] [data-description] { color: var(--dec-toast-text) !important; }
   .dec-root [data-sonner-toast] [data-close-button] {
     position: absolute !important;
     top: 50% !important;
@@ -32,8 +34,7 @@
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: #6b7280;
+    color: var(--dec-toast-close-btn);
     cursor: pointer;
   }
-  .dec-root.dark [data-sonner-toast] [data-close-button] { color: #ffffff; }
 }

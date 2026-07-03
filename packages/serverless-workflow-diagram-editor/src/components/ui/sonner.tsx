@@ -32,21 +32,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="dec:toaster dec:group"
       closeButton
       icons={{
-        success: <CircleCheckIcon className="dec:size-4" style={{ color: "#22c55e" }} />,
-        info: <InfoIcon className="dec:size-4" style={{ color: "#3b82f6" }} />,
-        warning: <TriangleAlertIcon className="dec:size-4" style={{ color: "#f97316" }} />,
-        error: <OctagonXIcon className="dec:size-4" style={{ color: "#ef4444" }} />,
+        success: (
+          <CircleCheckIcon className="dec:size-4" style={{ color: "var(--dec-toast-success)" }} />
+        ),
+        info: <InfoIcon className="dec:size-4" style={{ color: "var(--dec-toast-info)" }} />,
+        warning: (
+          <TriangleAlertIcon className="dec:size-4" style={{ color: "var(--dec-toast-warning)" }} />
+        ),
+        error: <OctagonXIcon className="dec:size-4" style={{ color: "var(--dec-error-accent)" }} />,
         loading: <Loader2Icon className="dec:size-4 dec:animate-spin" />,
         close: <XIcon size={14} />,
       }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
       {...props}
     />
   );
