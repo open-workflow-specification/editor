@@ -46,7 +46,10 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
-  const container = document.querySelector(".dec-root");
+  const [container, setContainer] = React.useState<HTMLElement>();
+  React.useEffect(() => {
+    setContainer(document.querySelector(".dec-root") ?? undefined);
+  }, []);
   return (
     <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Content

@@ -27,7 +27,6 @@ import { useResolvedColorMode } from "../hooks/useResolvedColorMode";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidePanel } from "@/side-panel/SidePanel";
 import { DiagramEditorErrorBoundary } from "./error-pages/DiagramEditorErrorBoundary";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
  * DiagramEditor component API

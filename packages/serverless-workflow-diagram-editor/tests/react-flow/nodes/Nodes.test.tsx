@@ -30,7 +30,6 @@ import {
 import { DEFAULT_NODE_SIZE } from "../../../src/react-flow/diagram/autoLayout";
 import { en } from "../../../src/i18n/locales/en";
 import { renderWithProviders } from "../../test-utils/render-helpers";
-import { TooltipProvider } from "../../../src/components/ui/tooltip";
 import userEvent from "@testing-library/user-event";
 
 function testNode(
@@ -258,15 +257,13 @@ describe("React Flow custom node types", () => {
         }),
       ];
       renderWithProviders(
-        <TooltipProvider>
-          <div>
-            <RF.ReactFlow
-              nodeTypes={ReactFlowNodeTypes}
-              nodes={nodesWithUnknownBadges}
-              edges={allEdges}
-            />
-          </div>
-        </TooltipProvider>,
+        <div>
+          <RF.ReactFlow
+            nodeTypes={ReactFlowNodeTypes}
+            nodes={nodesWithUnknownBadges}
+            edges={allEdges}
+          />
+        </div>,
       );
 
       const callBadge = screen.getByTestId("call-node-n1-badge-custom");
@@ -284,15 +281,13 @@ describe("React Flow custom node types", () => {
       ];
 
       renderWithProviders(
-        <TooltipProvider>
-          <div>
-            <RF.ReactFlow
-              nodeTypes={ReactFlowNodeTypes}
-              nodes={nodesWithUnknownBadges}
-              edges={allEdges}
-            />
-          </div>
-        </TooltipProvider>,
+        <div>
+          <RF.ReactFlow
+            nodeTypes={ReactFlowNodeTypes}
+            nodes={nodesWithUnknownBadges}
+            edges={allEdges}
+          />
+        </div>,
       );
 
       const callBadge = screen.getByTestId("call-node-n1-badge-custom");
