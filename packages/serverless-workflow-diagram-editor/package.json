@@ -49,6 +49,7 @@
     "elkjs": "catalog:",
     "js-yaml": "catalog:",
     "radix-ui": "catalog:",
+    "sonner": "catalog:",
     "use-sync-external-store": "catalog:"
   },
   "devDependencies": {

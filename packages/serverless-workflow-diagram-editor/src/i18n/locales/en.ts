@@ -50,6 +50,9 @@ export const en = {
   "aria.panel.workflowInfo": "Workflow information panel",
   "aria.panel.content": "Panel content",
   "aria.panel.exportActions": "Export actions",
+  "toast.clipboard.error": "Failed to copy",
+  "toast.download.success": "Download started",
+  "toast.download.error": "Download failed",
 } as const;
 
 export type TranslationKeys = keyof typeof en;
