@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import yaml from "js-yaml";
+import { load } from "js-yaml";
 import * as sdk from "@serverlessworkflow/sdk";
 import { fixNodesConnections } from "./graph";
 
@@ -255,9 +255,13 @@ export function parseWorkflow(text: string): WorkflowParseResult {
   let raw: Partial<sdk.Specification.Workflow>;
 
   try {
-    raw = yaml.load(text, {
-      schema: yaml.DEFAULT_SCHEMA,
-    }) as Partial<sdk.Specification.Workflow>;
+    if (text.trim() === "") {
+      return {
+        model: null,
+        errors: [new Error("Not a valid workflow")],
+      };
+    }
+    raw = load(text) as Partial<sdk.Specification.Workflow>;
   } catch (err) {
     return {
       model: null,
