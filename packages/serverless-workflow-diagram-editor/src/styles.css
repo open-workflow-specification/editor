@@ -19,7 +19,8 @@
   side-panel,
   react-flow-overrides,
   custom-nodes,
-  custom-edge-labels;
+  custom-edge-labels,
+  sonner;
 
 @import 'tailwindcss' prefix(dec);
 @import './components/ui/shadcn.css';
@@ -61,6 +62,15 @@
     --dec-minimap-node-stroke: #64748b;
     --dec-minimap-border: #cbd5e1;
     --dec-minimap-shadow: rgba(15, 23, 42, 0.12);
+    
+    /* toast */
+    --dec-toast-bg: #ffffff;
+    --dec-toast-border: #e9edf4;
+    --dec-toast-success: #22c55e;
+    --dec-toast-warning: #f97316;
+    --dec-toast-info: #3b82f6;
+    --dec-toast-close-btn: #6b7280;
+    --dec-toast-text: #1f2328;
   }
 
   .dec-root.dark {
@@ -77,6 +87,15 @@
     --dec-minimap-node-stroke: #cbd5e1;
     --dec-minimap-border: #2d3748;
     --dec-minimap-shadow: rgba(0, 0, 0, 0.5);
+    
+    /* toast */
+    --dec-toast-bg: #2d3748;
+    --dec-toast-border: #4a5568;
+    --dec-toast-success: #4ade80;
+    --dec-toast-warning: #fb923c;
+    --dec-toast-info: #60a5fa;
+    --dec-toast-close-btn: #ffffff;
+    --dec-toast-text: #ffffff;
   }
 
   .dec-root .dec-diagram-content {

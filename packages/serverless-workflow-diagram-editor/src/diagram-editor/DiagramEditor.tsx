@@ -27,6 +27,7 @@ import { useResolvedColorMode } from "../hooks/useResolvedColorMode";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidePanel } from "@/side-panel/SidePanel";
 import { DiagramEditorErrorBoundary } from "./error-pages/DiagramEditorErrorBoundary";
+import { Toaster } from "@/components/ui/sonner";
 
 /**
  * DiagramEditor component API
@@ -130,6 +131,7 @@ export const DiagramEditor = (props: DiagramEditorProps) => {
           }}
         </DiagramEditorInner>
       </I18nProvider>
+      <Toaster theme={resolvedColorMode} />
     </div>
   );
 };
