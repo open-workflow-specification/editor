@@ -28,6 +28,7 @@ import {
   terminalNodeConfigMap,
 } from "./taskNodeConfig";
 import { getCallSubType, getListenSubType, getRunSubType } from "../../core";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CircleAlert } from "lucide-react";
 
 export const ReactFlowNodeTypes: RF.NodeTypes = {
@@ -94,19 +95,21 @@ function TaskNodeBadge({ badge, testId }: BadgeProps) {
   const isUnknown = !KNOWN_BADGES.has(badge.toLowerCase());
 
   if (isUnknown) {
-    /* TODO: instead of using the browser default to display tool tip like below, replace with tooltip component when we add it */
     return (
-      <span
-        title={badge}
-        aria-label={`${t("aria.badge")} ${badge}`}
-        className="dec-task-node-badge-custom"
-        data-testid={`${testId}-custom`}
-      >
-        {badge}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="dec-task-node-badge-custom"
+            data-testid={`${testId}-custom`}
+            aria-label={`${t("aria.badge")} ${badge}`}
+          >
+            {badge}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{badge}</TooltipContent>
+      </Tooltip>
     );
   }
-
   return (
     <span className="dec-task-node-badge" data-testid={testId}>
       {badge}

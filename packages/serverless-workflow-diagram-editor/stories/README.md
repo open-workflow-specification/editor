@@ -22,7 +22,7 @@ This directory contains Storybook stories and documentation.
 
 - **`introduction/`** - Introductory documentation and welcome pages
 - **`features/`** - Component features and interactive stories
-- **`examples/`** - Serverless workflow specification examples
+- **`examples/`** - Open Workflow Specification examples
 - **`use-cases/`** - Real-world use case examples
 - **`assets/`** - Images and media files used in stories
 

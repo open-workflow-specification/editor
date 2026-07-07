@@ -46,19 +46,23 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  const [container, setContainer] = React.useState<HTMLElement>();
+  React.useEffect(() => {
+    setContainer(document.querySelector<HTMLElement>(".dec-root") ?? undefined);
+  }, []);
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "dec:z-50 dec:w-fit dec:origin-(--radix-tooltip-content-transform-origin) dec:animate-in dec:rounded-md dec:bg-foreground dec:px-3 dec:py-1.5 dec:text-xs dec:text-balance dec:text-background dec:fade-in-0 dec:zoom-in-95 dec:data-[side=bottom]:slide-in-from-top-2 dec:data-[side=left]:slide-in-from-right-2 dec:data-[side=right]:slide-in-from-left-2 dec:data-[side=top]:slide-in-from-bottom-2 dec:data-[state=closed]:animate-out dec:data-[state=closed]:fade-out-0 dec:data-[state=closed]:zoom-out-95",
+          "dec:z-50 dec:w-fit dec:origin-(--radix-tooltip-content-transform-origin) dec:animate-in dec:rounded-sm dec:bg-tooltip-foreground dec:px-1 dec:py-1 dec:text-[9px] dec:text-balance dec:text-tooltip-background dec:fade-in-0 dec:zoom-in-95 dec:data-[side=bottom]:slide-in-from-top-2 dec:data-[side=left]:slide-in-from-right-2 dec:data-[side=right]:slide-in-from-left-2 dec:data-[side=top]:slide-in-from-bottom-2 dec:data-[state=closed]:animate-out dec:data-[state=closed]:fade-out-0 dec:data-[state=closed]:zoom-out-95",
           className,
         )}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="dec:z-50 dec:size-2.5 dec:translate-y-[calc(-50%_-_2px)] dec:rotate-45 dec:rounded-[2px] dec:bg-foreground dec:fill-foreground" />
+        <TooltipPrimitive.Arrow className="dec:z-50 dec:size-2.5 dec:translate-y-[calc(-50%_-_2px)] dec:rotate-45 dec:rounded-[2px] dec:bg-tooltip-foreground dec:fill-tooltip-foreground" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

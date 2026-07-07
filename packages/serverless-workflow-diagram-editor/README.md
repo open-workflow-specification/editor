@@ -14,9 +14,9 @@
    limitations under the License.
 -->
 
-# serverless-workflow-diagram-editor
+# @serverlessworkflow/diagram-editor
 
-Serverless Workflow Diagram Editor React component / npm package
+Official visual diagram editor for the [Open Workflow Specification](https://github.com/serverlessworkflow/specification). A vendor-neutral, embeddable React component with strict separation between core logic and platform APIs.
 
 ## Getting Started
 
@@ -79,43 +79,110 @@ function App() {
 | `colorMode` | `'light' \| 'dark' \| 'system'` | No | `'system'` | Color theme for the editor |
 
 
-## Building the Component
+## Installation
 
 ```bash
-# Go to serverless-workflow-diagram-editor package
-cd ./packages/serverless-workflow-diagram-editor
+npm install @serverlessworkflow/diagram-editor
+# or
+pnpm add @serverlessworkflow/diagram-editor
+# or
+yarn add @serverlessworkflow/diagram-editor
+```
 
-# Install dependencies
+Import the component and styles:
+
+```tsx
+import { DiagramEditor } from "@serverlessworkflow/diagram-editor";
+import "@serverlessworkflow/diagram-editor/styles.css";
+```
+
+## Development
+
+```bash
+# Navigate to the package
+cd packages/serverless-workflow-diagram-editor
+
+# Install dependencies (or run from repo root)
 pnpm install
+
+# Start Storybook dev server on port 6006
+pnpm start
+
+# Run unit tests
+pnpm test
+
+# Run E2E tests
+pnpm test-e2e
+pnpm test-e2e:ui  # with Playwright UI
+
+# Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
 
 # Build package (development)
 pnpm run build:dev
 
-# Or build package (production)
+# Build package (production - includes linting and tests)
 pnpm run build:prod
 
-# Build storybook static content for publishing (documentation and demo)
+# Build Storybook static site
 pnpm run build:storybook
-
-# Run storybook (test and development / debugging)
-pnpm run start
 ```
 
-## shadcn/ui
+## Architecture
 
-This package uses [shadcn/ui](https://ui.shadcn.com/) for UI primitives. Configuration lives in `components.json` at the package root.
+### Core Principles
 
-### Key settings
+- **Vendor-neutral**: Platform-agnostic editor that can be embedded anywhere
+- **SDK isolation**: SDK integration helpers live under [`src/core/`](src/core/) (e.g., `workflowSdk.ts`, `graph.ts`, `taskSubType.ts`, `taskDetails.ts`, `mermaidExport.ts`); other layers may also import SDK types/enums (e.g., `Specification`, `GraphNodeType`) when needed.
+- **React Flow isolation**: React Flow rendering components live in [`src/react-flow/`](src/react-flow/) (nodes/edges/diagram); other layers may import `@xyflow/react` types and/or `ReactFlowProvider`.
+- **TypeScript strict mode**: Enforced with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
+
+### Directory Structure
+
+- **[`src/core/`](src/core/)** — SDK abstraction layer and graph types
+- **[`src/diagram-editor/`](src/diagram-editor/)** — Main `DiagramEditor` component and error pages
+- **[`src/react-flow/`](src/react-flow/)** — React Flow rendering (nodes, edges, diagram)
+- **[`src/side-panel/`](src/side-panel/)** — Side panel with workflow info and node details
+- **[`src/store/`](src/store/)** — React Context state management
+- **[`src/components/ui/`](src/components/ui/)** — shadcn/ui components (customized)
+- **[`src/hooks/`](src/hooks/)** — Custom React hooks
+- **[`src/lib/`](src/lib/)** — Utility functions (clipboard, download, utils)
+- **[`src/i18n/locales/`](src/i18n/locales/)** — Translation strings (en, fr)
+- **[`src/types/`](src/types/)** — Shared TypeScript types
+
+### Test Structure
+
+Tests mirror the source structure:
+
+- **[`tests/core/`](tests/core/)** — SDK integration tests
+- **[`tests/diagram-editor/`](tests/diagram-editor/)** — Component tests
+- **[`tests/react-flow/`](tests/react-flow/)** — Rendering tests (nodes, edges, diagram)
+- **[`tests/side-panel/`](tests/side-panel/)** — Side panel component tests
+- **[`tests/components/ui/`](tests/components/ui/)** — UI component tests
+- **[`tests/store/`](tests/store/)** — Context provider tests
+- **[`tests/hooks/`](tests/hooks/)** — Custom hook tests
+- **[`tests/lib/`](tests/lib/)** — Utility function tests
+- **[`tests/fixtures/`](tests/fixtures/)** — Shared test fixtures (workflow YAML/JSON)
+- **[`tests-e2e/`](tests-e2e/)** — Playwright end-to-end tests
+
+## UI Components (shadcn/ui)
+
+This package uses [shadcn/ui](https://ui.shadcn.com/) for UI primitives. Configuration: [`components.json`](components.json)
+
+### Key Settings
 
 - **Style**: `new-york` — compact spacing and sharper corners
-- **Tailwind prefix**: `dec:` — all generated classes are prefixed to avoid conflicts with host applications
-- **CSS target**: `src/components/ui/shadcn.css` — where shadcn injects its CSS variables
-- **Path aliases**: `@/components`, `@/lib`, `@/hooks` — resolved via `tsconfig.json` paths and Vite's `tsconfigPaths`
-- **Icon library**: `lucide` (generates `lucide-react` imports)
+- **Tailwind prefix**: `dec:` — all generated classes prefixed to avoid conflicts with host applications
+- **CSS target**: [`src/components/ui/shadcn.css`](src/components/ui/shadcn.css) — CSS variables
+- **Path aliases**: `@/components`, `@/lib`, `@/hooks` — resolved via tsconfig
+- **Icon library**: `lucide-react`
 
-### Adding a new shadcn component
+### Adding a shadcn Component
 
-The shadcn CLI doesn't understand pnpm catalogs, so adding a component requires a manual step.
+The shadcn CLI doesn't understand pnpm catalogs, so adding a component requires manual steps:
 
 1. **Generate the component**
 
@@ -124,47 +191,21 @@ The shadcn CLI doesn't understand pnpm catalogs, so adding a component requires 
    pnpm dlx shadcn@latest add <component>
    ```
 
-   This creates the component in `src/components/ui/` and adds any new dependencies (e.g. `@radix-ui/*`) to `package.json` with a pinned version.
+2. **Move dependency to pnpm catalog**
 
-2. **Move the dependency to the pnpm catalog**
-
-   The CLI writes something like `"@radix-ui/react-tooltip": "^1.2.3"` directly into `package.json`. To follow the workspace convention:
-   - Add the package and version to the `catalog:` section in the **root** `pnpm-workspace.yaml`
-   - Replace the pinned version in the editor's `package.json` with `"catalog:"`
+   The CLI adds pinned versions (e.g., `"@radix-ui/react-tooltip": "^1.2.3"`). Move them to the catalog:
+   - Add package and version to `catalog:` in root `pnpm-workspace.yaml`
+   - Replace the version in `package.json` with `"catalog:"`
 
 3. **Verify consistency**
 
    ```bash
-   # From the repo root
-   pnpm dependencies:check
+   pnpm dependencies:check  # from repo root
+   pnpm dependencies:fix    # if needed
    ```
-
-   This runs syncpack to confirm all workspace packages use the catalog. If you missed a dependency, run `pnpm dependencies:fix`.
 
 4. **Install**
 
    ```bash
    pnpm install
    ```
-
-## Package Structure
-
-```
-serverless-workflow-diagram-editor/
-├── src/
-│   ├── core/                   # SDK abstraction layer
-│   ├── diagram-editor/         # Main DiagramEditor component
-│   ├── i18n/locales/           # Locale string definitions (en, fr)
-│   ├── react-flow/diagram/     # @xyflow/react diagram rendering
-│   └── store/                  # React Context state management
-├── tests/
-│   ├── core/                   # SDK integration tests
-│   ├── diagram-editor/         # DiagramEditor component tests
-│   ├── react-flow/diagram/     # Diagram rendering tests
-│   ├── store/                  # Context provider tests
-│   └── fixtures/               # Shared test fixtures (workflow YAML/JSON)
-├── stories/                    # Storybook stories and demo components
-├── vitest.config.ts            # Unit test config
-├── tsconfig.json               # TypeScript config
-└── tsconfig.test.json          # TypeScript config for tests
-```

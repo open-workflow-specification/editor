@@ -14,90 +14,184 @@
    limitations under the License.
 -->
 
-# i18n Usage Guide
+# @serverlessworkflow/i18n
 
-This guide explains how to use the `@serverlessworkflow/i18n` package inside your project (e.g., in the `DiagramEditor`).
+A lightweight internationalization (i18n) package for React applications, providing simple translation support with automatic locale detection.
 
----
+## Overview
 
-## What this package provides
+This package provides a minimal i18n solution built on React Context, designed for use in the Serverless Workflow Diagram Editor and other React applications.
 
-- `I18nProvider` → React context provider for translations
-- `useI18n()` → Hook to access translations
-- `detectLocale()` → Automatically detect user language
-- `createI18n()` → Core translation logic (used internally)
+## Features
 
----
+- **React Context-based**: Simple provider/hook pattern
+- **Automatic locale detection**: Uses browser language preferences
+- **Type-safe**: Built with TypeScript
+- **Lightweight**: No heavy dependencies
+- **Fallback support**: Returns keys when translations are missing
 
-## Step 1: Define your dictionaries
+## Installation
 
-Create a file like:
+```bash
+pnpm add @serverlessworkflow/i18n
+```
+
+## API Reference
+
+### Exports
+
+- `I18nProvider` - React context provider for translations
+- `useI18n()` - Hook to access translation function and current locale
+- `createI18n()` - Core translation logic (typically used internally)
+- `detectLocale()` - Automatically detect user's preferred language
+
+### Types
+
+```ts
+type Dictionary = Record<string, string>;
+type Dictionaries = Record<string, Dictionary>;
+```
+
+## Usage
+
+### 1. Define your translation dictionaries
+
+Create a file with your translations for each supported language:
 
 ```ts
 // i18n/locales.ts
-
 export const dictionaries = {
   en: {
     save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
   },
   fr: {
     save: "Enregistrer",
+    cancel: "Annuler",
+    delete: "Supprimer",
   },
 };
 ```
 
-- Keys (`save`) must be consistent across languages.
+**Important**: Translation keys must be consistent across all languages.
 
----
+### 2. Detect or specify locale
 
-## Step 2: Detect or pass locale
-
-You can either:
-
-- Pass `locale` manually via props
-- Or auto-detect using `detectLocale`
-
-Example:
+Choose the user's locale either manually or through automatic detection:
 
 ```ts
-const supportedLocales = Object.keys(dictionaries);
+import { detectLocale } from "@serverlessworkflow/i18n";
+import { dictionaries } from "./i18n/locales";
 
-const locale = props.locale ?? detectLocale(supportedLocales);
+const supportedLocales = Object.keys(dictionaries) as Array<keyof typeof dictionaries>;
+
+// Auto-detect with fallback to "en"
+const locale = detectLocale(supportedLocales);
+
+// Or specify manually
+const locale = "fr";
+
+// Or combine both approaches
+const locale = props.locale ?? detectLocale(supportedLocales, "en");
 ```
 
----
+**`detectLocale()` behavior**:
 
-## Step 3: Wrap your app with `I18nProvider`
+- Uses `navigator.languages` and `navigator.language` to detect user preferences
+- Normalizes locales to their base language code (e.g., `"en-US"` → `"en"`)
+- Returns the `fallback` parameter (default: `"en"`) if no match found
+- Returns `fallback` in non-browser environments (SSR-safe)
+
+### 3. Wrap your app with `I18nProvider`
 
 ```tsx
 import { I18nProvider } from "@serverlessworkflow/i18n";
-import { dictionaries } from "../i18n/locales";
+import { dictionaries } from "./i18n/locales";
 
-<I18nProvider locale={locale} dictionaries={dictionaries}>
-  {/* your app */}
-</I18nProvider>;
+function App() {
+  const locale = detectLocale(Object.keys(dictionaries));
+
+  return (
+    <I18nProvider locale={locale} dictionaries={dictionaries}>
+      <YourAppContent />
+    </I18nProvider>
+  );
+}
 ```
 
----
+### 4. Use translations with `useI18n()`
 
-## Step 4: Use translations with `useI18n`
-
-Inside any child component:
+Inside any component within the provider:
 
 ```tsx
 import { useI18n } from "@serverlessworkflow/i18n";
 
-const Content = () => {
-  const { t } = useI18n();
+function MyComponent() {
+  const { t, locale } = useI18n();
 
-  return <p>{t("save")}</p>;
-};
+  return (
+    <div>
+      <p>Current locale: {locale}</p>
+      <button>{t("save")}</button>
+      <button>{t("cancel")}</button>
+    </div>
+  );
+}
 ```
 
-- If the key is missing, it will return the key itself:
+**Translation fallback**: If a key is missing, `t()` returns the key itself:
 
 ```ts
-t("unknown") → "unknown"
+t("unknown_key"); // Returns: "unknown_key"
 ```
 
----
+**Error handling**: `useI18n()` must be used inside `I18nProvider` or it will throw an error.
+
+## Architecture
+
+```
+src/
+├── index.ts                    # Public exports
+├── core/
+│   └── createI18n.ts          # Core translation logic
+├── react/
+│   └── I18nProvider.tsx       # React Context provider and hook
+└── utils/
+    └── detectLocale.ts        # Browser locale detection
+```
+
+## Development
+
+### Build
+
+```bash
+# Development build
+pnpm build:dev
+
+# Production build (includes tests)
+pnpm build:prod
+```
+
+### Test
+
+```bash
+pnpm test
+```
+
+Tests are located in the `tests/` directory and use Vitest.
+
+## TypeScript
+
+This package is written in TypeScript and includes type definitions. The build outputs:
+
+- `dist/index.js` - ESM JavaScript
+- `dist/index.d.ts` - TypeScript declarations
+
+## License
+
+Apache-2.0
+
+## Repository
+
+Part of the [Serverless Workflow Editor](https://github.com/serverlessworkflow/editor) monorepo.

@@ -26,13 +26,10 @@
   }
 
   .dec-root .diagram-background {
-    --xy-background-pattern-color: #ccc;
-    background-color: #e5e4e2;
-  }
-
-  .dec-root.dark .diagram-background {
-    --xy-background-pattern-color: inherit;
-    background-color: inherit;
+    /* Drive React Flow's own (unlayered) `.react-flow__background` rule through
+       its CSS vars rather than setting `background-color`. */
+    --xy-background-color: var(--dec-canvas-bg);
+    --xy-background-pattern-color: var(--dec-canvas-pattern);
   }
 
   /* react flow pointer behavior */
@@ -111,26 +108,21 @@
   /* Hover + selection are shared by every interactive node (leaf + container) */
   .dec-root .dec-leaf-node:hover,
   .dec-root .dec-container-node:hover {
-    @apply dec:shadow-[0_0_10px_rgba(0,65,208,0.3)];
-  }
-
-  .dec-root.dark .dec-leaf-node:hover,
-  .dec-root.dark .dec-container-node:hover {
-    @apply dec:shadow-[0_0_10px_rgba(255,255,255,0.3)];
+    box-shadow: 0 0 10px var(--dec-node-hover-glow);
   }
 
   .dec-root .dec-leaf-node.selected,
   .dec-root .dec-container-node.selected {
     box-shadow:
-      0 0 0 2px rgb(59 130 246),
-      0 0 12px 2px rgba(59, 130, 246, 0.45);
+      0 0 0 2px rgb(var(--dec-selected-rgb)),
+      0 0 12px 2px rgb(var(--dec-selected-rgb) / 0.45);
   }
 
   .dec-root.dark .dec-leaf-node.selected,
   .dec-root.dark .dec-container-node.selected {
     box-shadow:
-      0 0 0 2px rgb(96 165 250),
-      0 0 16px 4px rgba(96, 165, 250, 0.5);
+      0 0 0 2px rgb(var(--dec-selected-rgb)),
+      0 0 16px 4px rgb(var(--dec-selected-rgb) / 0.5);
   }
 
   /* container nodes (do, for, fork, try, try-catch, catch-container) */
@@ -145,7 +137,7 @@
   }
 
   .dec-root.dark .dec-container-node {
-    background-color: color-mix(in srgb, var(--task-node-color) 6%, #1a202c);
+    background-color: color-mix(in srgb, var(--task-node-color) 6%, var(--dec-surface-dark));
   }
 
   .dec-root .dec-container-node-header {
@@ -165,7 +157,7 @@
   }
 
   .dec-root.dark .dec-container-node-header {
-    background-color: color-mix(in srgb, var(--task-node-color) 18%, #1f2937);
+    background-color: color-mix(in srgb, var(--task-node-color) 18%, var(--dec-surface-dark-raised));
   }
 
   .dec-root .dec-container-node-icon {
@@ -217,7 +209,7 @@
   }
 
   .dec-root.dark .dec-leaf-node {
-    @apply dec:bg-[#2d3748];
+    background-color: var(--dec-surface-dark-elevated);
   }
 
   .dec-root .dec-leaf-node-content {
@@ -368,23 +360,23 @@
   .dec-root.dark .dec-container-node.has-error {
     box-shadow:
       0 0 0 1px var(--dec-error-accent),
-      0 0 12px 2px rgba(248, 113, 113, 0.4);
+      0 0 12px 2px var(--dec-error-glow);
   }
 
   .dec-root .dec-leaf-node.has-error.selected,
   .dec-root .dec-container-node.has-error.selected {
     box-shadow:
       0 0 0 2px var(--dec-error-accent),
-      0 0 0 4px rgb(59 130 246),
-      0 0 12px 4px rgba(59, 130, 246, 0.45);
+      0 0 0 4px rgb(var(--dec-selected-rgb)),
+      0 0 12px 4px rgb(var(--dec-selected-rgb) / 0.45);
   }
 
   .dec-root.dark .dec-leaf-node.has-error.selected,
   .dec-root.dark .dec-container-node.has-error.selected {
     box-shadow:
       0 0 0 2px var(--dec-error-accent),
-      0 0 0 4px rgb(96 165 250),
-      0 0 16px 4px rgba(96, 165, 250, 0.5);
+      0 0 0 4px rgb(var(--dec-selected-rgb)),
+      0 0 16px 4px rgb(var(--dec-selected-rgb) / 0.5);
   }
 
   .dec-root .dec-leaf-node.has-error {
@@ -401,25 +393,23 @@
 
   /* end validation errors */
 
-  .dec-root .dec-start-end-node {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
   .dec-root .dec-start-node, .dec-root .dec-end-node{
     width: 45px;
     height: 45px;
     border-radius: 50%;
     display: flex;
-    justify-content: center;
-    align-items: center;
     position: relative;
 
     @apply dec:border
-     dec:border-slate-400
+     dec:border-[var(--dec-edge-selected)]
      dec:bg-slate-100;
+  }
+
+  .dec-root .dec-start-end-node {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .dec-root .dec-end-node-inner {
@@ -429,21 +419,15 @@
     pointer-events: none;
 
     @apply dec:border
-     dec:border-slate-400
+     dec:border-[var(--dec-edge-selected)]
      dec:bg-slate-100;
   }
 
   .dec-root.dark .dec-start-node,
-  .dec-root.dark .dec-end-node {
+  .dec-root.dark .dec-end-node,
+  .dec-root.dark .dec-end-node-inner{
     @apply dec:border
-     dec:border-slate-600
-     dec:bg-slate-800
-     dec:text-slate-300;
-  }
-
-  .dec-root.dark .dec-end-node-inner {
-    @apply dec:border
-     dec:border-slate-600
+     dec:border-[var(--dec-edge-selected)]
      dec:bg-slate-800;
   }
 }
@@ -451,7 +435,7 @@
 /* custom edges */
 /* React flow SVG components do not work with classes defined into layers */
 .dec-root .edge-line {
-  @apply dec:stroke-[#aea6a6]
+  @apply dec:stroke-[var(--dec-edge-selected)]
         dec:stroke-2
         dec:transition-[filter];
 }
@@ -480,15 +464,15 @@
 
 /* Selected edge shadow effect - lighter for light mode */
 .dec-root .edge-line.selected {
-  filter: drop-shadow(0 0 2px rgba(59, 130, 246, 0.8))
-    drop-shadow(0 0 6px rgba(59, 130, 246, 0.4))
-    drop-shadow(0 0 12px rgba(59, 130, 246, 0.2));
+  filter: drop-shadow(0 0 2px rgb(var(--dec-selected-rgb) / 0.8))
+    drop-shadow(0 0 6px rgb(var(--dec-selected-rgb) / 0.4))
+    drop-shadow(0 0 12px rgb(var(--dec-selected-rgb) / 0.2));
 }
 
 .dec-root.dark .edge-line.selected {
-  filter: drop-shadow(0 0 3px rgb(59 130 246))
-    drop-shadow(0 0 8px rgb(59 130 246))
-    drop-shadow(0 0 16px rgba(59, 130, 246, 0.8));
+  filter: drop-shadow(0 0 3px rgb(var(--dec-selected-rgb)))
+    drop-shadow(0 0 8px rgb(var(--dec-selected-rgb)))
+    drop-shadow(0 0 16px rgb(var(--dec-selected-rgb) / 0.8));
 }
 
 /* custom edge labels */

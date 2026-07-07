@@ -15,7 +15,7 @@
  */
 
 import type * as RF from "@xyflow/react";
-import yaml from "js-yaml";
+import { dump } from "js-yaml";
 import { useI18n } from "@serverlessworkflow/i18n";
 import { getTaskDetails, type DetailField } from "@/core/taskDetails";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
@@ -84,7 +84,7 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
           <div className="dec-sidebar-section-spacer" />
           <SectionHeader label={t("sidebar.sectionSource")} />
           <YamlField
-            yaml={yaml.dump(task, { indent: 2, lineWidth: -1 })}
+            yaml={dump(task, { indent: 2, lineWidth: -1 })}
             summary={t("sidebar.viewSource")}
           />
         </>

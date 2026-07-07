@@ -201,7 +201,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
             M
           </RF.ControlButton>
         </RF.Controls>
-        <RF.Background className="diagram-background" variant={RF.BackgroundVariant.Cross} />
+        <RF.Background className="diagram-background" variant={RF.BackgroundVariant.Dots} />
       </RF.ReactFlow>
     </div>
   );

@@ -16,16 +16,55 @@
 
 # core
 
-Core package agnostic from the rendering library and its types.
+Core business logic layer that is agnostic to rendering libraries and platform-specific APIs. This layer provides the foundation for the diagram editor while maintaining vendor neutrality and embeddability.
 
-## Modules
+## Purpose
 
-`workflowSdk.ts` and `graph.ts` are the only places in the diagram editor that import from the SDK directly, keeping the rest of the editor decoupled from SDK implementation details.
+The core layer serves as the abstraction boundary between the Serverless Workflow SDK and the editor's UI layer. It handles workflow parsing, validation, graph manipulation, and data transformation without any dependencies on React Flow or other rendering frameworks.
 
-### workflowSdk.ts
+## Functional Areas
 
-Abstraction layer over the `@serverlessworkflow/sdk`.
+### SDK Abstraction
 
-### graph.ts
+**Critical constraint**: This is the only layer allowed to directly import from `@serverlessworkflow/sdk`. All SDK interactions must go through this abstraction to keep the rest of the editor decoupled from SDK implementation details. Despite of that, type-only imports may still be used elsewhere when needed.
 
-Add custom types to the original sdk `Graph` type.
+Responsibilities:
+
+- Parse and validate workflow definitions (YAML/JSON)
+- Provide type-safe access to workflow models
+- Convert workflow definitions to graph representations
+- Shield the rest of the editor from SDK internals and breaking changes
+
+### Graph Processing
+
+Utilities for working with workflow graphs as data structures:
+
+- Normalize graph connections and edges
+- Fix entry/exit node connections by redirecting them to parent containers
+- Provide graph traversal and manipulation operations
+
+### Layout Computation
+
+Integration with graph layout algorithms:
+
+- Wrap layout engines with editor-specific interfaces
+- Provide cancelable layout calculations with abort signal support
+- Transform layout results into consumable formats
+- Handle layout engine lifecycle and error cases
+
+### Export Capabilities
+
+Convert workflow models to other formats:
+
+- Generate diagram code in external formats (e.g., Mermaid)
+- Provide thin wrappers over SDK export functions
+- Enable integration with external diagramming tools
+
+### Validation & Error Handling
+
+Process and categorize validation errors:
+
+- Filter SDK validation errors for relevance
+- Map errors to specific nodes in the graph
+- Separate node-level errors from workflow-level errors
+- Provide structured error data for UI consumption

@@ -50,10 +50,16 @@ pnpm run build:prod
 
 ## Development Environment
 
-This project uses the following core technology stack:
+This project uses the following technology stack:
 
-- **Language**: [TypeScript](https://www.typescriptlang.org/) (for type safety and maintainability)
-- **Library**: [React](https://react.dev/) (for building the user interface)
+- **Language**: [TypeScript](https://www.typescriptlang.org/) with strict mode enabled
+- **UI Library**: [React](https://react.dev/)
+- **Diagram Rendering**: [@xyflow/react](https://reactflow.dev/) (isolated in `src/react-flow/`)
+- **Workflow SDK**: [@serverlessworkflow/sdk](https://github.com/serverlessworkflow/sdk-typescript) (isolated in `src/core/`)
+- **Testing**: [Vitest](https://vitest.dev/) for unit tests, [Playwright](https://playwright.dev/) for E2E
+- **Linting**: [oxlint](https://oxc.rs/) with TypeScript, React, import, and jsx-a11y plugins
+- **Formatting**: [oxfmt](https://oxc.rs/)
+- **Component Development**: [Storybook](https://storybook.js.org/)
 
 The project aims for the editor to be **embeddable**, with the core logic decoupled from specific platform APIs (like VS Code or Chrome APIs) through an abstraction layer.
 
@@ -63,7 +69,7 @@ If you find a bug or have a question, please check the [existing issues](https:/
 
 1. Open a new issue using the appropriate template.
 2. Provide a clear description of the problem.
-3. Include steps to reproduce the bug and provide a sample workflow file (`.sw.json` or `.sw.yaml`) if applicable.
+3. Include steps to reproduce the bug and provide a sample workflow file (`.json` or `.yaml`) if applicable.
 
 ## Suggesting a Change
 
@@ -110,12 +116,59 @@ If you're unsure whether your use of agents/LLMs is acceptable — ask! We're ha
 
 > This isn't about banning AI — it's about keeping this project collaborative, human-driven, and focused on quality.
 
+## Testing
+
+The project uses multiple testing strategies:
+
+### Unit Tests
+
+Unit tests are written using [Vitest](https://vitest.dev/) with React Testing Library. Tests mirror the source structure in `tests/`:
+
+```bash
+cd packages/serverless-workflow-diagram-editor
+pnpm test
+```
+
+### End-to-End Tests
+
+E2E tests use [Playwright](https://playwright.dev/) and are located in `tests-e2e/`:
+
+```bash
+cd packages/serverless-workflow-diagram-editor
+pnpm test-e2e          # Run tests headless
+pnpm test-e2e:ui       # Run with Playwright UI
+```
+
+Before running E2E tests for the first time, install Playwright browsers:
+
+```bash
+# From root directory
+pnpm playwright:install:ci
+```
+
+### Type Checking
+
+Run TypeScript type checking:
+
+```bash
+cd packages/serverless-workflow-diagram-editor
+pnpm typecheck
+```
+
+## Continuous Integration
+
+Pull requests automatically trigger:
+
+- **Netlify Deploy Previews**: Storybook is automatically built and deployed for PRs that modify the `@serverlessworkflow/diagram-editor` package, allowing reviewers to preview changes interactively.
+- **Automated Checks**: Linting, type checking, tests, and builds must pass before merging.
+
 ## Pull Request Process
 
 1. **Fork** the repository and create your branch from `main`.
 2. **Commit** your changes with clear, descriptive messages.
-3. **Verify** your changes by running the appropriate build and/or test commands for the packages you modified.
-4. If your PR changes a package, run `pnpm changeset` and commit the generated `.changeset/*.md` file.  
+3. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin. The `commit-msg` hook will automatically verify sign-off is present.
+4. **Verify** your changes by running the appropriate build and/or test commands for the packages you modified.
+5. If your PR changes a package, run `pnpm changeset` and commit the generated `.changeset/*.md` file.  
    As an alternative you may prefer to compare against upstream explicitly:
 
    ```bash
@@ -128,8 +181,7 @@ If you're unsure whether your use of agents/LLMs is acceptable — ask! We're ha
    git remote add upstream https://github.com/serverlessworkflow/editor.git
    ```
 
-5. **Submit** a Pull Request (PR).
-6. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin.
+6. **Submit** a Pull Request (PR).
 7. **Review**: At least one maintainer must review and approve your PR before it is merged.
 
 ---
