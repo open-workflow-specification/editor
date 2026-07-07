@@ -27,7 +27,7 @@ This package requires React 19 in the consuming application:
 npm install react@^19 react-dom@^19
 ```
 
-### Installation
+## Installation
 
 ```bash
 npm install @serverlessworkflow/diagram-editor
@@ -78,23 +78,6 @@ function App() {
 | `locale` | `'en'` | Yes | - | Language locale for the editor UI |
 | `colorMode` | `'light' \| 'dark' \| 'system'` | No | `'system'` | Color theme for the editor |
 
-
-## Installation
-
-```bash
-npm install @serverlessworkflow/diagram-editor
-# or
-pnpm add @serverlessworkflow/diagram-editor
-# or
-yarn add @serverlessworkflow/diagram-editor
-```
-
-Import the component and styles:
-
-```tsx
-import { DiagramEditor } from "@serverlessworkflow/diagram-editor";
-import "@serverlessworkflow/diagram-editor/styles.css";
-```
 
 ## Development
 
