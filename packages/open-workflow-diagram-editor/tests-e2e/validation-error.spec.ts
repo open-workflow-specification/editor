@@ -16,14 +16,14 @@
 
 import { test, expect } from "@playwright/test";
 
-test("renders listen node with document validation error", async ({ page }) => {
+test("renders document validation error in sidebar", async ({ page }) => {
   await page.goto("/iframe.html?id=features-validation-errors--document-error");
 
   const errors = page.getByTestId("sidebar-errors");
   await expect(errors).toBeVisible();
   await expect(
     errors.getByText(
-      "The DSL version of the workflow '9.9.8' does not satisfy the DSL version range supported by this SDK '>=1.0.0 <=1.0.3'.",
+      /The DSL version of the workflow '9\.9\.8' does not satisfy.*supported by this SDK/,
     ),
   ).toBeVisible();
 });

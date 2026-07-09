@@ -2,4 +2,4 @@
 "@serverlessworkflow/diagram-editor": minor
 ---
 
-Adding more e2e tests
+Test: expand Playwright E2E coverage for diagram rendering and validation errors
