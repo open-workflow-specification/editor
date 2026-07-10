@@ -323,21 +323,22 @@
       dec:gap-1.5
       dec:rounded-full
       dec:border
-      dec:border-slate-300
-      dec:bg-slate-100
+      dec:border-solid
+      dec:border-gray-300
+      dec:bg-gray-100
       dec:px-2.5
       dec:text-[10px]
       dec:font-medium
       dec:uppercase
       dec:leading-none
       dec:tracking-wide
-      dec:text-slate-600;
+      dec:text-gray-600;
   }
 
   .dec-root.dark .dec-terminal-node {
-    @apply dec:border-slate-600
-      dec:bg-slate-800
-      dec:text-slate-300;
+    @apply dec:border-gray-600
+      dec:bg-gray-800
+      dec:text-gray-300;
   }
 
   .dec-root .dec-terminal-node-icon {
@@ -401,8 +402,9 @@
     position: relative;
 
     @apply dec:border
+     dec:border-solid
      dec:border-[var(--dec-edge-selected)]
-     dec:bg-slate-100;
+     dec:bg-gray-100;
   }
 
   .dec-root .dec-start-end-node {
@@ -419,16 +421,18 @@
     pointer-events: none;
 
     @apply dec:border
+     dec:border-solid
      dec:border-[var(--dec-edge-selected)]
-     dec:bg-slate-100;
+     dec:bg-gray-100;
   }
 
   .dec-root.dark .dec-start-node,
   .dec-root.dark .dec-end-node,
   .dec-root.dark .dec-end-node-inner{
     @apply dec:border
+     dec:border-solid
      dec:border-[var(--dec-edge-selected)]
-     dec:bg-slate-800;
+     dec:bg-gray-800;
   }
 }
 
