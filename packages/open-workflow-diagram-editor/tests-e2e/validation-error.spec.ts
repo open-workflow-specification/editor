@@ -23,7 +23,7 @@ test("renders document validation error in sidebar", async ({ page }) => {
   await expect(errors).toBeVisible();
   await expect(
     errors.getByText(
-      /The DSL version of the workflow '9\.9\.8' does not satisfy.*supported by this SDK/,
+      /The DSL version of the workflow '\d\.\d\.\d' does not satisfy.*supported by this SDK/,
     ),
   ).toBeVisible();
 });

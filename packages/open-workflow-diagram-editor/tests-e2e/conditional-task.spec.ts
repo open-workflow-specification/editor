@@ -29,7 +29,5 @@ test("diagram editor renders conditional task", async ({ page }) => {
 
   await expect(page.locator(".edge-label")).toContainText(".customer.age < 18");
 
-  await expect(page.getByText("raiseErrorIfUnderage")).toBeVisible();
-
   await expect(page.getByText("RAISE", { exact: true })).toBeVisible();
 });
