@@ -1,0 +1,54 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: default
+  name: try-catch
+  version: "0.1.0"
+do:
+  - tryGetPet:
+      try:
+        - getPet:
+            call: http
+            with:
+              method: get
+              endpoint: https://petstore.swagger.io/v2/pet/{petId}
+      catch:
+        errors:
+          with:
+            type: https://serverlessworkflow.io/spec/1.0.0/errors/communication
+            status: 404
+        as: error
+        do:
+          - notifySupport:
+              emit:
+                event:
+                  with:
+                    source: https://petstore.swagger.io
+                    type: io.swagger.petstore.events.pets.not-found.v1
+                    data: ${ $error }
+          - setError:
+              set:
+                error: $error
+              export:
+                as: "$context + { error: $error }"
+  - buyPet:
+      if: $context.error == null
+      call: http
+      with:
+        method: put
+        endpoint: https://petstore.swagger.io/v2/pet/{petId}
+        body: '${ . + { status: "sold" } }'

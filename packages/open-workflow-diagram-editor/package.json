@@ -1,0 +1,91 @@
+{
+  "name": "@openworkflowspec/diagram-editor",
+  "version": "0.1.0",
+  "description": "React open workflow diagram component",
+  "keywords": [],
+  "homepage": "https://github.com/open-workflow-specification/editor",
+  "bugs": {
+    "url": "https://github.com/open-workflow-specification/editor/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-workflow-specification/editor.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --config .oxlintrc.json src/ stories/ tests/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "clean": "rimraf ./dist",
+    "clean:storybook": "rimraf ./dist-storybook",
+    "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm clean && tsc -p tsconfig.json && vite build && pnpm test && pnpm test-e2e",
+    "test": "vitest run --passWithNoTests",
+    "start": "storybook dev -p 6006 --no-open",
+    "build:storybook": "pnpm clean:storybook && storybook build --output-dir ./dist-storybook",
+    "test-e2e": "playwright test",
+    "test-e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "@openworkflowspec/i18n": "workspace:*",
+    "@serverlessworkflow/sdk": "catalog:",
+    "@xyflow/react": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "elkjs": "catalog:",
+    "js-yaml": "catalog:",
+    "radix-ui": "catalog:",
+    "sonner": "catalog:",
+    "use-sync-external-store": "catalog:"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "catalog:",
+    "@playwright/test": "catalog:",
+    "@storybook/addon-a11y": "catalog:",
+    "@storybook/addon-docs": "catalog:",
+    "@storybook/addon-vitest": "catalog:",
+    "@storybook/react-vite": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/js-yaml": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
+    "jsdom": "catalog:",
+    "lucide-react": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "storybook": "catalog:",
+    "tailwindcss": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

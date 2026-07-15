@@ -1,5 +1,5 @@
 <!--
-   Copyright 2021-Present The Serverless Workflow Specification Authors
+   Copyright 2021-Present The Open Workflow Specification Authors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
    limitations under the License.
 -->
 
-# @serverlessworkflow/i18n
+# @openworkflowspec/i18n
 
 A lightweight internationalization (i18n) package for React applications, providing simple translation support with automatic locale detection.
 
 ## Overview
 
-This package provides a minimal i18n solution built on React Context, designed for use in the Serverless Workflow Diagram Editor and other React applications.
+This package provides a minimal i18n solution built on React Context, designed for use in the Open Workflow Diagram Editor and other React applications.
 
 ## Features
 
@@ -33,7 +33,7 @@ This package provides a minimal i18n solution built on React Context, designed f
 ## Installation
 
 ```bash
-pnpm add @serverlessworkflow/i18n
+pnpm add @openworkflowspec/i18n
 ```
 
 ## API Reference
@@ -81,7 +81,7 @@ export const dictionaries = {
 Choose the user's locale either manually or through automatic detection:
 
 ```ts
-import { detectLocale } from "@serverlessworkflow/i18n";
+import { detectLocale } from "@openworkflowspec/i18n";
 import { dictionaries } from "./i18n/locales";
 
 const supportedLocales = Object.keys(dictionaries) as Array<keyof typeof dictionaries>;
@@ -106,7 +106,7 @@ const locale = props.locale ?? detectLocale(supportedLocales, "en");
 ### 3. Wrap your app with `I18nProvider`
 
 ```tsx
-import { I18nProvider } from "@serverlessworkflow/i18n";
+import { I18nProvider } from "@openworkflowspec/i18n";
 import { dictionaries } from "./i18n/locales";
 
 function App() {
@@ -125,7 +125,7 @@ function App() {
 Inside any component within the provider:
 
 ```tsx
-import { useI18n } from "@serverlessworkflow/i18n";
+import { useI18n } from "@openworkflowspec/i18n";
 
 function MyComponent() {
   const { t, locale } = useI18n();
@@ -194,4 +194,4 @@ Apache-2.0
 
 ## Repository
 
-Part of the [Serverless Workflow Editor](https://github.com/serverlessworkflow/editor) monorepo.
+Part of the [Open Workflow Editor](https://github.com/open-workflow-specification/editor) monorepo.

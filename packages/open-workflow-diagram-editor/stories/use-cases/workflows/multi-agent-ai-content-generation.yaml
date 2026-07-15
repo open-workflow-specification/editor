@@ -1,0 +1,117 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: default
+  name: multi-agent-collaboration-for-ai-content
+  version: "0.1.0"
+input:
+  schema:
+    document:
+      type: object
+      properties:
+        prompt:
+          type: string
+      required: [prompt]
+do:
+  - initialize:
+      set:
+        prompt: ${ $workflow.input.prompt }
+      export:
+        as: .prompt
+
+  - generateText:
+      call: http
+      with:
+        method: post
+        endpoint: https://ai-content-generator.com/api/v1/generate-text
+        body:
+          prompt: ${ .prompt }
+      export:
+        as: "$context + { text: .text }"
+
+  - generateImage:
+      call: http
+      with:
+        method: post
+        endpoint: https://ai-content-generator.com/api/v1/generate-image
+        body:
+          text: ${ .text }
+      export:
+        as: "$context + { image: .image }"
+
+  - evaluateQuality:
+      call: http
+      with:
+        method: post
+        endpoint: https://ai-content-generator.com/api/v1/evaluate
+        body:
+          text: ${ .text }
+          image: ${ .image }
+      export:
+        as: "$context + { evaluation: .evaluation }"
+
+  - refineContent:
+      switch:
+        - needsRefinement:
+            when: .evaluation.needsRefinement == true
+            then: refine
+        - noRefinementNeeded:
+            when: .evaluation.needsRefinement == false
+            then: deliverContent
+
+  - refine:
+      do:
+        - refineText:
+            call: http
+            with:
+              method: post
+              endpoint: https://ai-content-generator.com/api/v1/refine-text
+              body:
+                text: ${ .text }
+                feedback: ${ .evaluation.text_feedback }
+        - refineImage:
+            call: http
+            with:
+              method: post
+              endpoint: https://ai-content-generator.com/api/v1/refine-image
+              body:
+                image: ${ .image }
+                feedback: ${ .evaluation.image_feedback }
+        - reevaluate:
+            call: http
+            with:
+              method: post
+              endpoint: https://ai-content-generator.com/api/v1/evaluate
+              body:
+                text: ${ .refined_text }
+                image: ${ .refined_image }
+            export:
+              as: .evaluation
+      then: evaluateQuality
+
+  - deliverContent:
+      do:
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://ai-content-generator.com
+                  type: com.ai-content-generator.content.ready.v1
+                  data:
+                    text: ${ .text }
+                    image: ${ .image }
+      then: end

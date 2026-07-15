@@ -1,5 +1,5 @@
 <!--
-   Copyright 2021-Present The Serverless Workflow Specification Authors
+   Copyright 2021-Present The Open Workflow Specification Authors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 # editor
 
-The official **vendor-neutral visual editor** for the [Open Workflow Specification](https://github.com/serverlessworkflow/specification).
+The official **vendor-neutral visual editor** for the [Open Workflow Specification](https://github.com/open-workflow-specification/specification).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CNCF Sandbox](https://img.shields.io/badge/CNCF-Sandbox-informational)](https://www.cncf.io/projects/serverless-workflow/)
@@ -44,7 +44,7 @@ See the [Getting Started guide](./packages/serverless-workflow-diagram-editor/RE
 
 ```bash
 # Clone the repository
-git clone https://github.com/serverlessworkflow/editor.git
+git clone https://github.com/open-workflow-specification/editor.git
 cd editor
 
 # Install dependencies
@@ -64,14 +64,14 @@ pnpm run build:prod
 Storybook provides an interactive development environment for the diagram editor:
 
 ```bash
-cd packages/serverless-workflow-diagram-editor
+cd packages/open-workflow-diagram-editor
 pnpm start  # Starts Storybook on http://localhost:6006
 ```
 
 ### Running Tests
 
 ```bash
-cd packages/serverless-workflow-diagram-editor
+cd packages/open-workflow-diagram-editor
 
 # Unit tests (Vitest)
 pnpm test
@@ -118,7 +118,7 @@ editor/
 ├── .husky/                     # Git hooks (commit-msg for DCO, pre-commit for linting)
 ├── adr/                        # Architecture Decision Records
 ├── packages/                   # Monorepo workspace packages
-│   ├── serverless-workflow-diagram-editor/  # Main diagram editor component
+│   ├── open-workflow-diagram-editor/  # Main diagram editor component
 │   └── i18n/                   # Internationalization utilities
 ├── .changeset/                 # Changesets for version management
 ├── .oxfmtrc.json               # Formatter config (oxfmt)
@@ -132,7 +132,7 @@ editor/
 
 ## Packages
 
-### [@serverlessworkflow/diagram-editor](./packages/serverless-workflow-diagram-editor)
+### [@openworkflowspec/diagram-editor](./packages/open-workflow-diagram-editor)
 
 The main visual diagram editor component built with:
 
@@ -144,7 +144,7 @@ The main visual diagram editor component built with:
 - **[Storybook](https://storybook.js.org/)** for component development
 - **[Vitest](https://vitest.dev/)** and **[Playwright](https://playwright.dev/)** for testing
 
-### [@serverlessworkflow/i18n](./packages/i18n)
+### [@openworkflowspec/i18n](./packages/i18n)
 
 Internationalization utilities used by the diagram editor.
 
@@ -212,7 +212,7 @@ pnpm changeset
 
 # Or compare against upstream explicitly
 # add upstream remote, if you don't have it already
-git remote add upstream https://github.com/serverlessworkflow/editor.git
+git remote add upstream https://github.com/open-workflow-specification/editor.git
 
 pnpm changeset --since upstream/main
 ```
@@ -221,9 +221,9 @@ See [RELEASE_PROCESS.md](./RELEASE_PROCESS.md) for details.
 
 ## Community
 
-- **Slack**: Join [#serverless-workflow](https://cloud-native.slack.com/archives/C06PYFT9HTZ) on [CNCF Slack](https://slack.cncf.io/)
-- **Issues**: [GitHub Issues](https://github.com/serverlessworkflow/editor/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/serverlessworkflow/editor/discussions)
+- **Slack**: Join [#open-workflow](https://cloud-native.slack.com/archives/C06PYFT9HTZ) on [CNCF Slack](https://slack.cncf.io/)
+- **Issues**: [GitHub Issues](https://github.com/open-workflow-specification/editor/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/open-workflow-specification/editor/discussions)
 
 ## License
 
@@ -231,5 +231,5 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 
 ## Related Projects
 
-- [Open Workflow Specification](https://github.com/serverlessworkflow/specification)
-- [Serverless Workflow SDK (TypeScript)](https://github.com/serverlessworkflow/sdk-typescript)
+- [Open Workflow Specification](https://github.com/open-workflow-specification/specification)
+- [Open Workflow SDK (TypeScript)](https://github.com/serverlessworkflow/sdk-typescript)

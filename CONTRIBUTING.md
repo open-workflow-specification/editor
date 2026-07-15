@@ -1,5 +1,5 @@
 <!--
-   Copyright 2021-Present The Serverless Workflow Specification Authors
+   Copyright 2021-Present The Open Workflow Specification Authors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
    limitations under the License.
 -->
 
-# Contributing to Serverless Workflow Editor
+# Contributing to Open Workflow Editor
 
-Thank you for your interest in contributing to the CNCF Serverless Workflow Editor! We welcome all types of contributions, including bug reports, feature requests, documentation improvements, and code changes.
+Thank you for your interest in contributing to the Open Workflow Editor! We welcome all types of contributions, including bug reports, feature requests, documentation improvements, and code changes.
 
-This project is the official, vendor-neutral visual editor for the [Serverless Workflow Specification](https://github.com/serverlessworkflow/specification).
+This project is the official, vendor-neutral visual editor for the [Open Workflow Specification](https://github.com/open-workflow-specification/specification).
 
 ---
 
@@ -35,7 +35,7 @@ The project is structured as a monorepo to support multiple distribution targets
 
 ```bash
 # Clone the repository
-git clone https://github.com/serverlessworkflow/editor.git
+git clone https://github.com/open-workflow-specification/editor.git
 cd editor
 
 # Install dependencies
@@ -65,7 +65,7 @@ The project aims for the editor to be **embeddable**, with the core logic decoup
 
 ## Reporting an Issue
 
-If you find a bug or have a question, please check the [existing issues](https://github.com/serverlessworkflow/editor/issues) first.
+If you find a bug or have a question, please check the [existing issues](https://github.com/open-workflow-specification/editor/issues) first.
 
 1. Open a new issue using the appropriate template.
 2. Provide a clear description of the problem.
@@ -125,7 +125,7 @@ The project uses multiple testing strategies:
 Unit tests are written using [Vitest](https://vitest.dev/) with React Testing Library. Tests mirror the source structure in `tests/`:
 
 ```bash
-cd packages/serverless-workflow-diagram-editor
+cd packages/open-workflow-diagram-editor
 pnpm test
 ```
 
@@ -134,7 +134,7 @@ pnpm test
 E2E tests use [Playwright](https://playwright.dev/) and are located in `tests-e2e/`:
 
 ```bash
-cd packages/serverless-workflow-diagram-editor
+cd packages/open-workflow-diagram-editor
 pnpm test-e2e          # Run tests headless
 pnpm test-e2e:ui       # Run with Playwright UI
 ```
@@ -151,7 +151,7 @@ pnpm playwright:install:ci
 Run TypeScript type checking:
 
 ```bash
-cd packages/serverless-workflow-diagram-editor
+cd packages/open-workflow-diagram-editor
 pnpm typecheck
 ```
 
@@ -159,7 +159,7 @@ pnpm typecheck
 
 Pull requests automatically trigger:
 
-- **Netlify Deploy Previews**: Storybook is automatically built and deployed for PRs that modify the `@serverlessworkflow/diagram-editor` package, allowing reviewers to preview changes interactively.
+- **Netlify Deploy Previews**: Storybook is automatically built and deployed for PRs that modify the `@openworkflowspec/diagram-editor` package, allowing reviewers to preview changes interactively.
 - **Automated Checks**: Linting, type checking, tests, and builds must pass before merging.
 
 ## Pull Request Process
@@ -178,7 +178,7 @@ Pull requests automatically trigger:
    **Note:** If you don't have the `upstream` remote configured:
 
    ```bash
-   git remote add upstream https://github.com/serverlessworkflow/editor.git
+   git remote add upstream https://github.com/open-workflow-specification/editor.git
    ```
 
 6. **Submit** a Pull Request (PR).
@@ -188,4 +188,4 @@ Pull requests automatically trigger:
 
 ### Community and Communication
 
-Join the conversation on the [CNCF Slack](https://slack.cncf.io/) in the `#serverless-workflow` channel.
+Join the conversation on the [CNCF Slack](https://slack.cncf.io/) in the `#open-workflow` channel.

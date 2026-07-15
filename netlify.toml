@@ -1,5 +1,5 @@
 #
-# Copyright 2021-Present The Serverless Workflow Specification Authors
+# Copyright 2021-Present The Open Workflow Specification Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 [build.environment]
   NODE_VERSION = "24"
   PNPM_VERSION = "10.31.0"
-  PREVIEW_PACKAGE_NAME = "@serverlessworkflow/diagram-editor"
+  PREVIEW_PACKAGE_NAME = "@openworkflowspec/diagram-editor"
 
 [build]
   command = """
@@ -25,7 +25,7 @@
     pnpm -F "${PREVIEW_PACKAGE_NAME}..." build:dev
     pnpm -F "$PREVIEW_PACKAGE_NAME" build:storybook
   """
-  publish = "packages/serverless-workflow-diagram-editor/dist-storybook"
+  publish = "packages/open-workflow-diagram-editor/dist-storybook"
   ignore = """
     set -e -o pipefail
     git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main

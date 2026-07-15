@@ -1,5 +1,5 @@
 <!--
-   Copyright 2021-Present The Serverless Workflow Specification Authors
+   Copyright 2021-Present The Open Workflow Specification Authors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
    limitations under the License.
 -->
 
-# ADR: Post-MVP Roadmap for the Serverless Workflow Editor
+# ADR: Post-MVP Roadmap for the Open Workflow Editor
 
 **Status:** Proposed
 
-> This ADR sets out the **post-MVP roadmap** for the Serverless Workflow editor - how it grows from the existing read-only viewer into a full visual authoring tool. The MVP (read-only visualisation) is covered by the prior [ADR](https://github.com/serverlessworkflow/specification/blob/main/adr/v1.0-adr-shared-workflow-editor.md) and assumed here as the starting point.
+> This ADR sets out the **post-MVP roadmap** for the Open Workflow editor - how it grows from the existing read-only viewer into a full visual authoring tool. The MVP (read-only visualisation) is covered by the prior [ADR](https://github.com/open-workflow-specification/specification/blob/main/adr/v1.0-adr-shared-workflow-editor.md) and assumed here as the starting point.
 
 ## Purpose
 
@@ -41,13 +41,13 @@ Two principles guide the design:
 
 ## Licensing
 
-- **Apache 2.0** (consistent with Serverless Workflow specification)
+- **Apache 2.0** (consistent with Open Workflow specification)
 - All dependencies must be CNCF-compatible
 
 ## Governance & Community Alignment
 
-- The editor is developed and maintained **as part of the Serverless Workflow project**, by the community rather than any single vendor.
-- A **multi-maintainer model** with representatives from Quarkus Flow/Sonata Flow, Serverless Workflow Specification maintainers and other interested engine maintainers (e.g Zigflow/Synapse/Lemline etc) following spec governance model.
+- The editor is developed and maintained **as part of the Open Workflow project**, by the community rather than any single vendor.
+- A **multi-maintainer model** with representatives from Quarkus Flow/Sonata Flow, Open Workflow Specification maintainers and other interested engine maintainers (e.g Zigflow/Synapse/Lemline etc) following spec governance model.
 - The **specification remains the authority**: the editor follows the spec, it does not extend or fork it. Where editor work surfaces gaps or ambiguities, those are raised back to the specification.
 
 ## Scope
@@ -95,5 +95,5 @@ The same shared package is embedded into target tools. This work is **self-conta
 
 ## References
 
-- [Prior MVP ADR](https://github.com/serverlessworkflow/specification/blob/main/adr/v1.0-adr-shared-workflow-editor.md)
-- [Serverless Workflow specification](https://github.com/serverlessworkflow/specification)
+- [Prior MVP ADR](https://github.com/open-workflow-specification/specification/blob/main/adr/v1.0-adr-shared-workflow-editor.md)
+- [Open Workflow specification](https://github.com/open-workflow-specification/specification)

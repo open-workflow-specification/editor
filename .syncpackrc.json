@@ -9,13 +9,13 @@
   "versionGroups": [
     {
       "label": "Ignore root package version",
-      "packages": ["serverless-workflow-editor"],
+      "packages": ["open-workflow-editor"],
       "dependencyTypes": ["local"],
       "isIgnored": true
     },
     {
       "label": "Package versions must be consistent across packages",
-      "packages": ["@serverlessworkflow/*"],
+      "packages": ["@openworkflowspec/*"],
       "dependencyTypes": ["packageVersion"],
       "policy": "sameRange"
     },
