@@ -1,7 +1,7 @@
 {
-  "changelog": ["@changesets/changelog-github", { "repo": "serverlessworkflow/editor" }],
+  "changelog": ["@changesets/changelog-github", { "repo": "open-workflow-specification/editor" }],
   "commit": false,
-  "fixed": [["@serverlessworkflow/*"]],
+  "fixed": [["@openworkflowspec/*"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch"

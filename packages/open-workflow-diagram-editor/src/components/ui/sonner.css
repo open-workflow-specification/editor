@@ -1,0 +1,40 @@
+/*
+ * Copyright 2021-Present The Open Workflow Specification Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
+ @reference "../../styles.css";
+
+@layer sonner {
+  /* sonner defaults unlayered, so these overrides need !important */
+  .dec-root [data-sonner-toaster] { --width: 300px !important; }
+  .dec-root [data-sonner-toast] { background: var(--dec-toast-bg) !important; border-radius: 10px !important; border: 1px solid var(--dec-toast-border) !important; }
+  .dec-root [data-sonner-toast][data-type="success"] { border-left: 4px solid var(--dec-toast-success) !important; }
+  .dec-root [data-sonner-toast][data-type="error"]   { border-left: 4px solid var(--dec-error-accent) !important; }
+  .dec-root [data-sonner-toast][data-type="warning"] { border-left: 4px solid var(--dec-toast-warning) !important; }
+  .dec-root [data-sonner-toast][data-type="info"]    { border-left: 4px solid var(--dec-toast-info) !important; }
+  .dec-root [data-sonner-toast] [data-title], .dec-root [data-sonner-toast] [data-description] { color: var(--dec-toast-text) !important; }
+  .dec-root [data-sonner-toast] [data-close-button] {
+    position: absolute !important;
+    top: 50% !important;
+    right: 12px !important;
+    left: auto !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--dec-toast-close-btn);
+    cursor: pointer;
+  }
+}

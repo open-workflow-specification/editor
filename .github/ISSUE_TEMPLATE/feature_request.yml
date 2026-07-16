@@ -32,7 +32,7 @@ body:
       label: Definition of Done
       description: To be considered "Done," this feature must meet the following criteria.
       options:
-        - label: "Implementation: Fully implemented according to the Serverless Workflow spec."
+        - label: "Implementation: Fully implemented according to the Open Workflow spec."
         - label: "Unit Tests: Comprehensive unit tests are included and passing."
         - label: "Integration Tests: Verified within the monorepo and target environments (Web/VS Code)."
         - label: "Documentation: Updated README.md, ADRs, or official docs."

@@ -1,0 +1,206 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: default
+  name: manage-github-issues
+  version: "0.1.0"
+schedule:
+  on:
+    one:
+      with:
+        type: com.github.events.issues.opened.v1
+        data: ${ .data.author.team == "QA" }
+do:
+  - initialize:
+      set:
+        issue: ${ $workflow.input[0].data }
+      export:
+        as: .issue
+
+  - awaitForDevWork:
+      do:
+        - assign:
+            set:
+              issue:
+                assignedTo: DevTeam
+                status: inProgress
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://serverlessworkflow.io
+                  type: com.github.events.issues.assignedToDevTeam.v1
+                  data:
+                    issue: ${ .issue }
+        - await:
+            listen:
+              to:
+                one:
+                  with:
+                    type: com.github.events.issues.devWorkCompleted.v1
+            export:
+              as: "$context + { issue: ($context.issue + { action: .data.nextAction, dev: .data.dev }) }"
+      then: evaluateDevWorkOutcome
+
+  - evaluateDevWorkOutcome:
+      switch:
+        - review:
+            when: $context.issue.action == "review"
+            then: reviewIssue
+        - requestDetails:
+            when: $context.issue.action == "requestDetails"
+            then: awaitDetailsFromQA
+        - default:
+            then: raiseUnsupportedActionError
+
+  - awaitDetailsFromQA:
+      do:
+        - assign:
+            set:
+              issue:
+                assignedTo: QA
+                status: awaitingDetails
+                assignTo: ${ $context.issue.author }
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://serverlessworkflow.io
+                  type: com.github.events.issues.assignedToQATeam.v1
+                  data:
+                    issue: ${ $context.issue }
+        - await:
+            listen:
+              to:
+                one:
+                  with:
+                    type: com.github.events.issues.detailsProvided.v1
+            export:
+              as: "$context + { issue: ($context.issue + { action: .data.nextAction }) }"
+      then: awaitForDevWork
+
+  - reviewIssue:
+      do:
+        - assign:
+            set:
+              issue:
+                assignedTo: DevTeam
+                status: reviewing
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://serverlessworkflow.io
+                  type: com.github.events.issues.pendingReview.v1
+                  data:
+                    issue: ${ $context.issue }
+                    review:
+                      exclude: ${ $context.issue.dev }
+        - await:
+            listen:
+              to:
+                one:
+                  with:
+                    type: com.github.events.issues.reviewed.v1
+            export:
+              as: "$context + { issue: ($context.issue + { reviewer: .data.reviewer }) }"
+
+  - validateReview:
+      switch:
+        - reviewerIsNotAssignedDev:
+            when: $context.issue.reviewer != $context.issue.dev
+            then: evaluateReview
+        - reviewerIsAssignedDev:
+            then: raiseAssignedDevCannotBeReviewer
+
+  - evaluateReview:
+      do:
+        - assign:
+            set:
+              issue:
+                assignedTo: QA
+                status: evaluating
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://serverlessworkflow.io
+                  type: com.github.events.issues.evaluateReview.v1
+                  data:
+                    issue: ${ $context.issue }
+                    assignTo: ${ $context.issue.author }
+        - await:
+            listen:
+              to:
+                one:
+                  with:
+                    type: com.github.events.issues.evaluated.v1
+            export:
+              as: "$context + { issue: ($context.issue + { action: .data.nextAction }) }"
+        - evaluate:
+            switch:
+              - closeIssue:
+                  when: $context.issue.action == "close"
+                  then: closeIssue
+              - default:
+                  then: exit
+        - closeIssue:
+            do:
+              - initialize:
+                  set:
+                    organization: ${ $context.issue.repository.organization }
+                    repository: ${ $context.issue.repository.name }
+                    issueNumber: ${ $context.issue.number }
+              - closeIssueOnGithub:
+                  call: http
+                  with:
+                    endpoint: https://api.github.com/repos/{organization}/{repository}/issues/{issueNumber}
+                    method: patch
+                    body:
+                      state: closed
+              - setIssueInfo:
+                  set:
+                    issue:
+                      status: closed
+              - notify:
+                  emit:
+                    event:
+                      with:
+                        source: https://serverlessworkflow.io
+                        type: com.github.events.issues.closed.v1
+                        data:
+                          issue: ${ $context.issue }
+            then: end
+      then: awaitForDevWork
+
+  - raiseUnsupportedActionError:
+      raise:
+        error:
+          type: https://serverlessworkflow.io/spec/1.0.0/errors/runtime
+          status: 400
+          title: Unsupported Action
+          detail: The specified action is not supported in this context
+      then: end
+
+  - raiseAssignedDevCannotBeReviewer:
+      raise:
+        error:
+          type: https://serverlessworkflow.io/spec/1.0.0/errors/runtime
+          status: 400
+          title: Invalid Reviewer
+          detail: The developer that has performed the work associated with the issue cannot be the reviewer of its own work
+      then: end

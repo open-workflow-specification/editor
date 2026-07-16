@@ -1,15 +1,15 @@
 {
-  "name": "serverless-workflow-editor",
+  "name": "open-workflow-editor",
   "private": true,
-  "description": "CNCF Serverless Workflow Specification Visual Editor",
-  "homepage": "https://github.com/serverlessworkflow/editor",
+  "description": "Open Workflow Specification Visual Editor",
+  "homepage": "https://github.com/open-workflow-specification/editor",
   "bugs": {
-    "url": "https://github.com/serverlessworkflow/editor/issues"
+    "url": "https://github.com/open-workflow-specification/editor/issues"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/serverlessworkflow/editor.git"
+    "url": "https://github.com/open-workflow-specification/editor.git"
   },
   "type": "module",
   "scripts": {

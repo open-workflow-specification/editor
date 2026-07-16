@@ -1,0 +1,199 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: default
+  name: manage-ev-charging-stations
+  version: "0.1.0"
+schedule:
+  on:
+    any:
+      - with:
+          type: com.ev-power-supplier.charging-station.card-scanned.v1
+      - with:
+          type: com.ev-power-supplier.charging-station.faulted.v1
+do:
+  - initialize:
+      set:
+        event: ${ $workflow.input[0].data }
+      export:
+        as: .event
+
+  - handleStationEvents:
+      switch:
+        - sessionStarted:
+            when: .event.type == "com.ev-power-supplier.charging-station.card-scanned.v1"
+            then: tryGetActiveSession
+        - stationError:
+            when: .event.type == "com.ev-power-supplier.charging.station-faulted.v1"
+            then: handleError
+      then: raiseUnsupportedEventError
+
+  - tryGetActiveSession:
+      try:
+        - getSessionForCard:
+            call: http
+            with:
+              method: get
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/session/{cardId}
+        - setSessionInfo:
+            set:
+              session: ${ .session }
+      catch:
+        errors:
+          with:
+            status: 404
+
+  - handleActiveSession:
+      switch:
+        - sessionInProgress:
+            when: .session != null
+            then: endSession
+        - noActiveSession:
+            then: tryAquireSlot
+
+  - tryAquireSlot:
+      try:
+        - acquireSlot:
+            call: http
+            with:
+              method: post
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}
+              body:
+                card: ${ $context.card }
+            export:
+              as: "$context + { slot: .slot }"
+      catch:
+        errors:
+          with:
+            status: 400
+        when: .detail == "No charging slots available"
+        do:
+          - noSlotsAvailable:
+              call: http
+              with:
+                method: post
+                endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/leds/main
+                body:
+                  action: flicker
+                  color: red
+                  duration: 3000
+              then: end
+
+  - startSession:
+      do:
+        - initialize:
+            set:
+              session:
+                card: ${ $context.card }
+                slotNumber: ${ $context.slot.number }
+            export:
+              as: "$context + { session: . }"
+        - feedBack:
+            call: http
+            with:
+              method: post
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/leds/{slotNumber}
+              body:
+                action: "on"
+                color: blue
+        - lockSlot:
+            call: http
+            with:
+              method: put
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/slot/{slotNumber}/lock
+        - start:
+            call: http
+            with:
+              method: put
+              endpoint: https://ev-power-supplier.com/api/v2/sessions/{sessionId}/start
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://ev-power-supplier.com
+                  type: com.ev-power-supplier.charging-station.session-started.v1
+                  data: ${ $context.session }
+
+  - endSession:
+      do:
+        - end:
+            call: http
+            with:
+              method: put
+              endpoint: https://ev-power-supplier.com/api/v2/sessions/{sessionId}/end
+        - processPayment:
+            call: http
+            with:
+              method: put
+              endpoint: https://ev-power-supplier.com/api/v2/sessions/{sessionId}/pay
+        - unlockSlot:
+            call: http
+            with:
+              method: put
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/slot/{slotNumber}/unlock
+        - feedBack:
+            call: http
+            with:
+              method: post
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/leds/{slotNumber}
+              body:
+                action: flicker
+                color: white
+                duration: 3000
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://ev-power-supplier.com
+                  type: com.ev-power-supplier.charging-station.session-ended.v1
+                  data: ${ $context.session }
+      then: end
+
+  - handleError:
+      do:
+        - contactSupport:
+            call: http
+            with:
+              method: post
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/support
+              body:
+                error: ${ $context.event.data.error }
+        - feedBack:
+            call: http
+            with:
+              method: post
+              endpoint: https://ev-power-supplier.com/api/v2/stations/{stationId}/leds/main
+              body:
+                action: "on"
+                color: red
+        - notify:
+            emit:
+              event:
+                with:
+                  source: https://ev-power-supplier.com
+                  type: com.ev-power-supplier.charging-station.out-of-order.v1
+                  data: ${ $context.event.data.error }
+      then: end
+
+  - raiseUnsupportedEventError:
+      raise:
+        error:
+          type: https://serverlessworkflow.io/spec/1.0.0/errors/runtime
+          status: 400
+          title: Unsupported Event
+          detail: ${ "The specified station event '\($context.event.type)' is not supported in this context" }
+      then: end

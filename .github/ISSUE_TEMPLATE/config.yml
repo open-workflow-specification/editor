@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: CNCF Slack (#serverless-workflow)
+  - name: CNCF Slack (#open-workflow)
     url: https://slack.cncf.io/
-    about: Join the CNCF Slack workspace and visit #serverless-workflow for real-time support.
+    about: Join the CNCF Slack workspace and visit #open-workflow for real-time support.

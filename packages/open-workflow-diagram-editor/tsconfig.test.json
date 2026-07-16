@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+
+  "compilerOptions": {
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "node"],
+
+    // Tests can import JS or TS freely
+    "allowJs": true,
+
+    // Preserve JSX so test runner interprets it
+    "jsx": "react-jsx",
+
+    // No declaration output during tests
+    "declaration": false,
+    "emitDeclarationOnly": false,
+    "noEmit": true,
+
+    // Tests often work with dynamic/loosely typed objects
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["**/*.test.ts", "**/*.test.tsx", "**/tests/**/*"]
+}

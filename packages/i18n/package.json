@@ -1,16 +1,16 @@
 {
-  "name": "@serverlessworkflow/i18n",
+  "name": "@openworkflowspec/i18n",
   "version": "0.1.0",
-  "description": "Serverless workflow internationalization component",
+  "description": "Open workflow internationalization component",
   "keywords": [],
-  "homepage": "https://github.com/serverlessworkflow/editor",
+  "homepage": "https://github.com/open-workflow-specification/editor",
   "bugs": {
-    "url": "https://github.com/serverlessworkflow/editor/issues"
+    "url": "https://github.com/open-workflow-specification/editor/issues"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/serverlessworkflow/editor.git"
+    "url": "https://github.com/open-workflow-specification/editor.git"
   },
   "files": [
     "dist",
