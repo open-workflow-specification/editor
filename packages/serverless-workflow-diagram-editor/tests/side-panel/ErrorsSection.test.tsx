@@ -60,4 +60,33 @@ describe("ErrorSection", () => {
 
     expect(container.querySelector(".dec-sidebar-error-field")).toBeNull();
   });
+
+  it("renders field labels only for items that have a field", () => {
+    const items: ErrorItem[] = [
+      { field: "with", message: "missing endpoint" },
+      { message: "document-level error" },
+    ];
+
+    const { container } = renderWithProviders(<ErrorSection items={items} />);
+
+    const fields = container.querySelectorAll(".dec-sidebar-error-field");
+
+    expect(fields).toHaveLength(1);
+    expect(fields[0]).toHaveTextContent("with");
+
+    expect(screen.getByText("missing endpoint")).toBeInTheDocument();
+    expect(screen.getByText("document-level error")).toBeInTheDocument();
+  });
+
+  it("renders the correct count for a single error", () => {
+    renderWithProviders(<ErrorSection items={[{ message: "single error" }]} />);
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("renders the error list", () => {
+    const { container } = renderWithProviders(<ErrorSection items={[{ message: "error" }]} />);
+
+    expect(container.querySelector(".dec-sidebar-errors-list")).toBeInTheDocument();
+  });
 });

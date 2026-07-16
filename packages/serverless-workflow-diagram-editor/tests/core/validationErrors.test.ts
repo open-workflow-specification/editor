@@ -210,4 +210,81 @@ describe("getGeneralErrors", () => {
 
     expect(getGeneralErrors(errors, nodeIds)).toEqual([documentErr, rawErr]);
   });
+
+  describe("additional validation error edge cases", () => {
+    it("returns each node id only once even if multiple errors belong to it", () => {
+      const nodeIds = new Set(["/do/0/call"]);
+
+      const errors: SdkError[] = [
+        vErr({ path: "/do/0/call", message: "first" }),
+        vErr({ path: "/do/0/call/with", message: "second" }),
+        vErr({ path: "/do/0/call/output", message: "third" }),
+      ];
+
+      expect(getErrorNodeIds(errors, nodeIds)).toEqual(new Set(["/do/0/call"]));
+    });
+
+    it("does not treat non-string missingProperty values as noise", () => {
+      const nodeIds = new Set(["/do/0/call"]);
+
+      const errors: SdkError[] = [
+        vErr({
+          path: "/do/0/call",
+          object: {
+            missingProperty: 123,
+          },
+        }),
+      ];
+
+      const result = getNodeErrors(errors, "/do/0/call", nodeIds);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.object?.missingProperty).toBe(123);
+    });
+
+    it("keeps validation errors without an errorType", () => {
+      const nodeIds = new Set(["/do/0/call"]);
+
+      const errors: SdkError[] = [
+        vErr({
+          path: "/do/0/call",
+        }),
+      ];
+
+      expect(getNodeErrors(errors, "/do/0/call", nodeIds)).toHaveLength(1);
+    });
+
+    it("returns no node errors when there are no node ids", () => {
+      const errors: SdkError[] = [
+        vErr({
+          path: "/do/0/call",
+          message: "owned",
+        }),
+      ];
+
+      expect(getNodeErrors(errors, "/do/0/call", new Set())).toEqual([]);
+    });
+
+    it("returns no error node ids when there are no node ids", () => {
+      const errors: SdkError[] = [
+        vErr({
+          path: "/do/0/call",
+          message: "owned",
+        }),
+      ];
+
+      expect(getErrorNodeIds(errors, new Set())).toEqual(new Set());
+    });
+
+    it("treats all validation errors as general when there are no node ids", () => {
+      const errors: SdkError[] = [
+        vErr({
+          path: "/do/0/call",
+          message: "owned",
+        }),
+      ];
+
+      expect(getGeneralErrors(errors, new Set())).toEqual(errors);
+    });
+  });
 });

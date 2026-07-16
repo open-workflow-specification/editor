@@ -71,4 +71,112 @@ describe("SidePanel", () => {
     expect(screen.queryByText(/Copy Mermaid Code/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Download as Mermaid File/i)).not.toBeInTheDocument();
   });
+
+  it("renders node details when a node is selected", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    const mockNode = {
+      id: "node-1",
+      type: "set",
+      position: { x: 0, y: 0 },
+      data: { label: "My Node" },
+    };
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: "node-1",
+      nodes: [mockNode],
+    });
+
+    expect(screen.getByText("My Node")).toBeInTheDocument();
+    expect(screen.queryByTestId("workflow-info")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the translated node label when the selected node has no label", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    const mockNode = {
+      id: "node-1",
+      type: "set",
+      position: { x: 0, y: 0 },
+      data: {},
+    };
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: "node-1",
+      nodes: [mockNode],
+    });
+
+    expect(screen.getByText("Node")).toBeInTheDocument();
+  });
+
+  it("renders workflow title when no node is selected", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: null,
+    });
+
+    expect(screen.getByText("Workflow")).toBeInTheDocument();
+  });
+
+  it("renders the selection hint when no node is selected", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: null,
+    });
+
+    expect(screen.getByText(/Select a node/i)).toBeInTheDocument();
+  });
+
+  it("renders sidebar with workflow aria-label when no node is selected", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    renderWithProviders(<SidePanel />, { model });
+
+    expect(
+      screen.getByRole("complementary", {
+        name: /workflow/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders sidebar with node details aria-label when a node is selected", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    const mockNode = {
+      id: "node-1",
+      type: "set",
+      position: { x: 0, y: 0 },
+      data: { label: "Node" },
+    };
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: "node-1",
+      nodes: [mockNode],
+    });
+
+    expect(
+      screen.getByRole("complementary", {
+        name: /node details/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("does not render node details when selectedNodeId does not exist in nodes", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    renderWithProviders(<SidePanel />, {
+      model,
+      selectedNodeId: "missing-node",
+      nodes: [],
+    });
+
+    expect(screen.getByTestId("workflow-info")).toBeInTheDocument();
+  });
 });

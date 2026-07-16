@@ -263,3 +263,81 @@ describe("buildFlatGraph", () => {
     expect(() => buildFlatGraph(model!)).toThrow();
   });
 });
+
+describe("additional parseValidationErrorMessage edge cases", () => {
+  it.each(["#/required - ", " - missing property", " - "])(
+    "ignores malformed format-2 line: %s",
+    (message) => {
+      expect(parseValidationErrorMessage(message)).toEqual([]);
+    },
+  );
+
+  it.each([
+    "-  | #/required | message | {}",
+    "- /path |  | message | {}",
+    "- /path | #/required |  | {}",
+    "- /path | #/required | message | ",
+  ])("ignores malformed format-1 line: %s", (message) => {
+    expect(parseValidationErrorMessage(message)).toEqual([]);
+  });
+
+  it("parses multiple validation errors from a single message", () => {
+    const message = `
+- /task1 | #/required | missing property | {}
+- /task2 | #/type | wrong type | {}
+#/document - missing required property 'document'
+`;
+
+    expect(parseValidationErrorMessage(message)).toEqual([
+      {
+        path: "/task1",
+        errorType: "#/required",
+        message: "missing property",
+        object: {},
+      },
+      {
+        path: "/task2",
+        errorType: "#/type",
+        message: "wrong type",
+        object: {},
+      },
+      {
+        errorType: "#/document",
+        message: "missing required property 'document'",
+      },
+    ]);
+  });
+
+  it("trims leading and trailing whitespace from lines", () => {
+    const message = `
+        - /task | #/required | missing property | {}
+    `;
+
+    expect(parseValidationErrorMessage(message)).toEqual([
+      {
+        path: "/task",
+        errorType: "#/required",
+        message: "missing property",
+        object: {},
+      },
+    ]);
+  });
+});
+
+describe("additional parseWorkflow edge cases", () => {
+  it("returns an error for whitespace-only input", () => {
+    const result = parseWorkflow("   \n\t   ");
+
+    expect(result.model).toBeNull();
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toEqual(new Error("Not a valid workflow"));
+  });
+
+  it("returns an error when YAML evaluates to null", () => {
+    const result = parseWorkflow("null");
+
+    expect(result.model).toBeNull();
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toEqual(new Error("Not a valid workflow"));
+  });
+});

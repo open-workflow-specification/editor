@@ -19,6 +19,7 @@ import { DiagramEditor } from "../../src/diagram-editor";
 import { vi, expect, afterEach, describe, it } from "vitest";
 import { BASIC_VALID_WORKFLOW_YAML } from "../fixtures/workflows";
 import { t } from "../test-utils";
+import React from "react";
 
 /* When js-yaml throws a YAMLException, parseWorkflow
  returns a null model and the editor must fall back to the parsing error page. */
@@ -70,5 +71,56 @@ describe("DiagramEditor Component", () => {
     } else {
       expect(decRoot).not.toHaveClass("dark");
     }
+  });
+
+  it("sets the lang attribute from the locale prop", () => {
+    render(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="fr" isReadOnly={true} />);
+
+    expect(screen.getByTestId("dec-root")).toHaveAttribute("lang", "fr");
+  });
+
+  it("updates the rendered content when the workflow content changes", () => {
+    const { rerender } = render(
+      <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,
+    );
+
+    expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
+
+    rerender(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />);
+
+    expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
+    expect(screen.queryByText(t("workflowError.parsing.title"))).not.toBeInTheDocument();
+  });
+
+  it("exposes the imperative ref API", () => {
+    const ref = React.createRef<{ doSomething: () => void }>();
+
+    render(
+      <DiagramEditor ref={ref} content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />,
+    );
+
+    expect(ref.current).not.toBeNull();
+    expect(ref.current?.doSomething).toBeTypeOf("function");
+
+    expect(() => ref.current?.doSomething()).not.toThrow();
+  });
+
+  it("renders the sidebar provider with the diagram", () => {
+    render(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />);
+
+    expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument();
+  });
+
+  it("resets the error boundary when the content changes", () => {
+    const { rerender } = render(
+      <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,
+    );
+
+    expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
+
+    rerender(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />);
+
+    expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
   });
 });

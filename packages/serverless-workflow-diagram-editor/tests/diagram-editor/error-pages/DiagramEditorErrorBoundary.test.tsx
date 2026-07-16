@@ -16,7 +16,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { DiagramEditorErrorBoundary } from "../../../src/diagram-editor/error-pages/DiagramEditorErrorBoundary";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const ThrowError = ({ message = "Test error" }: { message?: string }) => {
   throw new Error(message);
@@ -84,6 +84,76 @@ describe("DiagramEditorErrorBoundary", () => {
 
     rerender(
       <DiagramEditorErrorBoundary resetKey="key-2">
+        <SafeComponent />
+      </DiagramEditorErrorBoundary>,
+    );
+
+    expect(screen.getByText("Safe Content")).toBeInTheDocument();
+
+    spy.mockRestore();
+  });
+});
+
+const ThrowString = () => {
+  throw "boom";
+};
+
+describe("additional DiagramEditorErrorBoundary tests", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("does not reset when resetKey does not change", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { rerender } = render(
+      <DiagramEditorErrorBoundary resetKey="same-key">
+        <ThrowError />
+      </DiagramEditorErrorBoundary>,
+    );
+
+    rerender(
+      <DiagramEditorErrorBoundary resetKey="same-key">
+        <SafeComponent />
+      </DiagramEditorErrorBoundary>,
+    );
+
+    expect(screen.queryByText("Safe Content")).not.toBeInTheDocument();
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+
+    spy.mockRestore();
+  });
+
+  it("does not render an error snippet when a non-Error value is thrown", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(
+      <DiagramEditorErrorBoundary>
+        <ThrowString />
+      </DiagramEditorErrorBoundary>,
+    );
+
+    expect(screen.getByText("An unexpected error occurred")).toBeInTheDocument();
+
+    // The thrown value is not an Error, so no snippet should be displayed.
+    expect(screen.queryByText("boom")).not.toBeInTheDocument();
+
+    spy.mockRestore();
+  });
+
+  it("resets when resetKey changes from undefined to a value", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { rerender } = render(
+      <DiagramEditorErrorBoundary>
+        <ThrowError />
+      </DiagramEditorErrorBoundary>,
+    );
+
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+
+    rerender(
+      <DiagramEditorErrorBoundary resetKey="new-key">
         <SafeComponent />
       </DiagramEditorErrorBoundary>,
     );

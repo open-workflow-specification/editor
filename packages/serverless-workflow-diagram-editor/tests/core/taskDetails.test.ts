@@ -142,4 +142,158 @@ describe("getTaskDetails", () => {
   it("returns no fields for a task with no displayable fields", () => {
     expect(getTaskDetails(asTask({}))).toEqual([]);
   });
+
+  it("ignores null and undefined values", () => {
+    const fields = getTaskDetails(
+      asTask({
+        set: {
+          a: null,
+          b: undefined,
+          c: "value",
+        },
+      }),
+    );
+
+    expect(fields).toEqual([{ path: "set.c", kind: "text", display: "value" }]);
+  });
+
+  it("converts boolean values to text", () => {
+    const fields = getTaskDetails(
+      asTask({
+        set: {
+          enabled: true,
+          disabled: false,
+        },
+      }),
+    );
+
+    expect(fields).toEqual([
+      { path: "set.enabled", kind: "text", display: "true" },
+      { path: "set.disabled", kind: "text", display: "false" },
+    ]);
+  });
+
+  it("ignores empty objects", () => {
+    const fields = getTaskDetails(
+      asTask({
+        set: {},
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
+
+  it("ignores nested empty objects", () => {
+    const fields = getTaskDetails(
+      asTask({
+        set: {
+          foo: {},
+        },
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
+
+  it("ignores input, output and export when they are not objects", () => {
+    const fields = getTaskDetails(
+      asTask({
+        input: "invalid",
+        output: 123,
+        export: true,
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
+
+  it("ignores timeout object without an after property", () => {
+    const fields = getTaskDetails(
+      asTask({
+        timeout: {},
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
+
+  it("ignores timeout object when after is undefined", () => {
+    const fields = getTaskDetails(
+      asTask({
+        timeout: {
+          after: undefined,
+        },
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
+
+  it("supports primitive task-specific values", () => {
+    const fields = getTaskDetails(
+      asTask({
+        call: 123,
+      }),
+    );
+
+    expect(fields).toEqual([{ path: "call", kind: "text", display: "123" }]);
+  });
+
+  it("flattens fields exactly at the maximum supported depth", () => {
+    const fields = getTaskDetails(
+      asTask({
+        with: {
+          a: {
+            b: {
+              c: {
+                value: "foo",
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(fields).toEqual([
+      {
+        path: "with.a.b.c.value",
+        kind: "text",
+        display: "foo",
+      },
+    ]);
+  });
+
+  it("returns base fields in the expected order", () => {
+    const fields = getTaskDetails(
+      asTask({
+        if: "${ .condition }",
+        input: { from: "${ .input }" },
+        output: { as: "${ .output }" },
+        export: { as: "${ .export }" },
+        timeout: "PT5M",
+        then: "next",
+      }),
+    );
+
+    expect(fields).toEqual([
+      { path: "if", kind: "text", display: "${ .condition }" },
+      { path: "input.from", kind: "text", display: "${ .input }" },
+      { path: "output.as", kind: "text", display: "${ .output }" },
+      { path: "export.as", kind: "text", display: "${ .export }" },
+      { path: "timeout", kind: "text", display: "PT5M" },
+      { path: "then", kind: "text", display: "next" },
+    ]);
+  });
+
+  it("returns no fields when only metadata is present", () => {
+    const fields = getTaskDetails(
+      asTask({
+        metadata: {
+          author: "john",
+        },
+      }),
+    );
+
+    expect(fields).toEqual([]);
+  });
 });

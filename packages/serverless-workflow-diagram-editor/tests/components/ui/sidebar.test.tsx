@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -110,5 +110,39 @@ describe("Sidebar", () => {
 
     expect(screen.getByText("Header Text")).toBeInTheDocument();
     expect(screen.getByText("Content Text")).toBeInTheDocument();
+  });
+
+  it("calls onOpenChange when used as a controlled component", async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+
+    render(
+      <SidebarProvider open={false} onOpenChange={onOpenChange}>
+        <Sidebar>
+          <SidebarHeader>
+            <SidebarTrigger />
+          </SidebarHeader>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /toggle sidebar/i }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("renders non-collapsible sidebar", () => {
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar collapsible="none">
+          <SidebarContent>Content</SidebarContent>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const sidebar = findSidebar(container);
+
+    expect(sidebar).not.toHaveAttribute("data-state");
+    expect(sidebar).toBeInTheDocument();
   });
 });

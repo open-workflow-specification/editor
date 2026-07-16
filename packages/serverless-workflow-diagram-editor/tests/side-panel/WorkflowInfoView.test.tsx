@@ -105,5 +105,74 @@ describe("WorkflowInfoView", () => {
 
       expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
     });
+
+    it("renders only the title when summary is not provided", () => {
+      renderWithProviders(
+        <WorkflowInfoView
+          document={{
+            ...baseDocument,
+            title: "Workflow Title",
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Metadata")).toBeInTheDocument();
+      expect(screen.getByText("Workflow Title")).toBeInTheDocument();
+      expect(screen.queryByText("Summary")).not.toBeInTheDocument();
+    });
+
+    it("renders only the summary when title is not provided", () => {
+      renderWithProviders(
+        <WorkflowInfoView
+          document={{
+            ...baseDocument,
+            summary: "Workflow summary",
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Metadata")).toBeInTheDocument();
+      expect(screen.getByText("Workflow summary")).toBeInTheDocument();
+      expect(screen.queryByText("Title")).not.toBeInTheDocument();
+    });
+
+    it("renders the metadata section when tags are the only metadata", () => {
+      renderWithProviders(
+        <WorkflowInfoView
+          document={{
+            ...baseDocument,
+            tags: {
+              env: "prod",
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText("Metadata")).toBeInTheDocument();
+      expect(screen.getByText("env: prod")).toBeInTheDocument();
+    });
+
+    it("does not render the tags field when tags is an empty object", () => {
+      renderWithProviders(
+        <WorkflowInfoView
+          document={{
+            ...baseDocument,
+            tags: {},
+          }}
+        />,
+      );
+
+      expect(screen.queryByText("Tags")).not.toBeInTheDocument();
+    });
+
+    it("renders both general validation errors and raw errors together", () => {
+      renderWithProviders(<WorkflowInfoView document={baseDocument} />, {
+        nodeIds: new Set(["/do/0/call"]),
+        errors: [{ path: "/document", message: "Missing version" }, new Error("Invalid workflow")],
+      });
+
+      expect(screen.getByText("Missing version")).toBeInTheDocument();
+      expect(screen.getByText("Invalid workflow")).toBeInTheDocument();
+    });
   });
 });

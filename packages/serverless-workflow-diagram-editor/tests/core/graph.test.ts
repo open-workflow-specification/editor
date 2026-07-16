@@ -1009,5 +1009,33 @@ describe("graph utils", () => {
       expect(fixedGraph.edges[3]?.targetId).toBe("task-outside");
       expect(fixedGraph.edges[3]?.id).toBe("edge-2-redirected");
     });
+
+    it("does not create redirected edges when parent has no exit node", () => {
+      const parent = {
+        id: "parent",
+        type: GraphNodeType.Do,
+      } as FlatGraphNode;
+
+      const child = {
+        id: "child",
+        type: GraphNodeType.Call,
+        parentId: "parent",
+      } as FlatGraphNode;
+
+      const outside = {
+        id: "outside",
+        type: GraphNodeType.Call,
+      } as FlatGraphNode;
+
+      const graph = createFlatGraph(
+        [parent, child, outside],
+        [{ id: "e1", sourceId: "child", targetId: "outside", label: "" }],
+      );
+
+      const fixed = fixNodesConnections(graph);
+
+      expect(fixed.edges).toHaveLength(1);
+      expect(fixed.edges[0]?.targetId).toBe("outside");
+    });
   });
 });
