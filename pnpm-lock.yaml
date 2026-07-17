@@ -9,6 +9,9 @@ catalogs:
     '@changesets/changelog-github':
       specifier: ^0.7.0
       version: 0.7.0
+    '@changesets/cli':
+      specifier: ^2.31.1
+      version: 2.31.1
     '@chromatic-com/storybook':
       specifier: ^5.2.0
       version: 5.2.1
@@ -147,7 +150,7 @@ importers:
         specifier: 'catalog:'
         version: 0.7.0
       '@changesets/cli':
-        specifier: 2.31.1
+        specifier: 'catalog:'
         version: 2.31.1(@types/node@26.1.1)
       '@playwright/test':
         specifier: 'catalog:'
