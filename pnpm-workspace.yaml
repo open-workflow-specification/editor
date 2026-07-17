@@ -2,15 +2,15 @@ packages:
   - packages/*
 catalog:
   "@changesets/changelog-github": ^0.7.0
-  "@changesets/cli": ^2.31.0
+  "@changesets/cli": ^2.31.1
   "@chromatic-com/storybook": ^5.2.0
   "@openworkflowspec/sdk": "^1.0.3-alpha4"
   "@playwright/test": ^1.61.1
-  "@storybook/addon-a11y": ^10.4.6
-  "@storybook/addon-docs": ^10.4.6
-  "@storybook/addon-vitest": ^10.4.6
-  "@storybook/react-vite": ^10.4.6
-  "@tailwindcss/vite": ^4.3.2
+  "@storybook/addon-a11y": ^10.5.2
+  "@storybook/addon-docs": ^10.5.2
+  "@storybook/addon-vitest": ^10.5.2
+  "@storybook/react-vite": ^10.5.2
+  "@tailwindcss/vite": ^4.3.3
   "@testing-library/dom": ^10.4.1
   "@testing-library/jest-dom": ^6.9.1
   "@testing-library/react": ^16.3.2
@@ -26,25 +26,25 @@ catalog:
   "@xyflow/react": ^12.11.2
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
-  elkjs: ^0.11.1
+  elkjs: ^0.12.0
   husky: ^9.1.7
   "js-yaml": ^5.2.1
   jsdom: ^29.1.0
-  lucide-react: ^1.23.0
+  lucide-react: ^1.25.0
   lint-staged: ^17.0.8
-  oxfmt: ^0.58.0
-  oxlint: ^1.73.0
+  oxfmt: ^0.59.0
+  oxlint: ^1.74.0
   radix-ui: ^1.6.2
   react: ^19.2.7
   react-dom: ^19.2.7
   rimraf: ^6.1.3
   sonner: ^2.0.7
-  storybook: ^10.4.6
+  storybook: ^10.5.2
   syncpack: ^15.3.2
-  tailwindcss: ^4.3.2
+  tailwindcss: ^4.3.3
   typescript: ^7.0.2
   use-sync-external-store: ^1.6.0
-  vite: ^8.1.4
+  vite: ^8.1.5
   vitest: ^4.1.10
 cleanupUnusedCatalogs: true
 onlyBuiltDependencies:
