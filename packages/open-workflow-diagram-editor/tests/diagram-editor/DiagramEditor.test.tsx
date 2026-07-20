@@ -79,7 +79,7 @@ describe("DiagramEditor Component", () => {
     expect(screen.getByTestId("dec-root")).toHaveAttribute("lang", "fr");
   });
 
-  it("updates the rendered content when the workflow content changes", () => {
+  it("updates the rendered content when the workflow content change", () => {
     const { rerender } = render(
       <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,
     );
