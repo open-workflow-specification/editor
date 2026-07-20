@@ -1,6 +1,6 @@
 {
   "name": "@openworkflowspec/diagram-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React open workflow diagram component",
   "keywords": [],
   "homepage": "https://github.com/open-workflow-specification/editor",
