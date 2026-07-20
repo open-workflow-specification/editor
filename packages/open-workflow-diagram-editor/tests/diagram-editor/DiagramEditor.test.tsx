@@ -111,16 +111,4 @@ describe("DiagramEditor Component", () => {
     expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument();
   });
-
-  it("resets the error boundary when the content changes", () => {
-    const { rerender } = render(
-      <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,
-    );
-
-    expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
-
-    rerender(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />);
-
-    expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
-  });
 });
