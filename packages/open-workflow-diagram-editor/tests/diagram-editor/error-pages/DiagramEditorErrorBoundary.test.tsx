@@ -16,7 +16,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { DiagramEditorErrorBoundary } from "../../../src/diagram-editor/error-pages/DiagramEditorErrorBoundary";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, afterEach } from "vitest";
 
 const ThrowError = ({ message = "Test error" }: { message?: string }) => {
   throw new Error(message);
