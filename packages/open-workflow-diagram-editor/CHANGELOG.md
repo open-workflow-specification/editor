@@ -1,5 +1,24 @@
 # @openworkflowspec/diagram-editor
 
+## 1.0.0
+
+### Major Changes
+
+- [#271](https://github.com/open-workflow-specification/editor/pull/271) [`66c53df`](https://github.com/open-workflow-specification/editor/commit/66c53df8f5a823d9c5b31e16adb3e80bb026f52e) Thanks [@fantonangeli](https://github.com/fantonangeli)! - Release the first stable version under the @openworkflowspec namespace.
+
+### Minor Changes
+
+- [#243](https://github.com/open-workflow-specification/editor/pull/243) [`b331928`](https://github.com/open-workflow-specification/editor/commit/b3319280dad1c0d1a5040f9935532b0e89e8a08d) Thanks [@lornakelly](https://github.com/lornakelly)! - Migrate from serverlessworkflow to openworkflow
+
+- [#265](https://github.com/open-workflow-specification/editor/pull/265) [`cd34b22`](https://github.com/open-workflow-specification/editor/commit/cd34b2235b39646dc7ac1a26caebc4c6d5d876e7) Thanks [@lornakelly](https://github.com/lornakelly)! - Update sdk package to new openworkflowspec package
+
+### Patch Changes
+
+- [#261](https://github.com/open-workflow-specification/editor/pull/261) [`91d2e7b`](https://github.com/open-workflow-specification/editor/commit/91d2e7b05859c846a744bbc8d7c290d7ce9834d2) Thanks [@fantonangeli](https://github.com/fantonangeli)! - Fix Start/End node styling when the Diagram Editor is embedded inside Shadow DOM hosts.
+
+- Updated dependencies [[`b331928`](https://github.com/open-workflow-specification/editor/commit/b3319280dad1c0d1a5040f9935532b0e89e8a08d), [`66c53df`](https://github.com/open-workflow-specification/editor/commit/66c53df8f5a823d9c5b31e16adb3e80bb026f52e)]:
+  - @openworkflowspec/i18n@1.0.0
+
 ## 0.1.0
 
 ### Minor Changes

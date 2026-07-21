@@ -1,5 +1,15 @@
 # @openworkflowspec/i18n
 
+## 1.0.0
+
+### Major Changes
+
+- [#271](https://github.com/open-workflow-specification/editor/pull/271) [`66c53df`](https://github.com/open-workflow-specification/editor/commit/66c53df8f5a823d9c5b31e16adb3e80bb026f52e) Thanks [@fantonangeli](https://github.com/fantonangeli)! - Release the first stable version under the @openworkflowspec namespace.
+
+### Minor Changes
+
+- [#243](https://github.com/open-workflow-specification/editor/pull/243) [`b331928`](https://github.com/open-workflow-specification/editor/commit/b3319280dad1c0d1a5040f9935532b0e89e8a08d) Thanks [@lornakelly](https://github.com/lornakelly)! - Migrate from serverlessworkflow to openworkflow
+
 ## 0.1.0
 
 ### Minor Changes
