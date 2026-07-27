@@ -16,7 +16,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test("renders listen node with validation error", async ({ page }) => {
+test("renders listen node with any badge", async ({ page }) => {
   await page.goto("/iframe.html?id=examples-workflows--listen-to-any-forever-foreach");
 
   const node = page.getByTestId("listen-node-/do/listenToGossips");
