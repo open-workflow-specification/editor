@@ -4,40 +4,40 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
 {
   "edges": [
     {
-      "id": "/do/4/step5-root-exit-node",
+      "id": "/do/step5-root-exit-node",
       "label": "",
-      "sourceId": "/do/4/step5",
+      "sourceId": "/do/step5",
       "targetId": "root-exit-node",
     },
     {
-      "id": "/do/3/step4-/do/4/step5",
+      "id": "/do/step4-/do/step5",
       "label": "",
-      "sourceId": "/do/3/step4",
-      "targetId": "/do/4/step5",
+      "sourceId": "/do/step4",
+      "targetId": "/do/step5",
     },
     {
-      "id": "/do/2/step3-/do/3/step4",
+      "id": "/do/step3-/do/step4",
       "label": "",
-      "sourceId": "/do/2/step3",
-      "targetId": "/do/3/step4",
+      "sourceId": "/do/step3",
+      "targetId": "/do/step4",
     },
     {
-      "id": "/do/1/step2-/do/2/step3",
+      "id": "/do/step2-/do/step3",
       "label": "",
-      "sourceId": "/do/1/step2",
-      "targetId": "/do/2/step3",
+      "sourceId": "/do/step2",
+      "targetId": "/do/step3",
     },
     {
-      "id": "/do/0/step1-/do/1/step2",
+      "id": "/do/step1-/do/step2",
       "label": "",
-      "sourceId": "/do/0/step1",
-      "targetId": "/do/1/step2",
+      "sourceId": "/do/step1",
+      "targetId": "/do/step2",
     },
     {
-      "id": "root-entry-node-/do/0/step1",
+      "id": "root-entry-node-/do/step1",
       "label": "",
       "sourceId": "root-entry-node",
-      "targetId": "/do/0/step1",
+      "targetId": "/do/step1",
     },
   ],
   "entryNode": {
@@ -45,40 +45,40 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
     "parent": {
       "edges": [
         {
-          "id": "/do/4/step5-root-exit-node",
+          "id": "/do/step5-root-exit-node",
           "label": "",
-          "sourceId": "/do/4/step5",
+          "sourceId": "/do/step5",
           "targetId": "root-exit-node",
         },
         {
-          "id": "/do/3/step4-/do/4/step5",
+          "id": "/do/step4-/do/step5",
           "label": "",
-          "sourceId": "/do/3/step4",
-          "targetId": "/do/4/step5",
+          "sourceId": "/do/step4",
+          "targetId": "/do/step5",
         },
         {
-          "id": "/do/2/step3-/do/3/step4",
+          "id": "/do/step3-/do/step4",
           "label": "",
-          "sourceId": "/do/2/step3",
-          "targetId": "/do/3/step4",
+          "sourceId": "/do/step3",
+          "targetId": "/do/step4",
         },
         {
-          "id": "/do/1/step2-/do/2/step3",
+          "id": "/do/step2-/do/step3",
           "label": "",
-          "sourceId": "/do/1/step2",
-          "targetId": "/do/2/step3",
+          "sourceId": "/do/step2",
+          "targetId": "/do/step3",
         },
         {
-          "id": "/do/0/step1-/do/1/step2",
+          "id": "/do/step1-/do/step2",
           "label": "",
-          "sourceId": "/do/0/step1",
-          "targetId": "/do/1/step2",
+          "sourceId": "/do/step1",
+          "targetId": "/do/step2",
         },
         {
-          "id": "root-entry-node-/do/0/step1",
+          "id": "root-entry-node-/do/step1",
           "label": "",
           "sourceId": "root-entry-node",
-          "targetId": "/do/0/step1",
+          "targetId": "/do/step1",
         },
       ],
       "entryNode": [Circular],
@@ -97,7 +97,7 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "type": "end",
         },
         {
-          "id": "/do/0/step1",
+          "id": "/do/step1",
           "label": "step1",
           "parent": [Circular],
           "task": {
@@ -105,10 +105,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "first task",
             },
           },
+          "taskReference": "/do/0/step1",
           "type": "set",
         },
         {
-          "id": "/do/1/step2",
+          "id": "/do/step2",
           "label": "step2",
           "parent": [Circular],
           "task": {
@@ -116,10 +117,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "second task",
             },
           },
+          "taskReference": "/do/1/step2",
           "type": "set",
         },
         {
-          "id": "/do/2/step3",
+          "id": "/do/step3",
           "label": "step3",
           "parent": [Circular],
           "task": {
@@ -127,10 +129,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "third task",
             },
           },
+          "taskReference": "/do/2/step3",
           "type": "set",
         },
         {
-          "id": "/do/3/step4",
+          "id": "/do/step4",
           "label": "step4",
           "parent": [Circular],
           "task": {
@@ -138,10 +141,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "fourth task",
             },
           },
+          "taskReference": "/do/3/step4",
           "type": "set",
         },
         {
-          "id": "/do/4/step5",
+          "id": "/do/step5",
           "label": "step5",
           "parent": [Circular],
           "task": {
@@ -149,11 +153,13 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "fifth task",
             },
           },
+          "taskReference": "/do/4/step5",
           "type": "set",
         },
       ],
       "parent": undefined,
       "task": undefined,
+      "taskReference": undefined,
       "type": "root",
     },
     "type": "start",
@@ -163,40 +169,40 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
     "parent": {
       "edges": [
         {
-          "id": "/do/4/step5-root-exit-node",
+          "id": "/do/step5-root-exit-node",
           "label": "",
-          "sourceId": "/do/4/step5",
+          "sourceId": "/do/step5",
           "targetId": "root-exit-node",
         },
         {
-          "id": "/do/3/step4-/do/4/step5",
+          "id": "/do/step4-/do/step5",
           "label": "",
-          "sourceId": "/do/3/step4",
-          "targetId": "/do/4/step5",
+          "sourceId": "/do/step4",
+          "targetId": "/do/step5",
         },
         {
-          "id": "/do/2/step3-/do/3/step4",
+          "id": "/do/step3-/do/step4",
           "label": "",
-          "sourceId": "/do/2/step3",
-          "targetId": "/do/3/step4",
+          "sourceId": "/do/step3",
+          "targetId": "/do/step4",
         },
         {
-          "id": "/do/1/step2-/do/2/step3",
+          "id": "/do/step2-/do/step3",
           "label": "",
-          "sourceId": "/do/1/step2",
-          "targetId": "/do/2/step3",
+          "sourceId": "/do/step2",
+          "targetId": "/do/step3",
         },
         {
-          "id": "/do/0/step1-/do/1/step2",
+          "id": "/do/step1-/do/step2",
           "label": "",
-          "sourceId": "/do/0/step1",
-          "targetId": "/do/1/step2",
+          "sourceId": "/do/step1",
+          "targetId": "/do/step2",
         },
         {
-          "id": "root-entry-node-/do/0/step1",
+          "id": "root-entry-node-/do/step1",
           "label": "",
           "sourceId": "root-entry-node",
-          "targetId": "/do/0/step1",
+          "targetId": "/do/step1",
         },
       ],
       "entryNode": {
@@ -215,7 +221,7 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
         },
         [Circular],
         {
-          "id": "/do/0/step1",
+          "id": "/do/step1",
           "label": "step1",
           "parent": [Circular],
           "task": {
@@ -223,10 +229,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "first task",
             },
           },
+          "taskReference": "/do/0/step1",
           "type": "set",
         },
         {
-          "id": "/do/1/step2",
+          "id": "/do/step2",
           "label": "step2",
           "parent": [Circular],
           "task": {
@@ -234,10 +241,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "second task",
             },
           },
+          "taskReference": "/do/1/step2",
           "type": "set",
         },
         {
-          "id": "/do/2/step3",
+          "id": "/do/step3",
           "label": "step3",
           "parent": [Circular],
           "task": {
@@ -245,10 +253,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "third task",
             },
           },
+          "taskReference": "/do/2/step3",
           "type": "set",
         },
         {
-          "id": "/do/3/step4",
+          "id": "/do/step4",
           "label": "step4",
           "parent": [Circular],
           "task": {
@@ -256,10 +265,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "fourth task",
             },
           },
+          "taskReference": "/do/3/step4",
           "type": "set",
         },
         {
-          "id": "/do/4/step5",
+          "id": "/do/step5",
           "label": "step5",
           "parent": [Circular],
           "task": {
@@ -267,11 +277,13 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
               "variable": "fifth task",
             },
           },
+          "taskReference": "/do/4/step5",
           "type": "set",
         },
       ],
       "parent": undefined,
       "task": undefined,
+      "taskReference": undefined,
       "type": "root",
     },
     "type": "end",
@@ -284,6 +296,7 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
       "label": undefined,
       "parentId": "root",
       "task": undefined,
+      "taskReference": undefined,
       "type": "start",
     },
     {
@@ -291,10 +304,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
       "label": undefined,
       "parentId": "root",
       "task": undefined,
+      "taskReference": undefined,
       "type": "end",
     },
     {
-      "id": "/do/0/step1",
+      "id": "/do/step1",
       "label": "step1",
       "parentId": "root",
       "task": {
@@ -302,10 +316,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "variable": "first task",
         },
       },
+      "taskReference": "/do/0/step1",
       "type": "set",
     },
     {
-      "id": "/do/1/step2",
+      "id": "/do/step2",
       "label": "step2",
       "parentId": "root",
       "task": {
@@ -313,10 +328,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "variable": "second task",
         },
       },
+      "taskReference": "/do/1/step2",
       "type": "set",
     },
     {
-      "id": "/do/2/step3",
+      "id": "/do/step3",
       "label": "step3",
       "parentId": "root",
       "task": {
@@ -324,10 +340,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "variable": "third task",
         },
       },
+      "taskReference": "/do/2/step3",
       "type": "set",
     },
     {
-      "id": "/do/3/step4",
+      "id": "/do/step4",
       "label": "step4",
       "parentId": "root",
       "task": {
@@ -335,10 +352,11 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "variable": "fourth task",
         },
       },
+      "taskReference": "/do/3/step4",
       "type": "set",
     },
     {
-      "id": "/do/4/step5",
+      "id": "/do/step5",
       "label": "step5",
       "parentId": "root",
       "task": {
@@ -346,11 +364,13 @@ exports[`buildFlatGraph > returns a loaded extended graph object from model 1`] 
           "variable": "fifth task",
         },
       },
+      "taskReference": "/do/4/step5",
       "type": "set",
     },
   ],
   "parent": undefined,
   "task": undefined,
+  "taskReference": undefined,
   "type": "root",
 }
 `;

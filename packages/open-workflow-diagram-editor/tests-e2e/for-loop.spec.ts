@@ -19,7 +19,7 @@ import { test, expect } from "@playwright/test";
 test("diagram editor renders for loop workflow ", async ({ page }) => {
   await page.goto("/iframe.html?id=examples-workflows--for");
 
-  const forNode = page.getByTestId("for-node-/do/0/checkup");
+  const forNode = page.getByTestId("for-node-/do/checkup");
 
   await expect(forNode).toBeVisible();
 
@@ -27,9 +27,9 @@ test("diagram editor renders for loop workflow ", async ({ page }) => {
 
   await expect(forNode).toContainText("FOR");
 
-  await expect(page.getByTestId("for-node-/do/0/checkup-badge")).toHaveText("while");
+  await expect(page.getByTestId("for-node-/do/checkup-badge")).toHaveText("while");
 
-  const listenNode = page.getByTestId("listen-node-/do/0/checkup/for/do/0/waitForCheckup");
+  const listenNode = page.getByTestId("listen-node-/do/checkup/do/waitForCheckup");
 
   await expect(listenNode).toBeVisible();
 
@@ -37,7 +37,7 @@ test("diagram editor renders for loop workflow ", async ({ page }) => {
 
   await expect(listenNode).toContainText("LISTEN");
 
-  await expect(
-    page.getByTestId("listen-node-/do/0/checkup/for/do/0/waitForCheckup-badge"),
-  ).toHaveText("one");
+  await expect(page.getByTestId("listen-node-/do/checkup/do/waitForCheckup-badge")).toHaveText(
+    "one",
+  );
 });

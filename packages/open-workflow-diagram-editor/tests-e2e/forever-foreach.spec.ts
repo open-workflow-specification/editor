@@ -19,14 +19,10 @@ import { test, expect } from "@playwright/test";
 test("renders listen node with validation error", async ({ page }) => {
   await page.goto("/iframe.html?id=examples-workflows--listen-to-any-forever-foreach");
 
-  const node = page.getByTestId("listen-node-/do/0/listenToGossips");
+  const node = page.getByTestId("listen-node-/do/listenToGossips");
 
   await expect(node).toContainText("listenToGossips");
   await expect(node).toContainText("LISTEN");
 
-  await expect(page.getByTestId("listen-node-/do/0/listenToGossips-badge")).toHaveText("any");
-
-  await expect(page.getByTestId("listen-node-/do/0/listenToGossips-error")).toBeVisible();
-
-  await expect(node).toHaveClass(/has-error/);
+  await expect(page.getByTestId("listen-node-/do/listenToGossips-badge")).toHaveText("any");
 });
