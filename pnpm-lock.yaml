@@ -88,8 +88,8 @@ catalogs:
       specifier: ^9.1.7
       version: 9.1.7
     js-yaml:
-      specifier: ^5.2.1
-      version: 5.2.1
+      specifier: ^4.3.0
+      version: 4.3.0
     jsdom:
       specifier: ^29.1.0
       version: 29.1.1
@@ -229,7 +229,7 @@ importers:
         version: 0.12.0
       js-yaml:
         specifier: 'catalog:'
-        version: 5.2.1
+        version: 4.3.0
       radix-ui:
         specifier: 'catalog:'
         version: 1.6.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
