@@ -16,7 +16,7 @@
 
 import { test, expect } from "@playwright/test";
 
-test("diagram editor render for loop workflow ", async ({ page }) => {
+test("diagram editor renders for loop workflow ", async ({ page }) => {
   await page.goto("/iframe.html?id=examples-workflows--for");
 
   const forNode = page.getByTestId("for-node-/do/checkup");
