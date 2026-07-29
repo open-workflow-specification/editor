@@ -1,0 +1,27 @@
+{
+  "name": "@openworkflowspec/vanilla-web-component-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "build:dev": "vite build",
+    "test": "vitest run",
+    "test-e2e": "playwright test"
+  },
+  "dependencies": {
+    "@openworkflowspec/diagram-editor": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
