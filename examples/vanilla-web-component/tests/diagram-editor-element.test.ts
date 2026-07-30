@@ -30,7 +30,9 @@ vi.mock("@openworkflowspec/diagram-editor", () => ({
 vi.mock("@openworkflowspec/diagram-editor/styles.css", () => ({}));
 
 beforeAll(() => {
-  customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+  if (!customElements.get("openworkflowspec-diagram-editor")) {
+    customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+  }
 });
 
 afterEach(() => {
