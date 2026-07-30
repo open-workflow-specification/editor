@@ -17,4 +17,6 @@
 import "@openworkflowspec/diagram-editor/styles.css";
 import { DiagramEditorElement } from "./diagram-editor-element";
 
-customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+if (!customElements.get("openworkflowspec-diagram-editor")) {
+  customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+}
