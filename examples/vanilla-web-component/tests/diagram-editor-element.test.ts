@@ -74,4 +74,13 @@ describe("DiagramEditorElement", () => {
     el.content = "document:\n  dsl: '1.0.3'";
     await vi.waitFor(() => expect(lastProps?.content).toBe("document:\n  dsl: '1.0.3'"));
   });
+
+  it("re-renders when content is replaced with a different workflow", async () => {
+    const el = createElement();
+    el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-a";
+    await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-a"));
+
+    el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-b";
+    await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-b"));
+  });
 });

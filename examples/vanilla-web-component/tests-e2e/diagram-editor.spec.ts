@@ -23,3 +23,28 @@ test("web component renders the diagram editor", async ({ page }) => {
 
   await expect(page.getByTestId("rf__node-/do/consumeReading")).toContainText("consumeReading");
 });
+
+test("web component re-renders when content is replaced", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("rf__node-/do/consumeReading")).toContainText("consumeReading");
+
+  const newWorkflow = `document:
+  dsl: '1.0.3'
+  namespace: examples
+  name: greet
+do:
+  - sayHello:
+      call: http
+      with:
+        method: get
+        endpoint: https://example.com/hello`;
+
+  await page.evaluate((yaml) => {
+    const editor = document.querySelector("openworkflowspec-diagram-editor") as any;
+    editor.content = yaml;
+  }, newWorkflow);
+
+  await expect(page.getByTestId("rf__node-/do/sayHello")).toContainText("sayHello");
+  await expect(page.getByTestId("rf__node-/do/consumeReading")).not.toBeVisible();
+});
