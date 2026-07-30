@@ -28,6 +28,11 @@ This package requires React 19 in the consuming application:
 npm install react@^19 react-dom@^19
 ```
 
+## Non-React Usage
+
+If your application doesn't use React, you can embed the editor as a Web Component.  
+See the [vanilla Web Component example](../../examples/vanilla-web-component/) for a working setup.
+
 ## Installation
 
 ```bash
