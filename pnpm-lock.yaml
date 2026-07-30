@@ -185,7 +185,7 @@ importers:
     devDependencies:
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.61.1
+        version: 1.62.0
       '@testing-library/dom':
         specifier: 'catalog:'
         version: 10.4.1
@@ -197,13 +197,13 @@ importers:
         version: 19.2.3(@types/react@19.2.17)
       jsdom:
         specifier: 'catalog:'
-        version: 29.1.1
+        version: 30.0.1
       oxfmt:
         specifier: 'catalog:'
-        version: 0.60.0
+        version: 0.61.0
       oxlint:
         specifier: 'catalog:'
-        version: 1.75.0
+        version: 1.76.0
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
@@ -212,10 +212,10 @@ importers:
         version: 7.0.2
       vite:
         specifier: 'catalog:'
-        version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
+        version: 8.1.5(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@29.1.1)(vite@8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.10(@types/node@26.1.2)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-v8@4.1.10)(@vitest/ui@4.1.10)(jsdom@30.0.1)(vite@8.1.5(@types/node@26.1.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/i18n:
     devDependencies:
