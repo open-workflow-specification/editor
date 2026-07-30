@@ -2,12 +2,30 @@
   "name": "@openworkflowspec/vanilla-web-component-example",
   "version": "1.0.0",
   "private": true,
+  "description": "non-React example embedding the open workflow diagram component",
+  "keywords": [],
+  "homepage": "https://github.com/open-workflow-specification/editor",
+  "bugs": {
+    "url": "https://github.com/open-workflow-specification/editor/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-workflow-specification/editor.git"
+  },
   "type": "module",
   "scripts": {
-    "start": "vite",
-    "build:dev": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --config .oxlintrc.json src/ tests/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "clean": "rimraf ./dist",
+    "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm clean && tsc -p tsconfig.json && vite build && pnpm test && pnpm test-e2e",
     "test": "vitest run",
-    "test-e2e": "playwright test"
+    "start": "vite",
+    "test-e2e": "playwright test",
+    "test-e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@openworkflowspec/diagram-editor": "workspace:*",
@@ -20,6 +38,9 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "jsdom": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

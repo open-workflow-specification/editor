@@ -29,7 +29,7 @@
     "clean": "rimraf ./dist",
     "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
     "build:prod": "pnpm run build:dev && pnpm test",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "catalog:",

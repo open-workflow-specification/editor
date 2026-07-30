@@ -34,7 +34,7 @@
     "clean:storybook": "rimraf ./dist-storybook",
     "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
     "build:prod": "pnpm lint && pnpm clean && tsc -p tsconfig.json && vite build && pnpm test && pnpm test-e2e",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "start": "storybook dev -p 6006 --no-open",
     "build:storybook": "pnpm clean:storybook && storybook build --output-dir ./dist-storybook",
     "test-e2e": "playwright test",

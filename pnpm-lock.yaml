@@ -198,6 +198,15 @@ importers:
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.60.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.75.0
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
