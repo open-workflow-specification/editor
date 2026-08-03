@@ -80,7 +80,7 @@ describe("useResolvedColorMode", () => {
     expect(result.current).toBe("dark");
   });
 
-  it('falls back to "system" for an unknown colorMode value', () => {
+  it('resolves an unknown colorMode value to the system preference', () => {
     matchesDark = false;
     // @ts-expect-error testing runtime behavior with an invalid colorMode value
     const { result } = renderHook(() => useResolvedColorMode("invalid"));

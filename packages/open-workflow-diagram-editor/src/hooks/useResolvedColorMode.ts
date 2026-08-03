@@ -19,7 +19,7 @@ import { ColorMode, ResolvedColorMode } from "../types/colorMode";
 
 const DARK_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
-function normalizeColorMode(colorMode: ColorMode): ColorMode {
+function normalizeColorMode(colorMode: string): ColorMode {
   return colorMode === "light" || colorMode === "dark" || colorMode === "system" ? colorMode : "system";
 }
 
