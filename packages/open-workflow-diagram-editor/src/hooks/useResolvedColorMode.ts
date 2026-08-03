@@ -31,13 +31,15 @@ function getSystemColorMode(): ResolvedColorMode {
 }
 
 export function useResolvedColorMode(colorMode: ColorMode): ResolvedColorMode {
+  const normalized = normalizeColorMode(colorMode);
+
   const [resolvedColorMode, setResolvedColorMode] = useState<ResolvedColorMode>(
-    normalizeColorMode(colorMode) === "system" ? getSystemColorMode() : normalizeColorMode(colorMode),
+    normalized === "system" ? getSystemColorMode() : normalized,
   );
 
   useEffect(() => {
-    if (normalizeColorMode(colorMode) !== "system") {
-      setResolvedColorMode(normalizeColorMode(colorMode));
+    if (normalized !== "system") {
+      setResolvedColorMode(normalized);
       return;
     }
 
@@ -52,7 +54,7 @@ export function useResolvedColorMode(colorMode: ColorMode): ResolvedColorMode {
     return () => {
       mediaQuery.removeEventListener("change", handler);
     };
-  }, [colorMode]);
+  }, [normalized]);
 
   return resolvedColorMode;
 }
