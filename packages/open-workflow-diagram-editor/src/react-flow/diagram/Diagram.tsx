@@ -164,6 +164,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
         zoomOnDoubleClick={false}
         elementsSelectable={true}
         panOnScroll={true}
+        panOnDrag={false}
         zoomOnScroll={false}
         preventScrolling={true}
         selectionOnDrag={true}
@@ -178,7 +179,7 @@ export const Diagram = ({ divRef, ref, colorMode = "light" }: DiagramProps) => {
         }}
         data-testid={"react-flow-canvas"}
         elevateEdgesOnSelect={false}
-        nodesDraggable={!isReadOnly}
+        nodesDraggable={false}
         nodesConnectable={!isReadOnly}
       >
         {minimapVisible && (

@@ -51,7 +51,7 @@ function FieldRow({ label, field }: { label: string; field: DetailField }) {
 
 export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const { t } = useI18n();
-  const { errors, nodeIds } = useDiagramEditorContext();
+  const { errors, nodeIds, isReadOnly } = useDiagramEditorContext();
   const task = node.data.task;
 
   const nodeErrors = getNodeErrors(errors, node.id, nodeIds);
@@ -79,7 +79,7 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
           </dl>
         </>
       )}
-      {task !== undefined && (
+      {isReadOnly && task !== undefined && (
         <>
           <div className="dec-sidebar-section-spacer" />
           <SectionHeader label={t("sidebar.sectionSource")} />

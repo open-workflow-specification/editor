@@ -161,5 +161,21 @@ describe("NodeDetailsView", () => {
       expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
       expect(screen.getByText("Properties")).toBeInTheDocument();
     });
+
+    it("does not render the Source section in editable mode", () => {
+      const task = {
+        call: "http",
+        with: { endpoint: "https://api.example.com" },
+      };
+      const node = makeNode({ label: "getPets", task });
+
+      const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: false,
+      });
+
+      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
+      expect(container.querySelector(".dec-sidebar-yaml-summary")).toBeNull();
+      expect(container.querySelector(".dec-sidebar-yaml-pre")).toBeNull();
+    });
   });
 });
