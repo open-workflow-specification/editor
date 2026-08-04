@@ -173,7 +173,7 @@ describe("Diagram Component", () => {
       expect(ReactFlow).toHaveBeenCalled();
     });
 
-    // Verify that ReactFlow was called with nodesDraggable={true} and nodesConnectable={true}
+    // Verify that ReactFlow was called with nodesDraggable={false} and nodesConnectable={true} and panOnDrag={false}
     const mockReactFlow = vi.mocked(ReactFlow);
     const reactFlowProps = mockReactFlow.mock.calls[mockReactFlow.mock.calls.length - 1][0];
     expect(reactFlowProps.nodesDraggable).toBe(false);
