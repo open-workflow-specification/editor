@@ -41,6 +41,7 @@
     "test-e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@base-ui/react": "catalog:",
     "@openworkflowspec/i18n": "workspace:*",
     "@openworkflowspec/sdk": "catalog:",
     "@xyflow/react": "catalog:",
