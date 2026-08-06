@@ -157,7 +157,7 @@ Tests mirror the source structure:
 
 ## UI Components (shadcn/ui)
 
-This package uses [shadcn/ui](https://ui.shadcn.com/) for UI primitives. Configuration: [`components.json`](components.json)
+This package uses [shadcn/ui](https://ui.shadcn.com/) for radix based UI primitives. Configuration: [`components.json`](components.json)
 
 ### Key Settings
 
