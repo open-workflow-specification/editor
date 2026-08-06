@@ -1,6 +1,6 @@
 {
   "name": "@openworkflowspec/vanilla-web-component-example",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "non-React example embedding the open workflow diagram component",
   "keywords": [],

@@ -1,5 +1,22 @@
 # @openworkflowspec/diagram-editor
 
+## 1.1.0
+
+### Minor Changes
+
+- [#280](https://github.com/open-workflow-specification/editor/pull/280) [`d988d0e`](https://github.com/open-workflow-specification/editor/commit/d988d0ea18d0b8ab84c63d6e4ef25c34df69e680) Thanks [@handreyrc](https://github.com/handreyrc)! - Fix bad routing / overlaps for feedback edges.
+
+- [#305](https://github.com/open-workflow-specification/editor/pull/305) [`f060c52`](https://github.com/open-workflow-specification/editor/commit/f060c529339852efc7154b746156b160336c5f4a) Thanks [@lornakelly](https://github.com/lornakelly)! - Use new sdk task reference for validation errors
+
+- [#307](https://github.com/open-workflow-specification/editor/pull/307) [`a216248`](https://github.com/open-workflow-specification/editor/commit/a216248b8592d02157e36463cd331d69a16beb47) Thanks [@lornakelly](https://github.com/lornakelly)! - Temporary validation workaround before updated specification is published
+
+### Patch Changes
+
+- [#288](https://github.com/open-workflow-specification/editor/pull/288) [`643d578`](https://github.com/open-workflow-specification/editor/commit/643d5783db2e0115b49357d99a1529395a43476f) Thanks [@fantonangeli](https://github.com/fantonangeli)! - Validate colorMode input in useResolvedColorMode, falling back to "system" for unknown values.
+
+- Updated dependencies []:
+  - @openworkflowspec/i18n@1.1.0
+
 ## 1.0.0
 
 ### Major Changes
