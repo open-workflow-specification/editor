@@ -70,7 +70,7 @@ describe("WorkflowInfoView", () => {
   describe("general errors", () => {
     it("renders general errors above the document section", () => {
       renderWithProviders(<WorkflowInfoView document={baseDocument} />, {
-        nodeIds: new Set(["/do/0/call"]),
+        taskReferences: new Set(["/do/0/call"]),
         errors: [
           {
             path: "/document",
@@ -89,7 +89,7 @@ describe("WorkflowInfoView", () => {
 
     it("does not render node-owned errors in the workflow view", () => {
       renderWithProviders(<WorkflowInfoView document={baseDocument} />, {
-        nodeIds: new Set(["/do/0/call"]),
+        taskReferences: new Set(["/do/0/call"]),
         errors: [{ path: "/do/0/call", message: "node-owned error" }],
       });
 
@@ -99,7 +99,7 @@ describe("WorkflowInfoView", () => {
 
     it("does not render the errors section when there are no general errors", () => {
       renderWithProviders(<WorkflowInfoView document={baseDocument} />, {
-        nodeIds: new Set(),
+        taskReferences: new Set(),
         errors: [],
       });
 
@@ -167,7 +167,7 @@ describe("WorkflowInfoView", () => {
 
     it("renders both general validation errors and raw errors together", () => {
       renderWithProviders(<WorkflowInfoView document={baseDocument} />, {
-        nodeIds: new Set(["/do/0/call"]),
+        taskReferences: new Set(["/do/0/call"]),
         errors: [{ path: "/document", message: "Missing version" }, new Error("Invalid workflow")],
       });
 

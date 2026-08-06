@@ -51,12 +51,14 @@ function FieldRow({ label, field }: { label: string; field: DetailField }) {
 
 export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const { t } = useI18n();
-  const { errors, nodeIds, isReadOnly } = useDiagramEditorContext();
+  const { errors, taskReferences, isReadOnly } = useDiagramEditorContext();
   const task = node.data.task;
+  const taskReference = node.data.taskReference;
 
-  const nodeErrors = getNodeErrors(errors, node.id, nodeIds);
+  /* Layout-only nodes (entry/exit/start/end) have no taskReference, so no error can be owned by them */
+  const nodeErrors = taskReference ? getNodeErrors(errors, taskReference, taskReferences) : [];
   const errorItems = nodeErrors.map((error) => {
-    const field = getNodeErrorField(error, node.id);
+    const field = taskReference ? getNodeErrorField(error, taskReference) : undefined;
     return field !== undefined ? { message: error.message, field } : { message: error.message };
   });
   const fields = task ? getTaskDetails(task) : [];

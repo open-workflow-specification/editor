@@ -20,6 +20,18 @@ export function getNodesByType(graph: FlatGraph, type: GraphNodeType): FlatGraph
   return graph.nodes.filter((node) => node.type === type);
 }
 
+/* The indexed JSON pointers of every task-backed node, where validation error paths live in.
+ */
+export function getTaskReferences(graph: FlatGraph): Set<string> {
+  const taskReferences = new Set<string>();
+  for (const node of graph.nodes) {
+    if (node.taskReference !== undefined) {
+      taskReferences.add(node.taskReference);
+    }
+  }
+  return taskReferences;
+}
+
 // Helper function to check if target is outside source's parent hierarchy
 export function isTargetOutsideSourceParent(
   sourceNode: FlatGraphNode,

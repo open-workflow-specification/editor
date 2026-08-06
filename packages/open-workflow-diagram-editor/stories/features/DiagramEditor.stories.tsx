@@ -63,7 +63,7 @@ do:
       call: openapi
       with:
         document:
-          endpoint: http://myorg.io/ordersservices.json
+          endpoint: openapi/ordersservices.json
         operationId: produceReport
   - emitEvent:
       emit:
@@ -78,6 +78,13 @@ do:
               items:
                 - breed: dalmatian
                   quantity: 101
+  - emitCompletion:
+      emit:
+        event:
+          with:
+            type: com.petstore.readings.completed.v1
+            data:
+              roomId: \${ .roomid }
 timeout:
   after:
     hours: 1`;
@@ -105,5 +112,54 @@ export const Component: Story = {
     isReadOnly: true,
     locale: "en",
     content: workflowExample,
+  },
+};
+
+/* The two stories below each isolate ONE piece of spec syntax the editor must accept,
+ * and both must render clean (no error badge).
+ */
+
+const relativeUriEndpointExample = `document:
+  dsl: '1.0.3'
+  namespace: examples
+  name: relative-uri-endpoint
+  version: '0.1.0'
+do:
+  - generateReport:
+      call: openapi
+      with:
+        document:
+          endpoint: openapi/ordersservices.json
+        operationId: produceReport`;
+
+const emitWithoutSourceExample = `document:
+  dsl: '1.0.3'
+  namespace: examples
+  name: emit-without-source
+  version: '0.1.0'
+do:
+  - emitCompletion:
+      emit:
+        event:
+          with:
+            type: com.petstore.readings.completed.v1
+            data:
+              roomId: \${ .roomid }`;
+
+/* A URI is an RFC 3986 URI-reference, so a relative one is valid and must not error. */
+export const RelativeUriEndpoint: Story = {
+  args: {
+    isReadOnly: true,
+    locale: "en",
+    content: relativeUriEndpointExample,
+  },
+};
+
+/* `source` is optional when emitting (runtimes generate it from the workflow) — so omitting it must not error. */
+export const EmitWithoutSource: Story = {
+  args: {
+    isReadOnly: true,
+    locale: "en",
+    content: emitWithoutSourceExample,
   },
 };

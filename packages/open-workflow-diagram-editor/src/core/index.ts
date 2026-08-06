@@ -16,6 +16,8 @@
 
 export * from "./workflowSdk";
 export * from "./validationErrors";
+/* TEMPORARY — remove with the workaround; see the revert checklist in workflowSdk.ts. */
+export * from "./specWorkarounds";
 export * from "./graph";
 export * from "./taskDetails";
 export * from "./taskSubType";

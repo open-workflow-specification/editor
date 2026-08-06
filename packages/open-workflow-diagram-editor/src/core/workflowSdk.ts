@@ -17,6 +17,7 @@
 import { load } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
 import { fixNodesConnections } from "./graph";
+import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
 
 /**
  * Sanitizes an object by removing dangerous prototype pollution keys
@@ -238,9 +239,14 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
     const message = err instanceof Error ? err.message : String(err);
     const parsedErrors = dedupeValidationErrors(parseValidationErrorMessage(message));
 
-    // If parsing succeeded and returned errors, use them
+    /* If parsing succeeded and returned errors, use them.
+     *
+     * TEMPORARY — TO REVERT WHEN THE SDK IS BUMPED (see core/specWorkarounds.ts):
+     * Replace `stripSpecAheadOfSdkErrors(...)` with `return parsedErrors;` again.
+     */
     if (parsedErrors.length > 0) {
-      return parsedErrors;
+      //return parsedErrors;
+      return stripSpecAheadOfSdkErrors(parsedErrors);
     }
 
     // Otherwise, return the original error as-is

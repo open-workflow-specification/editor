@@ -18,6 +18,7 @@ import { describe, it, expect } from "vitest";
 import { FlatGraphNode, GraphNodeType } from "@openworkflowspec/sdk";
 import {
   getNodesByType,
+  getTaskReferences,
   fixNodesConnections,
   isTargetOutsideSourceParent,
 } from "../../src/core/graph";
@@ -77,6 +78,37 @@ describe("graph utils", () => {
 
       expect(callNodes).toHaveLength(3);
       expect(callNodes.every((node) => node.type === GraphNodeType.Call)).toBe(true);
+    });
+  });
+
+  describe("getTaskReferences", () => {
+    it("collects the taskReference of every task-backed node", () => {
+      const graph = createFlatGraph(
+        [
+          { id: "/do/call", type: GraphNodeType.Call, taskReference: "/do/0/call" },
+          { id: "/do/set", type: GraphNodeType.Set, taskReference: "/do/1/set" },
+        ] as FlatGraphNode[],
+        [],
+      );
+
+      expect(getTaskReferences(graph)).toEqual(new Set(["/do/0/call", "/do/1/set"]));
+    });
+
+    it("skips layout-only nodes, which carry no taskReference", () => {
+      const graph = createFlatGraph(
+        [
+          { id: "root-entry-node", type: GraphNodeType.Start },
+          { id: "/do/call", type: GraphNodeType.Call, taskReference: "/do/0/call" },
+          { id: "root-exit-node", type: GraphNodeType.End },
+        ] as FlatGraphNode[],
+        [],
+      );
+
+      expect(getTaskReferences(graph)).toEqual(new Set(["/do/0/call"]));
+    });
+
+    it("returns an empty set for a graph with no task nodes", () => {
+      expect(getTaskReferences(createFlatGraph([], []))).toEqual(new Set());
     });
   });
 

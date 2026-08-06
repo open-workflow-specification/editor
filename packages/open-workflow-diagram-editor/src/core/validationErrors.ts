@@ -74,32 +74,41 @@ function isNodeError(error: SdkError): error is NodeError {
   return isValidationError(error) && error.path !== undefined && !isNoiseError(error);
 }
 
-/* Match the longest id prefix to find owning node */
-function findOwningNode(path: string, nodeIds: Set<string>): string | undefined {
-  let owner: string | undefined;
-  for (const id of nodeIds) {
-    if (path === id || path.startsWith(`${id}/`)) {
-      if (owner === undefined || id.length > owner.length) {
-        owner = id;
-      }
+/* Find the task owning this error path. Both sides are JSON pointers, so the longest matching taskReference is found by dropping trailing segments until one is known. */
+function findOwningTaskReference(path: string, taskReferences: Set<string>): string | undefined {
+  let candidate = path;
+
+  while (candidate.length > 0) {
+    if (taskReferences.has(candidate)) {
+      return candidate;
     }
+    const cut = candidate.lastIndexOf("/");
+    if (cut <= 0) {
+      break;
+    }
+    candidate = candidate.slice(0, cut);
   }
-  return owner;
+  return undefined;
 }
 
-/* returns errors for a particular node and removes noise */
+/* returns errors for a particular task and removes noise */
 export function getNodeErrors(
   errors: SdkError[],
-  nodeId: string,
-  nodeIds: Set<string>,
+  taskReference: string,
+  taskReferences: Set<string>,
 ): ValidationError[] {
   return errors.filter((error): error is NodeError => {
-    return isNodeError(error) && findOwningNode(error.path, nodeIds) === nodeId;
+    return (
+      isNodeError(error) && findOwningTaskReference(error.path, taskReferences) === taskReference
+    );
   });
 }
 
-export function getNodeErrorField(error: ValidationError, nodeId: string): string | undefined {
-  const prefix = `${nodeId}/`;
+export function getNodeErrorField(
+  error: ValidationError,
+  taskReference: string,
+): string | undefined {
+  const prefix = `${taskReference}/`;
   if (error.path === undefined || !error.path.startsWith(prefix)) {
     return undefined;
   }
@@ -107,27 +116,30 @@ export function getNodeErrorField(error: ValidationError, nodeId: string): strin
   return error.path.slice(prefix.length).split("/").join(".");
 }
 
-/* To quickly lookup nodeIds that should display badge and outline */
-export function getErrorNodeIds(errors: SdkError[], nodeIds: Set<string>): Set<string> {
-  const ids = new Set<string>();
+/* To quickly lookup the tasks that should display badge and outline */
+export function getErrorTaskReferences(
+  errors: SdkError[],
+  taskReferences: Set<string>,
+): Set<string> {
+  const owners = new Set<string>();
   for (const error of errors) {
     if (!isNodeError(error)) {
       continue;
     }
-    const owner = findOwningNode(error.path, nodeIds);
+    const owner = findOwningTaskReference(error.path, taskReferences);
     if (owner !== undefined) {
-      ids.add(owner);
+      owners.add(owner);
     }
   }
-  return ids;
+  return owners;
 }
 
 /* Errors not associated with node (workflow-level errors) */
-export function getGeneralErrors(errors: SdkError[], nodeIds: Set<string>): SdkError[] {
+export function getGeneralErrors(errors: SdkError[], taskReferences: Set<string>): SdkError[] {
   return errors.filter((error) => {
     if (!isValidationError(error) || error.path === undefined) {
       return true;
     }
-    return findOwningNode(error.path, nodeIds) === undefined;
+    return findOwningTaskReference(error.path, taskReferences) === undefined;
   });
 }

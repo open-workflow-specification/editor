@@ -19,10 +19,10 @@ import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { getGeneralErrors } from "@/core";
 
 export function SidePanelTrigger() {
-  const { errors, nodeIds, setSelectedNodeId } = useDiagramEditorContext();
+  const { errors, taskReferences, setSelectedNodeId } = useDiagramEditorContext();
   const { setOpen } = useSidebar();
 
-  const count = getGeneralErrors(errors, nodeIds).length;
+  const count = getGeneralErrors(errors, taskReferences).length;
 
   const showWorkflowErrors = () => {
     setSelectedNodeId(null);

@@ -26,7 +26,7 @@ export type DiagramEditorContextType = {
   errors: SdkError[];
   nodes: RF.Node[];
   edges: RF.Edge[];
-  nodeIds: Set<string>;
+  taskReferences: Set<string>;
   selectedNodeId: string | null;
 
   setIsReadOnly: React.Dispatch<React.SetStateAction<boolean>>;

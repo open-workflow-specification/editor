@@ -21,18 +21,18 @@ import { SidePanelTrigger } from "../../src/side-panel/SidePanelTrigger";
 import { renderWithProviders } from "../test-utils/render-helpers";
 import type { SdkError } from "../../src/core";
 
-const nodeIds = new Set(["/do/0/call", "/do/1/set"]);
+const taskReferences = new Set(["/do/0/call", "/do/1/set"]);
 
 describe("SidePanelTrigger", () => {
   it("does not render the badge when there are no general errors", () => {
-    renderWithProviders(<SidePanelTrigger />, { errors: [], nodeIds });
+    renderWithProviders(<SidePanelTrigger />, { errors: [], taskReferences });
 
     expect(screen.queryByTestId("sidebar-errors-badge")).not.toBeInTheDocument();
   });
 
   it("does not render the badge when all errors are owned by nodes", () => {
     const errors: SdkError[] = [{ path: "/do/0/call", message: "owned" }];
-    renderWithProviders(<SidePanelTrigger />, { errors, nodeIds });
+    renderWithProviders(<SidePanelTrigger />, { errors, taskReferences });
 
     expect(screen.queryByTestId("sidebar-errors-badge")).not.toBeInTheDocument();
   });
@@ -55,7 +55,7 @@ describe("SidePanelTrigger", () => {
   ])(
     "renders the badge with the general error count for $description",
     ({ errors, expectedCount }) => {
-      renderWithProviders(<SidePanelTrigger />, { errors, nodeIds });
+      renderWithProviders(<SidePanelTrigger />, { errors, taskReferences });
 
       expect(screen.getByTestId("sidebar-errors-badge")).toHaveTextContent(expectedCount);
     },
@@ -68,7 +68,7 @@ describe("SidePanelTrigger", () => {
 
     renderWithProviders(<SidePanelTrigger />, {
       errors,
-      nodeIds,
+      taskReferences,
       selectedNodeId: "/do/0/call",
       setSelectedNodeId,
     });

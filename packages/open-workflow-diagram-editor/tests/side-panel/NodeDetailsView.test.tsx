@@ -104,26 +104,29 @@ describe("NodeDetailsView", () => {
   });
 
   describe("validation errors", () => {
-    const nodeIds = new Set(["node-1"]);
+    /* Errors are attributed by taskReference (the indexed JSON pointer), not by node id */
+    const taskReference = "/do/0/getPets";
+    const taskReferences = new Set([taskReference]);
 
     it("renders the node's errors above the Properties section, with field labels", () => {
       const node = makeNode({
         label: "getPets",
+        taskReference,
         task: { call: "http", with: {} },
       });
 
       renderWithProviders(<NodeDetailsView node={node} />, {
-        nodeIds,
+        taskReferences,
         errors: [
           {
-            path: "node-1/with",
+            path: `${taskReference}/with`,
             message: "must have required property 'endpoint'",
           },
         ],
       });
 
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
-      // field label derived relative to the node id
+      // field label derived relative to the node's taskReference
       const field = document.querySelector(".dec-sidebar-error-field");
       expect(field?.textContent).toBe("with");
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
@@ -132,11 +135,11 @@ describe("NodeDetailsView", () => {
     });
 
     it("renders node details (errors only) when a task-less node has errors", () => {
-      const node = makeNode({ label: "start" }, "start");
+      const node = makeNode({ label: "start", taskReference }, "start");
 
       renderWithProviders(<NodeDetailsView node={node} />, {
-        nodeIds,
-        errors: [{ path: "node-1", message: "something is wrong" }],
+        taskReferences,
+        errors: [{ path: taskReference, message: "something is wrong" }],
       });
 
       expect(screen.getByTestId("node-details")).toBeInTheDocument();
@@ -150,16 +153,37 @@ describe("NodeDetailsView", () => {
     it("does not render the errors section when the node has no errors", () => {
       const node = makeNode({
         label: "getPets",
+        taskReference,
         task: { call: "http", with: { endpoint: "x" } },
       });
 
       renderWithProviders(<NodeDetailsView node={node} />, {
-        nodeIds,
+        taskReferences,
         errors: [],
       });
 
       expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
       expect(screen.getByText("Properties")).toBeInTheDocument();
+    });
+
+    it("attributes a nested child's error to the child, not its container", () => {
+      const containerReference = "/do/0/processItems";
+      const childReference = "/do/0/processItems/do/0/chargePayment";
+      const child = makeNode({
+        label: "chargePayment",
+        taskReference: childReference,
+        task: { call: "http", with: {} },
+      });
+
+      renderWithProviders(<NodeDetailsView node={child} />, {
+        taskReferences: new Set([containerReference, childReference]),
+        errors: [
+          { path: `${childReference}/with`, message: "must have required property 'endpoint'" },
+        ],
+      });
+
+      expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
+      expect(document.querySelector(".dec-sidebar-error-field")?.textContent).toBe("with");
     });
 
     it("does not render the Source section in editable mode", () => {

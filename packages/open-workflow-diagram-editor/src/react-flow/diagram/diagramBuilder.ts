@@ -15,7 +15,12 @@
  */
 
 import * as RF from "@xyflow/react";
-import { buildFlatGraph, getErrorNodeIds, type SdkError } from "../../core";
+import {
+  buildFlatGraph,
+  getErrorTaskReferences,
+  getTaskReferences,
+  type SdkError,
+} from "../../core";
 import { BaseNodeData, ReactFlowNodeTypes } from "../nodes/Nodes";
 import { BaseEdgeData, EdgeTypes } from "../edges/Edges";
 import * as sdk from "@openworkflowspec/sdk";
@@ -76,7 +81,7 @@ function resolveNodeType(graphNode: sdk.FlatGraphNode, catchContainerIds: Set<st
 function buildReactFlowNode(
   graphNode: sdk.FlatGraphNode,
   catchContainerIds: Set<string>,
-  erroringNodeIds: Set<string>,
+  erroringTaskReferences: Set<string>,
 ): RF.Node<BaseNodeData> {
   const type = resolveNodeType(graphNode, catchContainerIds);
   // There is no corresponding react flow component implemented
@@ -93,7 +98,10 @@ function buildReactFlowNode(
     data: {
       label: graphNode.label ?? "",
       ...(graphNode.task !== undefined && { task: structuredClone(graphNode.task) }),
-      ...(erroringNodeIds.has(graphNode.id) && { hasError: true }),
+      ...(graphNode.taskReference !== undefined && {
+        taskReference: graphNode.taskReference,
+        ...(erroringTaskReferences.has(graphNode.taskReference) && { hasError: true }),
+      }),
     },
     height: size.height,
     width: size.width,
@@ -134,11 +142,10 @@ export function buildDiagramElements(
   if (model) {
     const graph = buildFlatGraph(model);
     const catchContainerIds = getCatchContainerNodeIds(graph);
-    const nodeIds = new Set(graph.nodes.map((graphNode) => graphNode.id));
-    const nodeIdsWithErrors = getErrorNodeIds(errors, nodeIds);
+    const erroringTaskReferences = getErrorTaskReferences(errors, getTaskReferences(graph));
 
     graph.nodes.forEach((graphNode) =>
-      nodes.push(buildReactFlowNode(graphNode, catchContainerIds, nodeIdsWithErrors)),
+      nodes.push(buildReactFlowNode(graphNode, catchContainerIds, erroringTaskReferences)),
     );
 
     // Precompute node ID set for O(1) membership checks

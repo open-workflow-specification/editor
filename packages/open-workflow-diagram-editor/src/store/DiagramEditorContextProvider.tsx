@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { buildFlatGraph, parseWorkflow } from "../core";
+import { buildFlatGraph, getTaskReferences, parseWorkflow } from "../core";
 import { DiagramEditorProps } from "../diagram-editor/DiagramEditor";
 import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorContext";
 import type * as RF from "@xyflow/react";
@@ -34,8 +34,8 @@ export const DiagramEditorContextProvider = (
 
   const { model, errors } = React.useMemo(() => parseWorkflow(props.content), [props.content]);
 
-  const nodeIds = React.useMemo(
-    () => (model ? new Set(buildFlatGraph(model).nodes.map((node) => node.id)) : new Set<string>()),
+  const taskReferences = React.useMemo(
+    () => (model ? getTaskReferences(buildFlatGraph(model)) : new Set<string>()),
     [model],
   );
 
@@ -59,7 +59,7 @@ export const DiagramEditorContextProvider = (
       errors,
       nodes,
       edges,
-      nodeIds,
+      taskReferences,
       selectedNodeId,
       setIsReadOnly,
       setLocale,
@@ -74,7 +74,7 @@ export const DiagramEditorContextProvider = (
       errors,
       nodes,
       edges,
-      nodeIds,
+      taskReferences,
       selectedNodeId,
       setIsReadOnly,
       setLocale,

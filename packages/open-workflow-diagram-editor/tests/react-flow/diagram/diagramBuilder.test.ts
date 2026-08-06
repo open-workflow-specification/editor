@@ -608,7 +608,10 @@ describe("diagramBuilder", () => {
     describe("validation error highlighting", () => {
       const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_JSON_TASKS);
       const baseline = buildDiagramElements(model);
-      const targetId = baseline.nodes.find((node) => node.data.task !== undefined)!.id;
+      /* Errors are matched against the node's taskReference (indexed JSON pointer) */
+      const target = baseline.nodes.find((node) => node.data.taskReference !== undefined)!;
+      const targetId = target.id;
+      const targetReference = target.data.taskReference!;
 
       it("does not set hasError on any node when no errors are passed", () => {
         const diagram = buildDiagramElements(model);
@@ -616,11 +619,10 @@ describe("diagramBuilder", () => {
       });
 
       it("sets hasError only on the node owning a error", () => {
-        const errors: SdkError[] = [{ path: targetId, message: "missing endpoint" }];
+        const errors: SdkError[] = [{ path: targetReference, message: "missing endpoint" }];
         const diagram = buildDiagramElements(model, errors);
 
-        const target = diagram.nodes.find((node) => node.id === targetId)!;
-        expect(target.data.hasError).toBe(true);
+        expect(diagram.nodes.find((node) => node.id === targetId)!.data.hasError).toBe(true);
 
         diagram.nodes
           .filter((node) => node.id !== targetId)
@@ -628,14 +630,25 @@ describe("diagramBuilder", () => {
       });
 
       it("attributes a field error to its owning node", () => {
-        const errors: SdkError[] = [{ path: `${targetId}/with`, message: "missing endpoint" }];
+        const errors: SdkError[] = [
+          { path: `${targetReference}/with`, message: "missing endpoint" },
+        ];
         const diagram = buildDiagramElements(model, errors);
 
         expect(diagram.nodes.find((node) => node.id === targetId)!.data.hasError).toBe(true);
       });
 
+      it("does not set hasError when the error path uses the node id instead of the taskReference", () => {
+        const errors: SdkError[] = [{ path: targetId, message: "missing endpoint" }];
+        const diagram = buildDiagramElements(model, errors);
+
+        diagram.nodes.forEach((node) => expect(node.data.hasError).toBeUndefined());
+      });
+
       it("does not set hasError for noise errors", () => {
-        const errors: SdkError[] = [{ path: targetId, errorType: "#/oneOf", message: "noise" }];
+        const errors: SdkError[] = [
+          { path: targetReference, errorType: "#/oneOf", message: "noise" },
+        ];
         const diagram = buildDiagramElements(model, errors);
 
         expect(diagram.nodes.find((node) => node.id === targetId)!.data.hasError).toBeUndefined();

@@ -19,7 +19,7 @@ import {
   isValidationError,
   getNodeErrors,
   getNodeErrorField,
-  getErrorNodeIds,
+  getErrorTaskReferences,
   getGeneralErrors,
 } from "../../src/core";
 import type { SdkError, ValidationError } from "../../src/core";
@@ -51,16 +51,18 @@ describe("isValidationError", () => {
   });
 });
 
-describe("getNodeErrors", () => {
-  const nodeIds = new Set(["/do/0/call", "/do/1/set"]);
+/* Error paths and taskReferences share one namespace: the indexed RFC 6901 pointer.
+ * Node ids are a separate, index-free namespace and never appear here. */
+const TASK_REFERENCES = new Set(["/do/0/call", "/do/1/set"]);
 
+describe("getNodeErrors", () => {
   it("returns only errors owned by the given node", () => {
     const errors: SdkError[] = [
       vErr({ path: "/do/0/call", message: "call problem" }),
       vErr({ path: "/do/1/set", message: "set problem" }),
     ];
 
-    const result = getNodeErrors(errors, "/do/0/call", nodeIds);
+    const result = getNodeErrors(errors, "/do/0/call", TASK_REFERENCES);
     expect(result).toHaveLength(1);
     expect(result[0]!.message).toBe("call problem");
   });
@@ -68,7 +70,7 @@ describe("getNodeErrors", () => {
   it("attributes field errors to their owning node", () => {
     const errors: SdkError[] = [vErr({ path: "/do/0/call/with", message: "missing endpoint" })];
 
-    const result = getNodeErrors(errors, "/do/0/call", nodeIds);
+    const result = getNodeErrors(errors, "/do/0/call", TASK_REFERENCES);
     expect(result).toHaveLength(1);
     expect(result[0]!.path).toBe("/do/0/call/with");
   });
@@ -97,22 +99,22 @@ describe("getNodeErrors", () => {
       }),
     },
   ])("filters out noise error: $description", ({ error }) => {
-    expect(getNodeErrors([error], "/do/0/call", nodeIds)).toHaveLength(0);
+    expect(getNodeErrors([error], "/do/0/call", TASK_REFERENCES)).toHaveLength(0);
   });
 
   it("keeps a missing 'catch' property error (genuine, not noise as it catch cannot be missing)", () => {
     const errors: SdkError[] = [vErr({ path: "/do/0/call", object: { missingProperty: "catch" } })];
 
-    expect(getNodeErrors(errors, "/do/0/call", nodeIds)).toHaveLength(1);
+    expect(getNodeErrors(errors, "/do/0/call", TASK_REFERENCES)).toHaveLength(1);
   });
 
   it("excludes raw (non-validation) Errors", () => {
     const errors: SdkError[] = [new Error("yaml broke")];
 
-    expect(getNodeErrors(errors, "/do/0/call", nodeIds)).toHaveLength(0);
+    expect(getNodeErrors(errors, "/do/0/call", TASK_REFERENCES)).toHaveLength(0);
   });
 
-  it("attributes a nested-child error to the longest matching node id", () => {
+  it("attributes a nested-child error to the child, not its container", () => {
     const nested = new Set(["/do/0/try", "/do/0/try/do/0/call"]);
     const errors: SdkError[] = [vErr({ path: "/do/0/try/do/0/call/with", message: "nested" })];
 
@@ -120,47 +122,58 @@ describe("getNodeErrors", () => {
     expect(getNodeErrors(errors, "/do/0/try", nested)).toHaveLength(0);
   });
 
-  it("does not match a node id that is only a string prefix without a path boundary", () => {
-    const ids = new Set(["/do/0/try"]);
+  it("attributes a container's own error to the container", () => {
+    const nested = new Set(["/do/0/try", "/do/0/try/do/0/call"]);
+    const errors: SdkError[] = [vErr({ path: "/do/0/try/catch", message: "container" })];
+
+    expect(getNodeErrors(errors, "/do/0/try", nested)).toHaveLength(1);
+    expect(getNodeErrors(errors, "/do/0/try/do/0/call", nested)).toHaveLength(0);
+  });
+
+  it("does not match a taskReference that is only a string prefix without a path boundary", () => {
+    const references = new Set(["/do/0/try"]);
     // "/do/0/tryThings" starts with "/do/0/try" as a substring but not as a path segment.
     const errors: SdkError[] = [vErr({ path: "/do/0/tryThings", message: "unrelated" })];
 
-    expect(getNodeErrors(errors, "/do/0/try", ids)).toHaveLength(0);
+    expect(getNodeErrors(errors, "/do/0/try", references)).toHaveLength(0);
   });
 });
 
 describe("getNodeErrorField", () => {
   it.each([
-    { path: "/do/0/call/with", nodeId: "/do/0/call", expected: "with" },
+    { path: "/do/0/call/with", taskReference: "/do/0/call", expected: "with" },
     {
       path: "/do/0/call/with/endpoint",
-      nodeId: "/do/0/call",
+      taskReference: "/do/0/call",
       expected: "with.endpoint",
     },
-    { path: "/do/0/call", nodeId: "/do/0/call", expected: undefined },
-    { path: "/do/1/set", nodeId: "/do/0/call", expected: undefined },
-    { path: undefined, nodeId: "/do/0/call", expected: undefined },
-  ])("path=$path nodeId=$nodeId -> $expected", ({ path, nodeId, expected }) => {
-    expect(getNodeErrorField(vErr({ path }), nodeId)).toBe(expected);
-  });
+    { path: "/do/0/call", taskReference: "/do/0/call", expected: undefined },
+    { path: "/do/1/set", taskReference: "/do/0/call", expected: undefined },
+    { path: undefined, taskReference: "/do/0/call", expected: undefined },
+  ])(
+    "path=$path taskReference=$taskReference -> $expected",
+    ({ path, taskReference, expected }) => {
+      expect(getNodeErrorField(vErr({ path }), taskReference)).toBe(expected);
+    },
+  );
 });
 
-describe("getErrorNodeIds", () => {
-  const nodeIds = new Set(["/do/0/call", "/do/1/set"]);
-
-  it("returns the set of node ids that own at least one error", () => {
+describe("getErrorTaskReferences", () => {
+  it("returns the set of taskReferences that own at least one error", () => {
     const errors: SdkError[] = [
       vErr({ path: "/do/0/call/with", message: "missing endpoint" }),
       vErr({ path: "/do/1/set", message: "set problem" }),
     ];
 
-    expect(getErrorNodeIds(errors, nodeIds)).toEqual(new Set(["/do/0/call", "/do/1/set"]));
+    expect(getErrorTaskReferences(errors, TASK_REFERENCES)).toEqual(
+      new Set(["/do/0/call", "/do/1/set"]),
+    );
   });
 
   it("excludes nodes whose only errors are noise", () => {
     const errors: SdkError[] = [vErr({ path: "/do/0/call", errorType: "#/oneOf" })];
 
-    expect(getErrorNodeIds(errors, nodeIds)).toEqual(new Set());
+    expect(getErrorTaskReferences(errors, TASK_REFERENCES)).toEqual(new Set());
   });
 
   it("ignores raw errors owned by no node", () => {
@@ -169,26 +182,24 @@ describe("getErrorNodeIds", () => {
       vErr({ path: "/document", message: "missing version" }),
     ];
 
-    expect(getErrorNodeIds(errors, nodeIds)).toEqual(new Set());
+    expect(getErrorTaskReferences(errors, TASK_REFERENCES)).toEqual(new Set());
   });
 });
 
 describe("getGeneralErrors", () => {
-  const nodeIds = new Set(["/do/0/call", "/do/1/set"]);
-
   it("includes raw Errors", () => {
     const err = new Error("yaml broke");
-    expect(getGeneralErrors([err], nodeIds)).toEqual([err]);
+    expect(getGeneralErrors([err], TASK_REFERENCES)).toEqual([err]);
   });
 
   it("includes validation errors with no path", () => {
     const errors: SdkError[] = [vErr({ errorType: "#/required", message: "missing document" })];
-    expect(getGeneralErrors(errors, nodeIds)).toEqual(errors);
+    expect(getGeneralErrors(errors, TASK_REFERENCES)).toEqual(errors);
   });
 
   it("includes validation errors whose path has no node owns (e.g. /document)", () => {
     const errors: SdkError[] = [vErr({ path: "/document", message: "missing version" })];
-    expect(getGeneralErrors(errors, nodeIds)).toEqual(errors);
+    expect(getGeneralErrors(errors, TASK_REFERENCES)).toEqual(errors);
   });
 
   it("excludes errors owned by a node", () => {
@@ -196,7 +207,7 @@ describe("getGeneralErrors", () => {
       vErr({ path: "/do/0/call", message: "owned" }),
       vErr({ path: "/do/0/call/with", message: "owned field" }),
     ];
-    expect(getGeneralErrors(errors, nodeIds)).toEqual([]);
+    expect(getGeneralErrors(errors, TASK_REFERENCES)).toEqual([]);
   });
 
   it("mixed list into node vs general", () => {
@@ -208,12 +219,12 @@ describe("getGeneralErrors", () => {
     const rawErr = new Error("yaml broke");
     const errors: SdkError[] = [owned, documentErr, rawErr];
 
-    expect(getGeneralErrors(errors, nodeIds)).toEqual([documentErr, rawErr]);
+    expect(getGeneralErrors(errors, TASK_REFERENCES)).toEqual([documentErr, rawErr]);
   });
 
   describe("additional validation error edge cases", () => {
-    it("returns each node id only once even if multiple errors belong to it", () => {
-      const nodeIds = new Set(["/do/0/call"]);
+    it("returns each taskReference only once even if multiple errors belong to it", () => {
+      const references = new Set(["/do/0/call"]);
 
       const errors: SdkError[] = [
         vErr({ path: "/do/0/call", message: "first" }),
@@ -221,11 +232,11 @@ describe("getGeneralErrors", () => {
         vErr({ path: "/do/0/call/output", message: "third" }),
       ];
 
-      expect(getErrorNodeIds(errors, nodeIds)).toEqual(new Set(["/do/0/call"]));
+      expect(getErrorTaskReferences(errors, references)).toEqual(new Set(["/do/0/call"]));
     });
 
     it("does not treat non-string missingProperty values as noise", () => {
-      const nodeIds = new Set(["/do/0/call"]);
+      const references = new Set(["/do/0/call"]);
 
       const errors: SdkError[] = [
         vErr({
@@ -236,14 +247,14 @@ describe("getGeneralErrors", () => {
         }),
       ];
 
-      const result = getNodeErrors(errors, "/do/0/call", nodeIds);
+      const result = getNodeErrors(errors, "/do/0/call", references);
 
       expect(result).toHaveLength(1);
       expect(result[0]?.object?.missingProperty).toBe(123);
     });
 
     it("keeps validation errors without an errorType", () => {
-      const nodeIds = new Set(["/do/0/call"]);
+      const references = new Set(["/do/0/call"]);
 
       const errors: SdkError[] = [
         vErr({
@@ -251,10 +262,10 @@ describe("getGeneralErrors", () => {
         }),
       ];
 
-      expect(getNodeErrors(errors, "/do/0/call", nodeIds)).toHaveLength(1);
+      expect(getNodeErrors(errors, "/do/0/call", references)).toHaveLength(1);
     });
 
-    it("returns no node errors when there are no node ids", () => {
+    it("returns no node errors when there are no taskReferences", () => {
       const errors: SdkError[] = [
         vErr({
           path: "/do/0/call",
@@ -265,7 +276,7 @@ describe("getGeneralErrors", () => {
       expect(getNodeErrors(errors, "/do/0/call", new Set())).toEqual([]);
     });
 
-    it("returns no error node ids when there are no node ids", () => {
+    it("returns no error taskReferences when there are no taskReferences", () => {
       const errors: SdkError[] = [
         vErr({
           path: "/do/0/call",
@@ -273,10 +284,10 @@ describe("getGeneralErrors", () => {
         }),
       ];
 
-      expect(getErrorNodeIds(errors, new Set())).toEqual(new Set());
+      expect(getErrorTaskReferences(errors, new Set())).toEqual(new Set());
     });
 
-    it("treats all validation errors as general when there are no node ids", () => {
+    it("treats all validation errors as general when there are no taskReferences", () => {
       const errors: SdkError[] = [
         vErr({
           path: "/do/0/call",

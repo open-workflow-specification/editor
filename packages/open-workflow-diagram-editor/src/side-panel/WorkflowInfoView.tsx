@@ -27,9 +27,9 @@ type WorkflowInfoViewProps = {
 
 export function WorkflowInfoView({ document }: WorkflowInfoViewProps) {
   const { t } = useI18n();
-  const { errors, nodeIds } = useDiagramEditorContext();
+  const { errors, taskReferences } = useDiagramEditorContext();
 
-  const generalErrors = getGeneralErrors(errors, nodeIds).map((error) => ({
+  const generalErrors = getGeneralErrors(errors, taskReferences).map((error) => ({
     message: error.message,
   }));
 

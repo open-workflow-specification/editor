@@ -74,6 +74,7 @@ const KNOWN_BADGES = new Set([
 export type BaseNodeData<T = Specification.Task | void> = {
   label: string;
   task?: T;
+  taskReference?: string;
   hasError?: boolean;
 };
 
