@@ -38,7 +38,7 @@ To build and run the editor locally, you will need:
 
 ## Getting Started with the Diagram Editor
 
-See the [Getting Started guide](./packages/serverless-workflow-diagram-editor/README.md#getting-started) for installation and usage instructions for the Serverless Workflow Diagram Editor React component.
+See the [Getting Started guide](./packages/open-workflow-diagram-editor/README.md#getting-started) for installation and usage instructions for the Open Workflow Diagram Editor React component.
 
 ## Building the Project
 

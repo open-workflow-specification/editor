@@ -40,12 +40,12 @@ The wrapper in `src/diagram-editor-element.ts` defines a custom element `<openwo
 
 ### HTMLElement attributes
 
-| Attribute / Property | Type                            | Default    | Description                                              |
-| -------------------- | ------------------------------- | ---------- | -------------------------------------------------------- |
-| `content` (property) | `string`                        | -          | Serverless Workflow specification in YAML or JSON format |
-| `locale`             | `string`                        | -          | Language locale for the editor UI                        |
-| `color-mode`         | `'light' \| 'dark' \| 'system'` | `"system"` | Color theme for the editor                               |
-| `read-only`          | boolean                         | -          | Enable read-only mode to prevent editing                 |
+| Attribute / Property | Type                            | Default    | Description                                        |
+| -------------------- | ------------------------------- | ---------- | -------------------------------------------------- |
+| `content` (property) | `string`                        | -          | Open Workflow specification in YAML or JSON format |
+| `locale`             | `string`                        | -          | Language locale for the editor UI                  |
+| `color-mode`         | `'light' \| 'dark' \| 'system'` | `"system"` | Color theme for the editor                         |
+| `read-only`          | boolean                         | -          | Enable read-only mode to prevent editing           |
 
 ### Usage
 
