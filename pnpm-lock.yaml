@@ -93,6 +93,9 @@ catalogs:
     jsdom:
       specifier: ^30.0.1
       version: 30.0.1
+    lint-staged:
+      specifier: ^17.3.0
+      version: 17.3.0
     lucide-react:
       specifier: ^1.28.0
       version: 1.28.0
@@ -156,7 +159,7 @@ importers:
         specifier: 'catalog:'
         version: 9.1.7
       lint-staged:
-        specifier: 17.3.0
+        specifier: 'catalog:'
         version: 17.3.0
       oxfmt:
         specifier: 'catalog:'
