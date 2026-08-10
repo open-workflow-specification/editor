@@ -1,6 +1,6 @@
 {
   "$schema": "https://oxc.rs/schema/oxlintrc.json",
-  "plugins": ["react", "typescript", "import", "jsx-a11y"],
+  "plugins": ["react", "typescript", "import"],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "typescript/no-unused-vars": ["warn", { "varsIgnorePattern": "^_" }],
