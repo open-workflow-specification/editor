@@ -16,6 +16,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DiagramEditor } from "../features/DiagramEditor";
+import { createWorkflowStory } from "../helpers";
 import * as workflows from "./index";
 
 const meta = {
@@ -33,25 +34,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Constants for shared configuration
-const DEFAULT_STORY_ARGS = {
-  isReadOnly: true,
-  locale: "en" as const,
-} as const;
-
-/**
- * Factory function to create workflow story configurations
- * @param workflowContent - The YAML workflow content to display
- * @returns Story configuration object
- */
-const createWorkflowStory = (workflowContent: string): Story => {
-  return {
-    args: {
-      ...DEFAULT_STORY_ARGS,
-      content: workflowContent,
-    },
-  };
-};
-
 // Story definitions using the factory function
 export const AccumulateRoomReadings: Story = createWorkflowStory(workflows.accumulateRoomReadings);
 export const AuthenticationOAuth2: Story = createWorkflowStory(workflows.authenticationOAuth2);

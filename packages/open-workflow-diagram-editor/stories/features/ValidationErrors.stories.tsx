@@ -16,6 +16,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DiagramEditor } from "./DiagramEditor";
+import { createWorkflowStory } from "../helpers";
 
 const meta = {
   title: "Features/Validation Errors",
@@ -30,15 +31,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const DEFAULT_STORY_ARGS = {
-  isReadOnly: true,
-  locale: "en" as const,
-} as const;
-
-const createWorkflowStory = (content: string): Story => ({
-  args: { ...DEFAULT_STORY_ARGS, content },
-});
 
 export const DocumentError: Story = createWorkflowStory(
   `

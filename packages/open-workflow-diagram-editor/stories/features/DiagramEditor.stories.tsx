@@ -15,7 +15,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-
+import { createWorkflowStory } from "../helpers";
 import { DiagramEditor } from "./DiagramEditor";
 
 const workflowExample = `document:
@@ -107,13 +107,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Component: Story = {
-  args: {
-    isReadOnly: true,
-    locale: "en",
-    content: workflowExample,
-  },
-};
+export const Component: Story = createWorkflowStory(workflowExample);
 
 /* The two stories below each isolate ONE piece of spec syntax the editor must accept,
  * and both must render clean (no error badge).
@@ -147,19 +141,7 @@ do:
               roomId: \${ .roomid }`;
 
 /* A URI is an RFC 3986 URI-reference, so a relative one is valid and must not error. */
-export const RelativeUriEndpoint: Story = {
-  args: {
-    isReadOnly: true,
-    locale: "en",
-    content: relativeUriEndpointExample,
-  },
-};
+export const RelativeUriEndpoint: Story = createWorkflowStory(relativeUriEndpointExample);
 
 /* `source` is optional when emitting (runtimes generate it from the workflow) — so omitting it must not error. */
-export const EmitWithoutSource: Story = {
-  args: {
-    isReadOnly: true,
-    locale: "en",
-    content: emitWithoutSourceExample,
-  },
-};
+export const EmitWithoutSource: Story = createWorkflowStory(emitWithoutSourceExample);

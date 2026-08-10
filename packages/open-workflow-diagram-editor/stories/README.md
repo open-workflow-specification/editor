@@ -25,6 +25,7 @@ This directory contains Storybook stories and documentation.
 - **`examples/`** - Open Workflow Specification examples
 - **`use-cases/`** - Real-world use case examples
 - **`assets/`** - Images and media files used in stories
+- **`helpers.ts`** - Shared utilities for creating stories
 
 ## Running Storybook
 
