@@ -71,9 +71,6 @@ export const DiagramEditorDragNDrop = (props: Omit<DiagramEditorProps, "content"
     e.target.value = "";
   };
 
-  /* TODO: Remove this console log when the DiagramEditor is using the content from the param  */
-  console.log("### content updated:\n", content);
-
   return (
     <div style={{ height: "100vh" }}>
       <div
