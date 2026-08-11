@@ -76,12 +76,12 @@ function App() {
 
 ### Props
 
-| Prop         | Type                            | Required | Default    | Description                                              |
-| ------------ | ------------------------------- | -------- | ---------- | -------------------------------------------------------- |
-| `content`    | `string`                        | Yes      | -          | Serverless Workflow specification in YAML or JSON format |
-| `isReadOnly` | `boolean`                       | Yes      | -          | Enable read-only mode to prevent editing                 |
-| `locale`     | `string`                        | Yes      | -          | Language locale for the editor UI                        |
-| `colorMode`  | `'light' \| 'dark' \| 'system'` | No       | `'system'` | Color theme for the editor                               |
+| Prop         | Type                            | Required | Default    | Description                                        |
+| ------------ | ------------------------------- | -------- | ---------- | -------------------------------------------------- |
+| `content`    | `string`                        | Yes      | -          | Open Workflow specification in YAML or JSON format |
+| `isReadOnly` | `boolean`                       | Yes      | -          | Enable read-only mode to prevent editing           |
+| `locale`     | `string`                        | Yes      | -          | Language locale for the editor UI                  |
+| `colorMode`  | `'light' \| 'dark' \| 'system'` | No       | `'system'` | Color theme for the editor                         |
 
 ## Development
 
