@@ -237,6 +237,12 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.4(@types/react@19.2.18)
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.61.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.76.0
       react:
         specifier: 'catalog:'
         version: 19.2.8

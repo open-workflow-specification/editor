@@ -28,7 +28,10 @@
   "scripts": {
     "clean": "rimraf ./dist",
     "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
-    "build:prod": "pnpm run build:dev && pnpm test",
+    "build:prod": "pnpm lint && pnpm run build:dev && pnpm test",
+    "lint": "oxlint --config .oxlintrc.json src/ tests/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
     "test": "vitest run"
   },
   "devDependencies": {
@@ -37,6 +40,8 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rimraf": "catalog:",
