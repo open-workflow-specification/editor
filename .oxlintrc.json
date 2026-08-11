@@ -6,5 +6,8 @@
     "typescript/no-unused-vars": ["warn", { "varsIgnorePattern": "^_" }],
     "typescript/no-explicit-any": "warn"
   },
-  "ignorePatterns": ["**/dist/", "**/dist-storybook/", "**/node_modules/"]
+  "ignorePatterns": ["**/dist/", "**/dist-storybook/", "**/node_modules/"],
+  "options": {
+    "denyWarnings": true
+  }
 }
