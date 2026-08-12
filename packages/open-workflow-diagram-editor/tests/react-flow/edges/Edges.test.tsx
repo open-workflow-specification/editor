@@ -212,7 +212,8 @@ describe("React Flow custom edge types", () => {
     );
 
     const svg = container.querySelector("svg");
-    expect(svg?.firstChild).toMatchSnapshot();
+    expect(svg).not.toBeNull();
+    expect(svg!.firstChild).toMatchSnapshot();
   });
 });
 
@@ -503,7 +504,7 @@ describe("EdgeLabel positioning", () => {
       targetX: 100,
       targetY: 40,
       data: { label: "Test" },
-});
+    });
 
     expect(JSON.stringify(result)).toContain(`translate(${labelX}px,${labelY}px)`);
   });
