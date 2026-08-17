@@ -56,6 +56,27 @@ do:
           code: |
             const [,, flag, id] = process.argv;
             console.log(JSON.stringify({ processed: id }));
+  - waitTask:
+      wait:
+        seconds: 5
+  - forkTask:
+      fork:
+        compete: false
+        branches:
+          - notifyEmail:
+              call: http
+              with:
+                method: post
+                endpoint: https://api.example.com/notifications/email
+                body:
+                  userId: ${ .userId }
+          - notifySlack:
+              call: http
+              with:
+                method: post
+                endpoint: https://api.example.com/notifications/slack
+                body:
+                  userId: ${ .userId }
   - listenTask:
       listen:
         to:
@@ -70,6 +91,28 @@ do:
               correlate:
                 userId:
                   from: .subject
+  - emitTask:
+      emit:
+        event:
+          with:
+            source: https://api.example.com
+            type: com.example.user.processed.v1
+            data:
+              userId: ${ .userId }
+              userName: ${ .userName }
+  - forTask:
+      for:
+        each: role
+        in: ${ .roles }
+        at: index
+      do:
+        - assignRole:
+            call: http
+            with:
+              method: post
+              endpoint: https://api.example.com/users/${ .userId }/roles
+              body:
+                role: ${ .role }
   - switchTask:
       switch:
         - verified:
@@ -91,6 +134,26 @@ do:
             set:
               profile: ${ .body }
               enrichedAt: ${ now }
+      then: exit
+  - tryTask:
+      try:
+        - fetchPreferences:
+            call: http
+            with:
+              method: get
+              endpoint: https://api.example.com/users/${ .userId }/preferences
+      catch:
+        errors:
+          with:
+            type: https://open-workflow-specification.org/spec/1.0.0/errors/communication
+            status: 404
+        as: error
+        do:
+          - setDefaultPreferences:
+              set:
+                preferences:
+                  theme: default
+                  language: en
       then: exit
   - raiseErrorTask:
       raise:

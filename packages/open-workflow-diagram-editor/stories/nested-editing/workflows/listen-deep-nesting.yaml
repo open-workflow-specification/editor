@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Nested editing focus: listen task with deeply nested correlate maps inside
-# a to.all array, followed by a foreach block containing its own nested do tasks.
+# a to.any array, followed by a foreach block containing its own nested do tasks.
 # Tests drill-in navigation: top level -> listen config -> event filter array ->
 # correlate map, and separately: foreach -> do -> nested call task.
 document:
@@ -26,7 +26,7 @@ do:
   - awaitReadings:
       listen:
         to:
-          all:
+          any:
             - with:
                 source: https://sensors.example.com
                 type: com.example.sensors.temperature
@@ -54,7 +54,7 @@ do:
                   from: .device.id
                 roomId:
                   from: .location.room
-        until: ${ .readingCount >= 10 }
+          until: ${ .readingCount >= 10 }
       foreach:
         item: reading
         at: i
