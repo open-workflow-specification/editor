@@ -51,4 +51,10 @@ export const ListenDeepNesting: Story = createWorkflowStory(workflows.listenDeep
 export const NestedValidation: Story = createWorkflowStory(workflows.nestedValidation);
 export const RunTaskArray: Story = createWorkflowStory(workflows.runTaskArray);
 export const SetOpenMap: Story = createWorkflowStory(workflows.setOpenMap);
-export const SwitchLockedCases: Story = createWorkflowStory(workflows.switchLockedCases);
+export const SwitchLockedCases: Story = {
+  args: {
+    ...DEFAULT_STORY_ARGS,
+    isReadOnly: true,
+    content: workflows.switchLockedCases,
+  },
+};
