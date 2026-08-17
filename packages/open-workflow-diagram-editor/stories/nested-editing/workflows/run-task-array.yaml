@@ -1,0 +1,84 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Nested editing focus: run task with an arguments array and environment map,
+# inside a do container alongside a for loop that also contains a run task.
+# Tests reordering the arguments array and editing the environment map
+# at multiple nesting levels.
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: run-task-array
+  version: "0.1.0"
+do:
+  - prepare:
+      set:
+        fileContents: ${ .input.files }
+        outputDir: ${ .input.outputDir }
+  - processFiles:
+      do:
+        - validateInput:
+            run:
+              script:
+                language: python
+                arguments:
+                  - --mode
+                  - validate
+                  - --strict
+                environment:
+                  LOG_LEVEL: info
+                  TIMEOUT: "30"
+                code: |
+                  import sys, json
+                  data = json.loads(sys.stdin.read())
+                  assert data, "empty input"
+                  print(json.dumps({"valid": True}))
+        - transformFiles:
+            run:
+              script:
+                language: python
+                stdin: ${ .fileContents }
+                arguments:
+                  - --output-format
+                  - json
+                  - --verbose
+                  - --max-retries
+                  - "3"
+                environment:
+                  LOG_LEVEL: info
+                  TIMEOUT: "60"
+                  OUTPUT_DIR: ${ .outputDir }
+                code: |
+                  import sys, json, argparse
+                  parser = argparse.ArgumentParser()
+                  parser.add_argument('--output-format')
+                  parser.add_argument('--verbose', action='store_true')
+                  parser.add_argument('--max-retries', type=int)
+                  args = parser.parse_args()
+                  data = json.loads(sys.stdin.read())
+                  print(json.dumps({"processed": data, "format": args.output_format}))
+  - reportResults:
+      run:
+        script:
+          language: javascript
+          arguments:
+            - --summary
+            - --output
+            - ${ .outputDir }
+          environment:
+            NODE_ENV: production
+          code: |
+            const [,, , , dir] = process.argv;
+            console.log(JSON.stringify({ summary: true, dir }));

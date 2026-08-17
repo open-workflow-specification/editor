@@ -1,0 +1,55 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: switch-locked-cases
+  version: "0.1.0"
+do:
+  - routeOrder:
+      switch:
+        - electronicOrder:
+            when: ${ .orderType == "electronic" }
+            then: fulfillElectronic
+        - physicalOrder:
+            when: ${ .orderType == "physical" }
+            then: fulfillPhysical
+        - subscriptionOrder:
+            when: ${ .orderType == "subscription" }
+            then: fulfillSubscription
+        - default:
+            then: rejectUnknownOrder
+  - fulfillElectronic:
+      set:
+        deliveryMethod: email
+        status: queued
+      then: exit
+  - fulfillPhysical:
+      set:
+        deliveryMethod: courier
+        status: queued
+      then: exit
+  - fulfillSubscription:
+      set:
+        deliveryMethod: recurring
+        status: active
+      then: exit
+  - rejectUnknownOrder:
+      raise:
+        error:
+          type: https://example.com/errors/unknown-order-type
+          status: 400
+          title: Unknown Order Type

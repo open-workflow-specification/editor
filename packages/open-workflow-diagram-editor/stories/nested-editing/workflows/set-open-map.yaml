@@ -1,0 +1,56 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Nested editing focus: open map (set task) inside a for loop container.
+# The editor must handle adding/removing arbitrary keys in the set map
+# while navigating into the for loop's nested do block — two nesting levels.
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: set-open-map
+  version: "0.1.0"
+do:
+  - initContext:
+      set:
+        requestedAt: ${ now }
+        environment: production
+        featureFlags:
+          betaEditor: true
+          darkMode: false
+  - processItems:
+      for:
+        each: item
+        in: ${ .items }
+        at: index
+      do:
+        - enrichItem:
+            set:
+              id: ${ .item.id }
+              label: ${ .item.name }
+              index: ${ .index }
+              processedAt: ${ now }
+              meta:
+                source: workflow
+                version: v2
+        - tagItem:
+            set:
+              tagged: true
+              taggedBy: ${ $workflow.definition.document.name }
+              taggedAt: ${ now }
+  - finalise:
+      set:
+        totalProcessed: ${ .index + 1 }
+        completedAt: ${ now }
+        status: done

@@ -1,0 +1,97 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: all-task-types
+  version: "0.1.0"
+use:
+  errors:
+    notFound:
+      type: https://example.com/errors/not-found
+      status: 404
+      title: Resource Not Found
+do:
+  - callHttpTask:
+      call: http
+      with:
+        method: get
+        endpoint: https://api.example.com/users
+        headers:
+          Accept: application/json
+          X-Api-Key: ${ .apiKey }
+        query:
+          page: "1"
+          limit: "20"
+  - setContextTask:
+      set:
+        userId: ${ .users[0].id }
+        userName: ${ .users[0].name }
+        fetchedAt: ${ now }
+        meta:
+          source: api.example.com
+          version: v2
+  - runScriptTask:
+      run:
+        script:
+          language: javascript
+          arguments:
+            - --user-id
+            - ${ .userId }
+          environment:
+            NODE_ENV: production
+          code: |
+            const [,, flag, id] = process.argv;
+            console.log(JSON.stringify({ processed: id }));
+  - listenTask:
+      listen:
+        to:
+          any:
+            - with:
+                type: com.example.user.verified
+              correlate:
+                userId:
+                  from: .subject
+            - with:
+                type: com.example.user.rejected
+              correlate:
+                userId:
+                  from: .subject
+  - switchTask:
+      switch:
+        - verified:
+            when: ${ .eventType == "com.example.user.verified" }
+            then: doNestedTask
+        - rejected:
+            when: ${ .eventType == "com.example.user.rejected" }
+            then: raiseErrorTask
+        - default:
+            then: raiseErrorTask
+  - doNestedTask:
+      do:
+        - enrichProfile:
+            call: http
+            with:
+              method: get
+              endpoint: https://api.example.com/profile/${ .userId }
+        - storeProfile:
+            set:
+              profile: ${ .body }
+              enrichedAt: ${ now }
+      then: exit
+  - raiseErrorTask:
+      raise:
+        error: notFound

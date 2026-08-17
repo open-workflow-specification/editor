@@ -1,0 +1,94 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Nested editing focus: listen task with deeply nested correlate maps inside
+# a to.all array, followed by a foreach block containing its own nested do tasks.
+# Tests drill-in navigation: top level -> listen config -> event filter array ->
+# correlate map, and separately: foreach -> do -> nested call task.
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: listen-deep-nesting
+  version: "0.1.0"
+do:
+  - awaitReadings:
+      listen:
+        to:
+          all:
+            - with:
+                source: https://sensors.example.com
+                type: com.example.sensors.temperature
+                data: ${ .value > 37.5 }
+              correlate:
+                deviceId:
+                  from: .device.id
+                roomId:
+                  from: .location.room
+            - with:
+                source: https://sensors.example.com
+                type: com.example.sensors.humidity
+                data: ${ .percent > 80 }
+              correlate:
+                deviceId:
+                  from: .device.id
+                roomId:
+                  from: .location.room
+            - with:
+                source: https://sensors.example.com
+                type: com.example.sensors.pressure
+                data: ${ .hpa < 980 }
+              correlate:
+                deviceId:
+                  from: .device.id
+                roomId:
+                  from: .location.room
+        until: ${ .readingCount >= 10 }
+      foreach:
+        item: reading
+        at: i
+        do:
+          - logReading:
+              call: http
+              with:
+                method: post
+                endpoint: https://ingest.example.com/readings
+                headers:
+                  Content-Type: application/json
+                  X-Device-Id: ${ .reading.deviceId }
+                body:
+                  reading: ${ .reading }
+                  index: ${ .i }
+          - updateState:
+              set:
+                lastReading: ${ .reading }
+                readingCount: ${ .i + 1 }
+      output:
+        as: .latestReadings
+  - processReadings:
+      do:
+        - summarise:
+            set:
+              total: ${ .latestReadings | length }
+              avgTemp: ${ [ .latestReadings[] | select(.type == "temperature") | .value ] | add / length }
+        - notifyAlert:
+            call: http
+            with:
+              method: post
+              endpoint: https://alerts.example.com/notify
+              headers:
+                Content-Type: application/json
+              body:
+                summary: ${ .summary }
+                avgTemp: ${ .avgTemp }
