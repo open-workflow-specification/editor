@@ -51,6 +51,5 @@ do:
               taggedAt: ${ now }
   - finalise:
       set:
-        totalProcessed: ${ .index + 1 }
         completedAt: ${ now }
         status: done
