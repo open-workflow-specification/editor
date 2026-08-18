@@ -18,6 +18,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DiagramEditorErrorBoundary } from "../../src/diagram-editor/error-pages/DiagramEditorErrorBoundary";
 import { ColorMode } from "../../src/types/colorMode";
 import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { spyOn } from "storybook/test";
 
 type DiagramEditorErrorBoundaryProps = {
   title?: string;
@@ -29,11 +30,29 @@ type DiagramEditorErrorBoundaryStoryProps = DiagramEditorErrorBoundaryProps & {
   colorMode?: ColorMode;
 };
 
-const ThrowError = ({ message = "Test error message" }: { message?: string }) => {
+const DEFAULT_ERROR_MESSAGE = "Test error message";
+const CUSTOM_ERROR_MESSAGE = "Custom error details in snippet";
+
+const ThrowError = ({ message = DEFAULT_ERROR_MESSAGE }: { message?: string }) => {
   throw new Error(message);
 };
 
 const meta = {
+  beforeEach: () => {
+    const originalConsoleError = console.error;
+
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation((...args) => {
+      const error = args[1];
+
+      if (error instanceof Error && (error.message===DEFAULT_ERROR_MESSAGE || error.message===CUSTOM_ERROR_MESSAGE)) {
+        return;
+      }
+
+      originalConsoleError(...args);
+    });
+
+    return () => consoleErrorSpy.mockRestore();
+  },
   title: "Features/DiagramEditorErrorBoundary",
   component: DiagramEditorErrorBoundary,
   tags: ["autodocs"],
@@ -78,6 +97,6 @@ export const WithErrorCustomMessage: Story = {
   args: {
     title: "Custom Error Title",
     message: "This is a custom error message",
-    children: <ThrowError message="Custom error details in snippet" />,
+    children: <ThrowError message={CUSTOM_ERROR_MESSAGE} />,
   },
 };

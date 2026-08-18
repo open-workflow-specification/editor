@@ -36,6 +36,7 @@ describe("NodeDetailsView", () => {
       task: {
         call: "http",
         with: { endpoint: "https://api.example.com" },
+        // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
         then: "continue",
       },
     });

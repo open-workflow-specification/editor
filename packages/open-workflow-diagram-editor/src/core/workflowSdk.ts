@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-import { load } from "js-yaml";
+import { load, dump } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
 import { fixNodesConnections } from "./graph";
 import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
+
+export type ContentFormat = "json" | "yaml";
 
 /**
  * Sanitizes an object by removing dangerous prototype pollution keys
@@ -287,4 +289,16 @@ export function parseWorkflow(text: string): WorkflowParseResult {
 
 export function buildFlatGraph(model: sdk.Specification.Workflow): sdk.FlatGraph {
   return fixNodesConnections(sdk.buildFlatGraph(model));
+}
+
+export function serializeWorkflow(
+  model: sdk.Specification.Workflow,
+  format: ContentFormat,
+): string {
+  // The SDK validates the model before serializing it and it may cause validation exceptions
+  // Even if we have a model with validation errors we want it to be serialized
+  const json = JSON.stringify(model);
+  if (format === "json") return json;
+  // dump only works with plain objects.
+  return dump(JSON.parse(json));
 }

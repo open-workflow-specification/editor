@@ -271,6 +271,7 @@ describe("getTaskDetails", () => {
         output: { as: "${ .output }" },
         export: { as: "${ .export }" },
         timeout: "PT5M",
+        // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
         then: "next",
       }),
     );

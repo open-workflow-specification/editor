@@ -32,19 +32,33 @@ const noop = () => {};
 export const createMockContextValue = (
   overrides?: Partial<DiagramEditorContextType>,
 ): DiagramEditorContextType => ({
+  // --- editor state defaults ---
   isReadOnly: true,
   locale: "en",
+  contentFormat: "yaml",
   model: null,
   errors: [],
   nodes: [],
   edges: [],
   taskReferences: new Set(),
   selectedNodeId: null,
-  setIsReadOnly: noop,
+
+  // --- dispatch defaults ---
   setLocale: noop,
   setEdges: noop,
   setNodes: noop,
   setSelectedNodeId: noop,
+  setContent: noop,
+
+  // --- history defaults ---
+  submitModel: noop,
+  undo: noop,
+  redo: noop,
+  canUndo: false,
+  canRedo: false,
+  pendingViewportRestore: null,
+  clearPendingViewportRestore: noop,
+
   ...overrides,
 });
 

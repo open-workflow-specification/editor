@@ -20,6 +20,7 @@ import {
   validateWorkflow,
   buildFlatGraph,
   parseValidationErrorMessage,
+  serializeWorkflow,
 } from "../../src/core";
 import {
   BASIC_VALID_WORKFLOW_YAML,
@@ -29,6 +30,7 @@ import {
   BASIC_VALID_WORKFLOW_JSON_TASKS,
   EMPTY_WORKFLOW_JSON,
   PARSEABLE_INVALID_WORKFLOW_YAML,
+  WORKFLOW_WITH_METADATA_JSON,
 } from "../fixtures/workflows";
 import { Classes, Specification } from "@openworkflowspec/sdk";
 
@@ -242,6 +244,100 @@ describe("validateWorkflow", () => {
     // Verify it has the standard Error message property
     expect(result[0]).toHaveProperty("message");
     expect((result[0] as Error).message).toBe("Random error: something went wrong internally");
+  });
+});
+
+describe("serializeWorkflow", () => {
+  it("serializes a workflow model to JSON", () => {
+    const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_JSON);
+    expect(model).not.toBeNull();
+
+    const result = serializeWorkflow(model!, "json");
+
+    const parsed = JSON.parse(result);
+    expect(parsed.document.name).toBe("valid-workflow-json");
+    expect(parsed.do).toHaveLength(1);
+  });
+
+  it("serializes a workflow model to YAML", () => {
+    const model = new Classes.Workflow({
+      document: {
+        dsl: "1.0.3",
+        name: "valid-workflow-yaml",
+        version: "1.0.0",
+        namespace: "default",
+      },
+      do: [{ step1: { set: { variable: "my first workflow" } } }],
+    }) as Specification.Workflow;
+
+    const result = serializeWorkflow(model, "yaml");
+
+    expect(typeof result).toBe("string");
+    expect(result).toContain("valid-workflow-yaml");
+    expect(result).toContain("do:");
+  });
+
+  it("serializes a plain-object workflow model to YAML", () => {
+    const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_YAML);
+    expect(model).not.toBeNull();
+
+    const result = serializeWorkflow(model!, "yaml");
+
+    expect(typeof result).toBe("string");
+    expect(result).toContain("valid-workflow-yaml");
+    expect(result).toContain("do:");
+  });
+
+  it("round-trips a JSON workflow without data loss", () => {
+    const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_JSON);
+    expect(model).not.toBeNull();
+
+    const serialized = serializeWorkflow(model!, "json");
+    const { model: reparsed, errors } = parseWorkflow(serialized);
+
+    expect(errors).toHaveLength(0);
+    expect(reparsed?.document?.name).toBe(model!.document!.name);
+    expect(reparsed?.document?.version).toBe(model!.document!.version);
+    expect(reparsed?.document?.namespace).toBe(model!.document!.namespace);
+  });
+
+  it("round-trips a YAML workflow without data loss", () => {
+    const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_YAML);
+    expect(model).not.toBeNull();
+
+    const serialized = serializeWorkflow(model!, "yaml");
+    const { model: reparsed, errors } = parseWorkflow(serialized);
+
+    expect(errors).toHaveLength(0);
+    expect(reparsed?.document?.name).toBe(model!.document!.name);
+    expect(reparsed?.document?.version).toBe(model!.document!.version);
+    expect(reparsed?.document?.namespace).toBe(model!.document!.namespace);
+  });
+
+  it("preserves all tasks when serialized to JSON", () => {
+    const { model } = parseWorkflow(BASIC_VALID_WORKFLOW_JSON_TASKS);
+    expect(model).not.toBeNull();
+
+    const serialized = serializeWorkflow(model!, "json");
+    const parsed = JSON.parse(serialized);
+
+    expect(parsed.do).toHaveLength(5);
+  });
+
+  it("produces valid JSON output for a workflow with metadata", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+    expect(model).not.toBeNull();
+
+    const result = serializeWorkflow(model!, "json");
+    const parsed = JSON.parse(result);
+
+    expect(parsed.document.title).toBe("Test Workflow Title");
+    expect(parsed.document.summary).toBe("A test workflow with full metadata");
+    expect(parsed.document.tags).toEqual({
+      iot: "Internet of Things",
+      sensors: "Sensor data",
+      readings: "Room readings",
+    });
   });
 });
 

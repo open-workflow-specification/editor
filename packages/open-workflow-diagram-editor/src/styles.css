@@ -80,7 +80,7 @@
     --dec-minimap-node-stroke: #64748b;
     --dec-minimap-border: #cbd5e1;
     --dec-minimap-shadow: rgba(15, 23, 42, 0.12);
-    
+
     /* toast */
     --dec-toast-bg: #ffffff;
     --dec-toast-border: #e9edf4;
@@ -104,7 +104,7 @@
     --dec-selected-rgb: 96 165 250;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
     --dec-node-hover-glow: rgba(255, 255, 255, 0.3);
-  
+
     /* minimap */
     --dec-minimap-bg: var(--dec-surface-dark);
     --dec-minimap-mask: rgba(2, 6, 23, 0.5);
@@ -113,7 +113,7 @@
     --dec-minimap-node-stroke: #cbd5e1;
     --dec-minimap-border: var(--dec-surface-dark-elevated);
     --dec-minimap-shadow: rgba(0, 0, 0, 0.5);
-    
+
     /* toast */
     --dec-toast-bg: #2d3748;
     --dec-toast-border: #4a5568;

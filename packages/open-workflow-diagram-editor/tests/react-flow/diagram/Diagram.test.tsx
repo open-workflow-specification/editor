@@ -37,6 +37,39 @@ vi.mock("@xyflow/react", async () => {
   };
 });
 
+/** Build a mock ReactFlow instance with spies for all viewport methods. */
+function makeMockReactFlowInstance() {
+  return {
+    fitView: vi.fn(),
+    getViewport: vi.fn().mockReturnValue({ x: 0, y: 0, zoom: 1 }),
+    setViewport: vi.fn(),
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    zoomTo: vi.fn(),
+    getZoom: vi.fn().mockReturnValue(1),
+    setCenter: vi.fn(),
+    fitBounds: vi.fn(),
+    project: vi.fn(),
+    screenToFlowPosition: vi.fn(),
+    flowToScreenPosition: vi.fn(),
+    getNode: vi.fn(),
+    getNodes: vi.fn().mockReturnValue([]),
+    getEdge: vi.fn(),
+    getEdges: vi.fn().mockReturnValue([]),
+    getIntersectingNodes: vi.fn().mockReturnValue([]),
+    isNodeIntersecting: vi.fn(),
+    updateNode: vi.fn(),
+    updateNodeData: vi.fn(),
+    updateEdge: vi.fn(),
+    updateEdgeData: vi.fn(),
+    addNodes: vi.fn(),
+    addEdges: vi.fn(),
+    deleteElements: vi.fn(),
+    toObject: vi.fn(),
+    viewportInitialized: true,
+  };
+}
+
 /**
  * Helper function to render the Diagram component with all required providers
  * @param options - Configuration options for the diagram
@@ -87,14 +120,10 @@ describe("Diagram Component", () => {
   it("render Diagram component and canvas", async () => {
     renderDiagram({ isReadOnly: true });
 
-    const diagram = screen.getByTestId("diagram-container");
-    const canvas = screen.getByTestId("react-flow-canvas");
-
-    expect(diagram).toBeInTheDocument();
-    expect(canvas).toBeInTheDocument();
-
-    // Verify that applyAutoLayout was called
+    // diagram-container is always present; canvas mounts after first layout completes.
+    expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
     await waitFor(() => {
+      expect(screen.getByTestId("react-flow-canvas")).toBeInTheDocument();
       expect(applyAutoLayoutSpy).toHaveBeenCalled();
     });
   });
@@ -128,18 +157,11 @@ describe("Diagram Component", () => {
   it("should disable node interaction when isReadOnly is true", async () => {
     renderDiagram({ isReadOnly: true });
 
-    const diagram = screen.getByTestId("diagram-container");
+    expect(screen.getByTestId("diagram-container")).toHaveClass("read-only");
 
-    // Verify that the read-only class is applied
-    // This class applies CSS rule: .read-only .react-flow__handle { visibility: hidden !important; }
-    expect(diagram).toHaveClass("read-only");
-
-    // Verify ReactFlow canvas is rendered
-    const canvas = screen.getByTestId("react-flow-canvas");
-    expect(canvas).toBeInTheDocument();
-
-    // Wait for ReactFlow to be called
+    // Canvas mounts after layout — wait for it.
     await waitFor(() => {
+      expect(screen.getByTestId("react-flow-canvas")).toBeInTheDocument();
       expect(ReactFlow).toHaveBeenCalled();
     });
 
@@ -159,17 +181,11 @@ describe("Diagram Component", () => {
   it("should enable node interaction when isReadOnly is false", async () => {
     renderDiagram({ isReadOnly: false });
 
-    const diagram = screen.getByTestId("diagram-container");
+    expect(screen.getByTestId("diagram-container")).not.toHaveClass("read-only");
 
-    // Verify that the read-only class is not applied
-    expect(diagram).not.toHaveClass("read-only");
-
-    // Verify ReactFlow canvas is rendered
-    const canvas = screen.getByTestId("react-flow-canvas");
-    expect(canvas).toBeInTheDocument();
-
-    // Wait for ReactFlow to be called
+    // Canvas mounts after layout — wait for it.
     await waitFor(() => {
+      expect(screen.getByTestId("react-flow-canvas")).toBeInTheDocument();
       expect(ReactFlow).toHaveBeenCalled();
     });
 
@@ -292,6 +308,46 @@ describe("Diagram Component", () => {
         // Selected edges: 100
         // Edge labels: 1000+ (tested in Edges.test.tsx)
       });
+    });
+  });
+
+  describe("viewport stability on node selection", () => {
+    it("should not call fitView when a node is selected in read-only mode", async () => {
+      // Regression test: selecting a node must not reset zoom/pan.
+      // The bug: onNodesChange fired by React Flow on selection updated `nodes` state,
+      // which was a dep of the post-layout effect, causing fitView to be called.
+      const mockInstance = makeMockReactFlowInstance();
+      vi.spyOn(RF, "useReactFlow").mockReturnValue(mockInstance as unknown as RF.ReactFlowInstance);
+
+      applyAutoLayoutSpy.mockResolvedValue({
+        nodes: [{ id: "node1", position: { x: 0, y: 0 }, data: {} }],
+        edges: [],
+      });
+
+      renderDiagram({ isReadOnly: true });
+
+      // Wait for the first layout cycle to complete and fitView to have run once
+      // (via the fitView prop on <RF.ReactFlow> — tracked by hasRunInitialFitView).
+      await waitFor(() => {
+        expect(screen.getByTestId("react-flow-canvas")).toBeInTheDocument();
+      });
+
+      // Reset the spy so we can detect any spurious fitView calls after selection.
+      mockInstance.fitView.mockClear();
+
+      // Simulate a node selection change — the same event that triggered the bug.
+      const onSelectionChange = vi.mocked(ReactFlow).mock.calls.at(-1)![0].onSelectionChange;
+      act(() => {
+        onSelectionChange?.({ nodes: [{ id: "node1" } as RF.Node], edges: [] });
+      });
+
+      // Give all effects and timeouts a chance to run.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      // fitView must NOT have been called — the viewport must be untouched.
+      expect(mockInstance.fitView).not.toHaveBeenCalled();
     });
   });
 });

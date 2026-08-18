@@ -16,6 +16,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DiagramEditor } from "../features/DiagramEditor";
+import { createWorkflowStory } from "../helpers";
 import * as workflows from "./index";
 
 const meta = {
@@ -31,20 +32,6 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
-const DEFAULT_STORY_ARGS = {
-  isReadOnly: true,
-  locale: "en" as const,
-} as const;
-
-const createWorkflowStory = (workflowContent: string): Story => {
-  return {
-    args: {
-      ...DEFAULT_STORY_ARGS,
-      content: workflowContent,
-    },
-  };
-};
 
 export const AutomatedDataBackup: Story = createWorkflowStory(workflows.automatedDataBackup);
 export const ManagingEVChargingStations: Story = createWorkflowStory(

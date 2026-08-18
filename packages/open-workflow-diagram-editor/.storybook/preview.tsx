@@ -28,6 +28,7 @@ const preview: Preview = {
         color: /(background|color)$/i,
         date: /Date$/i,
       },
+      disableSaveFromUI: true, // Disable modifiy story popup. Stories mustn't be editable from Storybook UI.
     },
 
     backgrounds: {

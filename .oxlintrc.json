@@ -4,7 +4,13 @@
   "rules": {
     "react/react-in-jsx-scope": "off",
     "typescript/no-unused-vars": ["warn", { "varsIgnorePattern": "^_" }],
-    "typescript/no-explicit-any": "warn"
+    "typescript/no-explicit-any": "warn",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "jsx-a11y/click-events-have-key-events": "off",
+    "jsx-a11y/no-noninteractive-element-interactions": "off"
   },
-  "ignorePatterns": ["**/dist/", "**/dist-storybook/", "**/node_modules/"]
+  "ignorePatterns": ["**/dist/", "**/dist-storybook/", "**/node_modules/"],
+  "options": {
+    "denyWarnings": true
+  }
 }

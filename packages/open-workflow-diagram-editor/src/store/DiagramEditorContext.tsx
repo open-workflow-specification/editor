@@ -17,11 +17,12 @@
 import type { Specification } from "@openworkflowspec/sdk";
 import * as React from "react";
 import type * as RF from "@xyflow/react";
-import type { SdkError } from "../core";
+import type { ContentFormat, SdkError } from "../core";
 
 export type DiagramEditorContextType = {
   isReadOnly: boolean;
   locale: string;
+  contentFormat: ContentFormat;
   model: Specification.Workflow | null;
   errors: SdkError[];
   nodes: RF.Node[];
@@ -29,11 +30,30 @@ export type DiagramEditorContextType = {
   taskReferences: Set<string>;
   selectedNodeId: string | null;
 
-  setIsReadOnly: React.Dispatch<React.SetStateAction<boolean>>;
   setLocale: React.Dispatch<React.SetStateAction<string>>;
   setNodes: React.Dispatch<React.SetStateAction<RF.Node[]>>;
   setEdges: React.Dispatch<React.SetStateAction<RF.Edge[]>>;
   setSelectedNodeId: React.Dispatch<React.SetStateAction<string | null>>;
+
+  // Undo/redo — history API
+  submitModel: (
+    model: Specification.Workflow,
+    viewport: RF.Viewport,
+    selectedNodeId: string | null,
+  ) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  pendingViewportRestore: RF.Viewport | null;
+  clearPendingViewportRestore: () => void;
+  /**
+   * Load a new workflow from a YAML or JSON string, exactly as if the
+   * `content` prop had changed. The serialisation format is re-detected from
+   * the supplied string and replaces the current format for future
+   * `getContent()` calls.
+   */
+  setContent: (content: string) => void;
 };
 
 export const DiagramEditorContext = React.createContext<DiagramEditorContextType | undefined>(

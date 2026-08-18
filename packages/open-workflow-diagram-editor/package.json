@@ -48,6 +48,7 @@
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "elkjs": "catalog:",
+    "fast-equals": "catalog:",
     "js-yaml": "catalog:",
     "radix-ui": "catalog:",
     "sonner": "catalog:",

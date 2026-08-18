@@ -26,5 +26,7 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     sourcemap: true,
+    // Raised to 5000 to suppress chunk size warning
+    chunkSizeWarningLimit: 5000,
   },
 });

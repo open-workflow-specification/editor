@@ -50,17 +50,19 @@ describe("React Flow custom edge types", () => {
     const Component = component;
     const { container } = render(
       <RF.ReactFlowProvider>
-        <Component
-          id={"n1-n2"}
-          source={"n1"}
-          target={"n2"}
-          sourceX={0}
-          sourceY={0}
-          targetX={0}
-          targetY={0}
-          sourcePosition={RF.Position.Left}
-          targetPosition={RF.Position.Left}
-        />
+        <svg>
+          <Component
+            id={"n1-n2"}
+            source={"n1"}
+            target={"n2"}
+            sourceX={0}
+            sourceY={0}
+            targetX={0}
+            targetY={0}
+            sourcePosition={RF.Position.Left}
+            targetPosition={RF.Position.Left}
+          />
+        </svg>
       </RF.ReactFlowProvider>,
     );
     const path = container.querySelector("path.edge-line");
@@ -158,18 +160,20 @@ describe("React Flow custom edge types", () => {
     ({ component: Component, selected, shouldHaveSelected, expectedClasses }) => {
       const { container } = render(
         <RF.ReactFlowProvider>
-          <Component
-            id={"n1-n2"}
-            source={"n1"}
-            target={"n2"}
-            sourceX={0}
-            sourceY={0}
-            targetX={0}
-            targetY={0}
-            sourcePosition={RF.Position.Left}
-            targetPosition={RF.Position.Left}
-            selected={selected}
-          />
+          <svg>
+            <Component
+              id={"n1-n2"}
+              source={"n1"}
+              target={"n2"}
+              sourceX={0}
+              sourceY={0}
+              targetX={0}
+              targetY={0}
+              sourcePosition={RF.Position.Left}
+              targetPosition={RF.Position.Left}
+              selected={selected}
+            />
+          </svg>
         </RF.ReactFlowProvider>,
       );
       const path = container.querySelector("path.edge-line");
@@ -188,24 +192,28 @@ describe("React Flow custom edge types", () => {
   it("matches snapshot with waypoints", () => {
     const { container } = render(
       <RF.ReactFlowProvider>
-        <DefaultEdge
-          id={"n1-n2"}
-          source={"n1"}
-          target={"n2"}
-          sourceX={0}
-          sourceY={0}
-          targetX={0}
-          targetY={0}
-          sourcePosition={RF.Position.Left}
-          targetPosition={RF.Position.Left}
-          data={{
-            wayPoints: [{ x: 50, y: 50 }],
-          }}
-        />
+        <svg>
+          <DefaultEdge
+            id={"n1-n2"}
+            source={"n1"}
+            target={"n2"}
+            sourceX={0}
+            sourceY={0}
+            targetX={0}
+            targetY={0}
+            sourcePosition={RF.Position.Left}
+            targetPosition={RF.Position.Left}
+            data={{
+              wayPoints: [{ x: 50, y: 50 }],
+            }}
+          />
+        </svg>
       </RF.ReactFlowProvider>,
     );
 
-    expect(container.firstChild).toMatchSnapshot();
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg!.firstChild).toMatchSnapshot();
   });
 });
 
@@ -391,18 +399,20 @@ describe("EdgeLabel component", () => {
     ])("$description", ({ component: Component, data, selector }) => {
       const { container } = render(
         <RF.ReactFlowProvider>
-          <Component
-            id="e1"
-            source="n1"
-            target="n2"
-            sourceX={0}
-            sourceY={0}
-            targetX={100}
-            targetY={100}
-            sourcePosition={RF.Position.Right}
-            targetPosition={RF.Position.Left}
-            data={data}
-          />
+          <svg>
+            <Component
+              id="e1"
+              source="n1"
+              target="n2"
+              sourceX={0}
+              sourceY={0}
+              targetX={100}
+              targetY={100}
+              sourcePosition={RF.Position.Right}
+              targetPosition={RF.Position.Left}
+              data={data}
+            />
+          </svg>
         </RF.ReactFlowProvider>,
       );
 
@@ -557,19 +567,21 @@ describe("EdgeLabel z-index behavior", () => {
       ({ component: Component, edgeClass, selected }) => {
         const { container } = render(
           <RF.ReactFlowProvider>
-            <Component
-              id="e1"
-              source="n1"
-              target="n2"
-              sourceX={0}
-              sourceY={0}
-              targetX={100}
-              targetY={100}
-              sourcePosition={RF.Position.Right}
-              targetPosition={RF.Position.Left}
-              data={{ label: "Test Label" }}
-              selected={selected}
-            />
+            <svg>
+              <Component
+                id="e1"
+                source="n1"
+                target="n2"
+                sourceX={0}
+                sourceY={0}
+                targetX={100}
+                targetY={100}
+                sourcePosition={RF.Position.Right}
+                targetPosition={RF.Position.Left}
+                data={{ label: "Test Label" }}
+                selected={selected}
+              />
+            </svg>
           </RF.ReactFlowProvider>,
         );
 

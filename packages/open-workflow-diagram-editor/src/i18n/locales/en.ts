@@ -50,6 +50,8 @@ export const en = {
   "aria.panel.workflowInfo": "Workflow information panel",
   "aria.panel.content": "Panel content",
   "aria.panel.exportActions": "Export actions",
+  "workflowError.autoLayout.title": "Layout Error",
+  "workflowError.autoLayout.message": "Failed to apply auto-layout to the diagram.",
   "toast.clipboard.error": "Failed to copy",
   "toast.download.success": "Download started",
   "toast.download.error": "Download failed",
