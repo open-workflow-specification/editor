@@ -55,14 +55,6 @@ export const en = {
   "toast.clipboard.error": "Failed to copy",
   "toast.download.success": "Download started",
   "toast.download.error": "Download failed",
-  // "sidebar.runtimeExpression": "Runtime expression",
-  // "sidebar.selectAnOption": "Select an option",
-  // "sidebar.durationHint": "Enter an ISO 8601 duration, for example PT30S or PT5M",
-  sidebar: {
-    runtimeExpression: "Runtime expression",
-    selectAnOption: "Select an option",
-    durationHint: "Enter an ISO 8601 duration, for example PT30S or PT5M",
-  },
 } as const;
 
 export type TranslationKeys = keyof typeof en;
