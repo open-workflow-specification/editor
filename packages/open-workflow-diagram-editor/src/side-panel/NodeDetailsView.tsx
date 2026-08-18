@@ -28,12 +28,6 @@ type NodeDetailsViewProps = {
   node: RF.Node<BaseNodeData>;
 };
 
-const OBJECT_GLYPH = "{...}";
-
-function itemCount(length: number): string {
-  return `${length} item${length === 1 ? "" : "s"}`;
-}
-
 function FieldRow({
   label,
   field,
