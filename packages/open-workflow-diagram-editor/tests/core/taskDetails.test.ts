@@ -30,9 +30,9 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "call", kind: "text", display: "http" },
-      { path: "with.method", kind: "text", display: "GET" },
-      { path: "with.url", kind: "text", display: "http://example.com" },
+      { path: "call", kind: "scalar", value: "http" },
+      { path: "with.method", kind: "scalar", value: "GET" },
+      { path: "with.url", kind: "scalar", value: "http://example.com" },
     ]);
   });
 
@@ -43,9 +43,9 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "set.foo", kind: "text", display: "bar" },
-      { path: "if", kind: "text", display: "${ .ok }" },
-      { path: "then", kind: "text", display: "continue" },
+      { path: "set.foo", kind: "scalar", value: "bar" },
+      { path: "if", kind: "runtime-expression", value: "${ .ok }" },
+      { path: "then", kind: "scalar", value: "continue" },
     ]);
   });
 
@@ -61,11 +61,11 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "set.x", kind: "text", display: "1" },
-      { path: "input.from", kind: "text", display: "${ .input }" },
-      { path: "output.as", kind: "text", display: "${ .output }" },
-      { path: "export.as", kind: "text", display: "${ .export }" },
-      { path: "timeout.after", kind: "text", display: "${ .timeout }" },
+      { path: "set.x", kind: "scalar", value: 1 },
+      { path: "input.from", kind: "scalar", value: "${ .input }" },
+      { path: "output.as", kind: "scalar", value: "${ .output }" },
+      { path: "export.as", kind: "scalar", value: "${ .export }" },
+      { path: "timeout.after", kind: "duration", value: "${ .timeout }" },
     ]);
   });
 
@@ -77,8 +77,8 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "timeout.after.minutes", kind: "text", display: "5" },
-      { path: "timeout.after.seconds", kind: "text", display: "30" },
+      { path: "timeout.after.minutes", kind: "scalar", value: 5 },
+      { path: "timeout.after.seconds", kind: "scalar", value: 30 },
     ]);
   });
 
@@ -89,7 +89,7 @@ describe("getTaskDetails", () => {
       }),
     );
 
-    expect(fields).toEqual([{ path: "timeout", kind: "text", display: "MyTimeout" }]);
+    expect(fields).toEqual([{ path: "timeout", kind: "duration", value: "MyTimeout" }]);
   });
 
   it.each([{ length: 0 }, { length: 1 }, { length: 2 }])(
@@ -123,7 +123,7 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "with.a.b.client.name", kind: "text", display: "foo" },
+      { path: "with.a.b.client.name", kind: "scalar", value: "foo" },
       { path: "with.a.b.client.config", kind: "object" },
     ]);
   });
@@ -136,7 +136,7 @@ describe("getTaskDetails", () => {
       }),
     );
 
-    expect(fields).toEqual([{ path: "set.x", kind: "text", display: "1" }]);
+    expect(fields).toEqual([{ path: "set.x", kind: "scalar", value: 1 }]);
   });
 
   it("returns no fields for a task with no displayable fields", () => {
@@ -154,7 +154,7 @@ describe("getTaskDetails", () => {
       }),
     );
 
-    expect(fields).toEqual([{ path: "set.c", kind: "text", display: "value" }]);
+    expect(fields).toEqual([{ path: "set.c", kind: "scalar", value: "value" }]);
   });
 
   it("converts boolean values to text", () => {
@@ -168,8 +168,8 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "set.enabled", kind: "text", display: "true" },
-      { path: "set.disabled", kind: "text", display: "false" },
+      { path: "set.enabled", kind: "scalar", value: true },
+      { path: "set.disabled", kind: "scalar", value: false },
     ]);
   });
 
@@ -236,7 +236,7 @@ describe("getTaskDetails", () => {
       }),
     );
 
-    expect(fields).toEqual([{ path: "call", kind: "text", display: "123" }]);
+    expect(fields).toEqual([{ path: "call", kind: "scalar", value: 123 }]);
   });
 
   it("flattens fields exactly at the maximum supported depth", () => {
@@ -257,8 +257,8 @@ describe("getTaskDetails", () => {
     expect(fields).toEqual([
       {
         path: "with.a.b.c.value",
-        kind: "text",
-        display: "foo",
+        kind: "scalar",
+        value: "foo",
       },
     ]);
   });
@@ -276,12 +276,12 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([
-      { path: "if", kind: "text", display: "${ .condition }" },
-      { path: "input.from", kind: "text", display: "${ .input }" },
-      { path: "output.as", kind: "text", display: "${ .output }" },
-      { path: "export.as", kind: "text", display: "${ .export }" },
-      { path: "timeout", kind: "text", display: "PT5M" },
-      { path: "then", kind: "text", display: "next" },
+      { path: "if", kind: "runtime-expression", value: "${ .condition }" },
+      { path: "input.from", kind: "scalar", value: "${ .input }" },
+      { path: "output.as", kind: "scalar", value: "${ .output }" },
+      { path: "export.as", kind: "scalar", value: "${ .export }" },
+      { path: "timeout", kind: "duration", value: "PT5M" },
+      { path: "then", kind: "scalar", value: "next" },
     ]);
   });
 
@@ -295,5 +295,75 @@ describe("getTaskDetails", () => {
     );
 
     expect(fields).toEqual([]);
+  });
+
+  it("classifies shell commands as long-string fields", () => {
+    const fields = getTaskDetails(
+      asTask({
+        run: {
+          shell: {
+            command: 'echo "Hello World"',
+          },
+        },
+      }),
+    );
+
+    expect(fields).toEqual([
+      {
+        path: "run.shell.command",
+        kind: "long-string",
+        value: 'echo "Hello World"',
+      },
+    ]);
+  });
+
+  it("classifies script code as a long-string field", () => {
+    const fields = getTaskDetails(
+      asTask({
+        run: {
+          script: {
+            code: 'console.log("Hello World");',
+          },
+        },
+      }),
+    );
+
+    expect(fields).toEqual([
+      {
+        path: "run.script.code",
+        kind: "long-string",
+        value: 'console.log("Hello World");',
+      },
+    ]);
+  });
+
+  it("extracts enum fields with their available options", () => {
+    const fields = getTaskDetails({
+      call: "http",
+      with: {
+        method: "GET",
+        endpoint: "https://example.com",
+        output: "content",
+      },
+    });
+
+    expect(fields).toContainEqual({
+      path: "with.output",
+      kind: "enum",
+      value: "content",
+      options: ["raw", "content", "response"],
+    });
+  });
+
+  it("classifies timeout as a duration field", () => {
+    const task = {
+      timeout: "PT30S",
+    } as Specification.Task;
+
+    expect(getTaskDetails(task)).toContainEqual({
+      path: "timeout",
+      kind: "duration",
+      value: "PT30S",
+    });
   });
 });

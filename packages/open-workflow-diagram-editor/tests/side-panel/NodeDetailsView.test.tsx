@@ -45,11 +45,51 @@ describe("NodeDetailsView", () => {
     expect(screen.getByTestId("node-details")).toBeInTheDocument();
     expect(screen.getByText("Properties")).toBeInTheDocument();
     expect(screen.getByText("call")).toBeInTheDocument();
-    expect(screen.getByText("http")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("http")).toBeInTheDocument();
     expect(screen.getByText("with.endpoint")).toBeInTheDocument();
-    expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://api.example.com")).toBeInTheDocument();
     expect(screen.getByText("then")).toBeInTheDocument();
-    expect(screen.getByText("continue")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("continue")).toBeInTheDocument();
+  });
+
+  it("renders number fields as number inputs", () => {
+    const node = makeNode({
+      label: "step",
+      task: {
+        with: {
+          retries: 42,
+        },
+      },
+    });
+
+    renderWithProviders(<NodeDetailsView node={node} />);
+
+    expect(screen.getByText("with.retries")).toBeInTheDocument();
+
+    const input = screen.getByDisplayValue("42");
+
+    expect(input).toHaveAttribute("type", "number");
+    expect(input).toBeDisabled();
+  });
+
+  it("renders boolean fields as switches", () => {
+    const node = makeNode({
+      label: "step",
+      task: {
+        with: {
+          enabled: true,
+        },
+      },
+    });
+
+    renderWithProviders(<NodeDetailsView node={node} />);
+
+    expect(screen.getByText("with.enabled")).toBeInTheDocument();
+
+    const switchControl = screen.getByRole("switch");
+
+    expect(switchControl).toBeChecked();
+    expect(switchControl).toBeDisabled();
   });
 
   it.each([
@@ -178,7 +218,10 @@ describe("NodeDetailsView", () => {
       renderWithProviders(<NodeDetailsView node={child} />, {
         taskReferences: new Set([containerReference, childReference]),
         errors: [
-          { path: `${childReference}/with`, message: "must have required property 'endpoint'" },
+          {
+            path: `${childReference}/with`,
+            message: "must have required property 'endpoint'",
+          },
         ],
       });
 

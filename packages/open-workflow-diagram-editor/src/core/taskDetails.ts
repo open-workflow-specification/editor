@@ -24,12 +24,36 @@ const MAX_DEPTH = 4;
 
 /* Flattened task row - kind: how the view should render it */
 export type DetailField =
-  | { path: string; kind: "text"; display: string }
+  | { path: string; kind: "scalar"; value: string | number | boolean }
+  | { path: string; kind: "enum"; value: string; options: string[] }
+  | { path: string; kind: "runtime-expression"; value: string }
+  | { path: string; kind: "duration"; value: string }
+  | { path: string; kind: "long-string"; value: string }
   | { path: string; kind: "array"; count: number }
   | { path: string; kind: "object" };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isLongStringField(path: string): boolean {
+  return path === "run.shell.command" || path === "run.script.code";
+}
+
+function isRuntimeExpressionField(path: string): boolean {
+  return path === "if";
+}
+
+function isDurationField(path: string): boolean {
+  return path === "timeout" || path === "timeout.after";
+}
+
+const ENUM_FIELDS: Record<string, string[]> = {
+  "with.output": ["raw", "content", "response"],
+};
+
+function getEnumOptions(path: string): string[] | undefined {
+  return ENUM_FIELDS[path];
 }
 
 function flattenFields(
@@ -57,9 +81,56 @@ function flattenFields(
     for (const [key, val] of Object.entries(value)) {
       flattenFields(val, path ? `${path}.${key}` : key, depth + 1, outputFields);
     }
+
     return;
   }
-  outputFields.push({ path, kind: "text", display: String(value) });
+
+  if (typeof value === "string" && isLongStringField(path)) {
+    outputFields.push({
+      path,
+      kind: "long-string",
+      value,
+    });
+    return;
+  }
+
+  if (typeof value === "string" && isRuntimeExpressionField(path)) {
+    outputFields.push({
+      path,
+      kind: "runtime-expression",
+      value,
+    });
+    return;
+  }
+
+  if (typeof value === "string" && isDurationField(path)) {
+    outputFields.push({
+      path,
+      kind: "duration",
+      value,
+    });
+    return;
+  }
+
+  if (typeof value === "string") {
+    const options = getEnumOptions(path);
+
+    if (options) {
+      outputFields.push({
+        path,
+        kind: "enum",
+        value,
+        options,
+      });
+      return;
+    }
+  }
+
+  outputFields.push({
+    path,
+    kind: "scalar",
+    value: value as string | number | boolean,
+  });
 }
 
 /* Builds the flattened detail rows for a task: task-specific fields first, inherited base fields last */

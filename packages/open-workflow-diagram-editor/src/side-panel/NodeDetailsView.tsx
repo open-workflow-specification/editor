@@ -34,19 +34,16 @@ function itemCount(length: number): string {
   return `${length} item${length === 1 ? "" : "s"}`;
 }
 
-function fieldText(field: DetailField): string {
-  switch (field.kind) {
-    case "array":
-      return itemCount(field.count);
-    case "text":
-      return field.display;
-    case "object":
-      return OBJECT_GLYPH;
-  }
-}
-
-function FieldRow({ label, field }: { label: string; field: DetailField }) {
-  return <PropertyField label={label} value={fieldText(field)} />;
+function FieldRow({
+  label,
+  field,
+  isReadOnly,
+}: {
+  label: string;
+  field: DetailField;
+  isReadOnly: boolean;
+}) {
+  return <PropertyField label={label} field={field} isReadOnly={isReadOnly} />;
 }
 
 export function NodeDetailsView({ node }: NodeDetailsViewProps) {
@@ -76,7 +73,7 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
           <SectionHeader label={t("sidebar.sectionProperties")} />
           <dl>
             {fields.map((field) => (
-              <FieldRow key={field.path} label={field.path} field={field} />
+              <FieldRow key={field.path} label={field.path} field={field} isReadOnly={isReadOnly} />
             ))}
           </dl>
         </>
