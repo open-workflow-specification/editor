@@ -126,11 +126,13 @@ function flattenFields(
     }
   }
 
-  outputFields.push({
-    path,
-    kind: "scalar",
-    value: value as string | number | boolean,
-  });
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    outputFields.push({
+      path,
+      kind: "scalar",
+      value,
+    });
+  }
 }
 
 /* Builds the flattened detail rows for a task: task-specific fields first, inherited base fields last */

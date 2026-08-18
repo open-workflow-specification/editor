@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import type { DetailField } from "@/core/taskDetails";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,7 +76,7 @@ export function PropertyField({
   field: DetailField;
   isReadOnly: boolean;
 }) {
-  let control: React.ReactNode;
+  let control: ReactNode;
 
   if (field.kind === "long-string") {
     control = <AutoGrowTextarea value={field.value} disabled={isReadOnly} />;
