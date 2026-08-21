@@ -36,6 +36,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+//  This is temporary function  until we dynamically build the form with field types
 function isLongStringField(path: string): boolean {
   return path === "run.shell.command" || path === "run.script.code";
 }
