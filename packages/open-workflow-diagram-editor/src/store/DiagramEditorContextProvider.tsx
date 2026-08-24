@@ -59,6 +59,9 @@ export const DiagramEditorContextProvider = React.forwardRef<
   const [nodes, setNodes] = React.useState([] as RF.Node[]);
   const [edges, setEdges] = React.useState([] as RF.Edge[]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = React.useState<RF.ReactFlowInstance | null>(
+    null,
+  );
 
   // Read isReadOnly directly from props — no local state copy.
   // This ensures useWorkflowHistory always receives the current value without
@@ -179,6 +182,8 @@ export const DiagramEditorContextProvider = React.forwardRef<
       edges,
       taskReferences,
       selectedNodeId,
+      reactFlowInstance,
+      setReactFlowInstance,
       setLocale,
       setNodes,
       setEdges,
@@ -202,6 +207,8 @@ export const DiagramEditorContextProvider = React.forwardRef<
       edges,
       taskReferences,
       selectedNodeId,
+      reactFlowInstance,
+      setReactFlowInstance,
       setLocale,
       setNodes,
       setEdges,

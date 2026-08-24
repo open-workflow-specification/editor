@@ -43,6 +43,7 @@ export const en = {
   "sidebar.exportMermaid.copy": "Copy Mermaid Code",
   "sidebar.exportMermaid.download": "Download as Mermaid File",
   "sidebar.exportMermaid.copied": "Copied!",
+  "sidebar.exportPng.download": "Download as PNG",
   "aria.minimap.hide": "Hide minimap",
   "aria.minimap.show": "Show minimap",
   "aria.badge": "Badge:",

@@ -16,18 +16,21 @@
 
 import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
-import { ClipboardPen, Download, ClipboardCheck } from "lucide-react";
+import { ClipboardPen, Download, ClipboardCheck, FileImage } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportToMermaid } from "@/core";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/download";
+import { exportDiagramAsPng } from "@/lib/exportPng";
+import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import type { Specification } from "@openworkflowspec/sdk";
 import { toast } from "sonner";
 
-export function MermaidActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
+export function ExportActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { reactFlowInstance } = useDiagramEditorContext();
 
   React.useEffect(() => {
     return () => {
@@ -76,6 +79,23 @@ export function MermaidActions({ model }: { model: Specification.Workflow }): Re
     }
   };
 
+  const handleExportPng = async () => {
+    if (reactFlowInstance === null) return;
+    try {
+      const sanitizedName = (model.document?.name || "workflow")
+        .replace(/[/\\:*?"<>|]/g, "_")
+        .replace(/\s+/g, "_")
+        .trim()
+        .substring(0, 200);
+      await exportDiagramAsPng(reactFlowInstance, `${sanitizedName}.png`);
+      toast.success(t("toast.download.success"));
+    } catch (error) {
+      toast.error(t("toast.download.error"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
+    }
+  };
+
   return (
     <>
       <Button
@@ -95,6 +115,16 @@ export function MermaidActions({ model }: { model: Specification.Workflow }): Re
       >
         <Download />
         {t("sidebar.exportMermaid.download")}
+      </Button>
+      <Button
+        onClick={handleExportPng}
+        variant="outline"
+        size="sm"
+        className="dec:cursor-pointer"
+        disabled={reactFlowInstance === null}
+      >
+        <FileImage />
+        {t("sidebar.exportPng.download")}
       </Button>
     </>
   );

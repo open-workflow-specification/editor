@@ -63,6 +63,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
     submitModel,
     pendingViewportRestore,
     clearPendingViewportRestore,
+    setReactFlowInstance,
   } = useDiagramEditorContext();
 
   const [minimapVisible, setMinimapVisible] = React.useState(false);
@@ -197,6 +198,10 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
       abortController?.abort();
     };
   }, [model, errors, setNodes, setEdges, reactFlowInstance]);
+
+  React.useEffect(() => {
+    setReactFlowInstance(reactFlowInstance);
+  }, [reactFlowInstance, setReactFlowInstance]);
 
   if (layoutError) {
     return (

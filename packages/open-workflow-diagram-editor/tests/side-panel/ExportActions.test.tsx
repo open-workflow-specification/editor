@@ -17,7 +17,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MermaidActions } from "../../src/side-panel/MermaidActions";
+import { ExportActions } from "../../src/side-panel/ExportActions";
 import { parseWorkflow } from "../../src/core/workflowSdk";
 import { renderWithProviders } from "../test-utils/render-helpers";
 import { WORKFLOW_WITH_METADATA_JSON } from "../fixtures/workflows";
@@ -26,7 +26,7 @@ import * as core from "../../src/core";
 import * as download from "../../src/lib/download";
 import * as sonner from "sonner";
 
-describe("MermaidActions", () => {
+describe("ExportActions", () => {
   const toastMock = vi.fn();
   const MERMAID_CODE = "mermaid code";
 
@@ -41,7 +41,7 @@ describe("MermaidActions", () => {
     const copySpy = vi.spyOn(clipboard, "copyToClipboard").mockResolvedValue(undefined);
     vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
 
-    renderWithProviders(<MermaidActions model={model!} />, { model });
+    renderWithProviders(<ExportActions model={model!} />, { model });
 
     const copyButton = screen.getByRole("button", {
       name: /Copy Mermaid Code/i,
@@ -60,7 +60,7 @@ describe("MermaidActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<MermaidActions model={model!} />, { model });
+    renderWithProviders(<ExportActions model={model!} />, { model });
 
     const copyButton = screen.getByRole("button", {
       name: /Copy Mermaid Code/i,
@@ -79,7 +79,7 @@ describe("MermaidActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<MermaidActions model={model!} />, { model });
+    renderWithProviders(<ExportActions model={model!} />, { model });
 
     const downloadButton = screen.getByRole("button", {
       name: /Download as Mermaid File/i,
@@ -101,7 +101,7 @@ describe("MermaidActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<MermaidActions model={model!} />, { model });
+    renderWithProviders(<ExportActions model={model!} />, { model });
 
     const downloadButton = screen.getByRole("button", {
       name: /Download as Mermaid File/i,

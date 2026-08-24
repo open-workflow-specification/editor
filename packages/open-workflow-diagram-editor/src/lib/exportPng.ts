@@ -39,24 +39,58 @@ export async function exportDiagramAsPng(
   const contentWidth = maxX - minX + PADDING * 2;
   const contentHeight = maxY - minY + PADDING * 2;
 
-  const dataUrl = await toPng(viewport, {
-    backgroundColor: "#ffffff",
-    width: contentWidth,
-    height: contentHeight,
-    pixelRatio: SCALE,
-    style: {
-      transform: `translate(${-minX + PADDING}px, ${-minY + PADDING}px)`,
-      width: `${contentWidth}px`,
-      height: `${contentHeight}px`,
-    },
-    filter: (node) => {
-      if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
-        const href = node.href ?? "";
-        return !href.startsWith("http") && !href.startsWith("//");
-      }
-      return true;
-    },
-  });
+  // Resolve CSS custom properties from the live DOM — html-to-image serialises
+  // the SVG to a string and cannot resolve var() references that are defined
+  // outside the captured element (e.g. on .dec-root).
+  const rootStyle = getComputedStyle(document.documentElement);
+  const edgeColor = rootStyle.getPropertyValue("--dec-edge-selected").trim() || "#aea6a6";
+  const edgeColorCondition =
+    rootStyle.getPropertyValue("--dec-edge-selected-condition").trim() || edgeColor;
+  const edgeColorError = rootStyle.getPropertyValue("--dec-error-accent").trim() || "#ef4444";
+
+  // Directly inline the resolved colours onto every edge path before capture,
+  // then restore the original inline style afterwards. This is necessary because
+  // html-to-image v1 has no clone hook — we must mutate the live DOM temporarily.
+  type EdgePatch = { el: SVGElement; previous: string };
+  const patches: EdgePatch[] = [];
+
+  const patchEdges = (selector: string, color: string) => {
+    viewport.querySelectorAll<SVGElement>(selector).forEach((el) => {
+      patches.push({ el, previous: el.style.stroke });
+      el.style.stroke = color;
+    });
+  };
+
+  patchEdges(".edge-line", edgeColor);
+  patchEdges(".edge-line.condition", edgeColorCondition);
+  patchEdges(".edge-line.error", edgeColorError);
+
+  let dataUrl: string;
+  try {
+    dataUrl = await toPng(viewport, {
+      backgroundColor: "#ffffff",
+      width: contentWidth,
+      height: contentHeight,
+      pixelRatio: SCALE,
+      style: {
+        transform: `translate(${-minX + PADDING}px, ${-minY + PADDING}px)`,
+        width: `${contentWidth}px`,
+        height: `${contentHeight}px`,
+      },
+      filter: (node) => {
+        if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
+          const href = node.href ?? "";
+          return !href.startsWith("http") && !href.startsWith("//");
+        }
+        return true;
+      },
+    });
+  } finally {
+    // Always restore original inline styles regardless of success or failure.
+    patches.forEach(({ el, previous }) => {
+      el.style.stroke = previous;
+    });
+  }
 
   const link = document.createElement("a");
   link.download = filename;
