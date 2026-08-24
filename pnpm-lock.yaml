@@ -90,6 +90,9 @@ catalogs:
     fast-equals:
       specifier: ^6.0.2
       version: 6.0.2
+    html-to-image:
+      specifier: ^1.11.13
+      version: 1.11.13
     husky:
       specifier: ^9.1.7
       version: 9.1.7
@@ -291,6 +294,9 @@ importers:
       fast-equals:
         specifier: 'catalog:'
         version: 6.0.2
+      html-to-image:
+        specifier: 'catalog:'
+        version: 1.11.13
       js-yaml:
         specifier: 'catalog:'
         version: 5.2.3
@@ -3068,6 +3074,9 @@ packages:
 
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
+
+  html-to-image@1.11.13:
+    resolution: {integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==}
 
   human-id@4.2.0:
     resolution: {integrity: sha512-K3GbkIWqyvvlpfhBPlbEvD97TtqBpAYA4kt+cn2lD2x2HuohzZCibcA2nOlnJT6exqvJLggoB5nv2dNf192nEA==}
@@ -6419,6 +6428,8 @@ snapshots:
       - '@noble/hashes'
 
   html-escaper@2.0.2: {}
+
+  html-to-image@1.11.13: {}
 
   human-id@4.2.0: {}
 
