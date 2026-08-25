@@ -42,12 +42,16 @@ export const createMockContextValue = (
   edges: [],
   taskReferences: new Set(),
   selectedNodeId: null,
+  reactFlowInstance: null,
+  isExporting: false,
 
   // --- dispatch defaults ---
   setLocale: noop,
   setEdges: noop,
   setNodes: noop,
   setSelectedNodeId: noop,
+  setReactFlowInstance: noop,
+  setIsExporting: noop,
   setContent: noop,
 
   // --- history defaults ---

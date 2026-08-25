@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type * as RF from "@xyflow/react";
 import { ExportActions } from "../../src/side-panel/ExportActions";
 import { parseWorkflow } from "../../src/core/workflowSdk";
 import { renderWithProviders } from "../test-utils/render-helpers";
@@ -24,6 +25,7 @@ import { WORKFLOW_WITH_METADATA_JSON } from "../fixtures/workflows";
 import * as clipboard from "../../src/lib/clipboard";
 import * as core from "../../src/core";
 import * as download from "../../src/lib/download";
+import * as exportPng from "../../src/lib/exportPng";
 import * as sonner from "sonner";
 
 describe("ExportActions", () => {
@@ -110,5 +112,56 @@ describe("ExportActions", () => {
     await user.click(downloadButton);
 
     expect(toastMock).toHaveBeenCalledWith(expect.any(String), { description: "Download error" });
+  });
+
+  it("should disable the PNG button when reactFlowInstance is null", () => {
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+
+    renderWithProviders(<ExportActions model={model!} />, { model, reactFlowInstance: null });
+
+    expect(screen.getByRole("button", { name: /Download as PNG/i })).toBeDisabled();
+  });
+
+  it("should call exportDiagramAsPng with sanitized filename and show success toast", async () => {
+    const user = userEvent.setup();
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+    const exportSpy = vi.spyOn(exportPng, "exportDiagramAsPng").mockResolvedValue(undefined);
+    const setIsExporting = vi.fn();
+    vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
+
+    renderWithProviders(<ExportActions model={model!} />, {
+      model,
+      reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
+      setIsExporting,
+    });
+
+    await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
+    await vi.waitFor(() => expect(exportSpy).toHaveBeenCalled());
+
+    expect(exportSpy).toHaveBeenCalledWith(expect.anything(), "test-wf.png");
+    expect(toastMock).toHaveBeenCalledWith(expect.any(String));
+    expect(setIsExporting).toHaveBeenCalledWith(true);
+    expect(setIsExporting).toHaveBeenLastCalledWith(false);
+  });
+
+  it("should show error toast and still reset isExporting when PNG export fails", async () => {
+    const user = userEvent.setup();
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+    vi.spyOn(exportPng, "exportDiagramAsPng").mockRejectedValue(new Error("Export failed"));
+    const setIsExporting = vi.fn();
+    vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
+    vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
+
+    renderWithProviders(<ExportActions model={model!} />, {
+      model,
+      reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
+      setIsExporting,
+    });
+
+    await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
+    await vi.waitFor(() => expect(setIsExporting).toHaveBeenLastCalledWith(false));
+
+    expect(toastMock).toHaveBeenCalledWith(expect.any(String), { description: "Export failed" });
   });
 });
