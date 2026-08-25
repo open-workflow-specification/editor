@@ -30,12 +30,14 @@ export type DiagramEditorContextType = {
   taskReferences: Set<string>;
   selectedNodeId: string | null;
   reactFlowInstance: RF.ReactFlowInstance | null;
+  isExporting: boolean;
 
   setLocale: React.Dispatch<React.SetStateAction<string>>;
   setNodes: React.Dispatch<React.SetStateAction<RF.Node[]>>;
   setEdges: React.Dispatch<React.SetStateAction<RF.Edge[]>>;
   setSelectedNodeId: React.Dispatch<React.SetStateAction<string | null>>;
   setReactFlowInstance: React.Dispatch<React.SetStateAction<RF.ReactFlowInstance | null>>;
+  setIsExporting: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Undo/redo — history API
   submitModel: (

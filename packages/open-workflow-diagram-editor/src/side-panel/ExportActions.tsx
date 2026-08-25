@@ -30,7 +30,7 @@ export function ExportActions({ model }: { model: Specification.Workflow }): Rea
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { reactFlowInstance } = useDiagramEditorContext();
+  const { reactFlowInstance, setIsExporting } = useDiagramEditorContext();
 
   React.useEffect(() => {
     return () => {
@@ -87,12 +87,16 @@ export function ExportActions({ model }: { model: Specification.Workflow }): Rea
         .replace(/\s+/g, "_")
         .trim()
         .substring(0, 200);
+      setIsExporting(true);
+      await new Promise((resolve) => setTimeout(resolve, 50));
       await exportDiagramAsPng(reactFlowInstance, `${sanitizedName}.png`);
       toast.success(t("toast.download.success"));
     } catch (error) {
       toast.error(t("toast.download.error"), {
         description: error instanceof Error ? error.message : undefined,
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
