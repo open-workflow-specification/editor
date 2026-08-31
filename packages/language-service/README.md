@@ -45,7 +45,4 @@ pnpm run build:dev
 
 # Build package (production - includes linting and tests)
 pnpm run build:prod
-
-# Build Storybook static site
-pnpm run build:storybook
 ```
