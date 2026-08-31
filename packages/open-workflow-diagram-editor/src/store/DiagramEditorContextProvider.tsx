@@ -29,7 +29,7 @@ import type * as RF from "@xyflow/react";
 import { useWorkflowHistory } from "../react-flow/hooks/useWorkflowHistory";
 
 export type ContextProviderProps = DiagramEditorProps & {
-  diagramDivRef: React.RefObject<HTMLDivElement | null>;
+  diagramDivRef?: React.RefObject<HTMLDivElement | null>;
 };
 
 /**
@@ -47,7 +47,9 @@ function resolveSelectedId(model: Specification.Workflow, currentId: string | nu
 export const DiagramEditorContextProvider = React.forwardRef<
   DiagramEditorRef,
   React.PropsWithChildren<ContextProviderProps>
->(({ diagramDivRef, ...props }, ref) => {
+>(({ diagramDivRef: diagramDivRefProp, ...props }, ref) => {
+  const internalDivRef = React.useRef<HTMLDivElement | null>(null);
+  const diagramDivRef = diagramDivRefProp ?? internalDivRef;
   // Detect the serialization format once from the initial content prop.
   // JSON content starts with `{` (after trimming); everything else is YAML.
   // useState keeps the format in sync with React's render cycle, so consumers

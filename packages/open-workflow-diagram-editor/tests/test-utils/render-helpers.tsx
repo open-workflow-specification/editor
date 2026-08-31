@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import * as React from "react";
+import type * as React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import {
