@@ -22,7 +22,9 @@ do:
   - listenToGossips:
       listen:
         to:
-          any: []
+          any:
+            - with:
+                type: com.fake-gossip-api.events.gossip.v1
           until: "${ false }"
       foreach:
         item: event

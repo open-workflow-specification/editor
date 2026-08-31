@@ -147,6 +147,7 @@ const DiagramEditorBody = ({
           content={props.content}
           isReadOnly={props.isReadOnly}
           locale={props.locale}
+          diagramDivRef={diagramDivRef}
         >
           <SidebarProvider defaultOpen={false}>
             <div className="dec-diagram-content">

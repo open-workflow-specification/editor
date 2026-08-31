@@ -450,7 +450,7 @@
 }
 
 .dec-root .edge-line.condition {
-  @apply dec:stroke-blue-500;
+  stroke: var(--dec-edge-selected-condition);
 }
 
 /* Override React Flow's default selected edge styling to preserve original colors */

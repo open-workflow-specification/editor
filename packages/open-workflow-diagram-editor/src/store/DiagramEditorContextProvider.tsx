@@ -28,7 +28,9 @@ import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorC
 import type * as RF from "@xyflow/react";
 import { useWorkflowHistory } from "../react-flow/hooks/useWorkflowHistory";
 
-export type ContextProviderProps = DiagramEditorProps;
+export type ContextProviderProps = DiagramEditorProps & {
+  diagramDivRef: React.RefObject<HTMLDivElement | null>;
+};
 
 /**
  * Resolves the currently selected node/edge ID against a new model.
@@ -45,7 +47,7 @@ function resolveSelectedId(model: Specification.Workflow, currentId: string | nu
 export const DiagramEditorContextProvider = React.forwardRef<
   DiagramEditorRef,
   React.PropsWithChildren<ContextProviderProps>
->((props, ref) => {
+>(({ diagramDivRef, ...props }, ref) => {
   // Detect the serialization format once from the initial content prop.
   // JSON content starts with `{` (after trimming); everything else is YAML.
   // useState keeps the format in sync with React's render cycle, so consumers
@@ -199,6 +201,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       setContent,
       isExporting,
       setIsExporting,
+      diagramDivRef,
     }),
     [
       isReadOnly,
@@ -226,6 +229,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       setContent,
       isExporting,
       setIsExporting,
+      diagramDivRef,
     ],
   );
 

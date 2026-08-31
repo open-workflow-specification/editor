@@ -139,7 +139,7 @@ describe("ExportActions", () => {
     await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
     await vi.waitFor(() => expect(exportSpy).toHaveBeenCalled());
 
-    expect(exportSpy).toHaveBeenCalledWith(expect.anything(), "test-wf.png");
+    expect(exportSpy).toHaveBeenCalledWith(expect.anything(), "test-wf.png", null);
     expect(toastMock).toHaveBeenCalledWith(expect.any(String));
     expect(setIsExporting).toHaveBeenCalledWith(true);
     expect(setIsExporting).toHaveBeenLastCalledWith(false);

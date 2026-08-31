@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import * as React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import {
@@ -44,6 +45,7 @@ export const createMockContextValue = (
   selectedNodeId: null,
   reactFlowInstance: null,
   isExporting: false,
+  diagramDivRef: { current: null } as React.RefObject<HTMLDivElement | null>,
 
   // --- dispatch defaults ---
   setLocale: noop,

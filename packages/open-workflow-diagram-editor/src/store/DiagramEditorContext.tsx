@@ -31,6 +31,7 @@ export type DiagramEditorContextType = {
   selectedNodeId: string | null;
   reactFlowInstance: RF.ReactFlowInstance | null;
   isExporting: boolean;
+  diagramDivRef: React.RefObject<HTMLDivElement | null>;
 
   setLocale: React.Dispatch<React.SetStateAction<string>>;
   setNodes: React.Dispatch<React.SetStateAction<RF.Node[]>>;

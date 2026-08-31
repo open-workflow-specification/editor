@@ -7,12 +7,14 @@ const SCALE = 3;
 export async function exportDiagramAsPng(
   reactFlowInstance: ReactFlowInstance,
   filename: string,
+  container?: HTMLElement | null,
 ): Promise<void> {
   if (typeof document === "undefined") {
     throw new Error("Document API is not available in this environment");
   }
 
-  const viewport = document.querySelector<HTMLElement>(".react-flow__viewport");
+  const root = container ?? document;
+  const viewport = root.querySelector<HTMLElement>(".react-flow__viewport");
   if (!viewport) {
     throw new Error("React Flow viewport element not found");
   }
@@ -39,31 +41,14 @@ export async function exportDiagramAsPng(
   const contentWidth = maxX - minX + PADDING * 2;
   const contentHeight = maxY - minY + PADDING * 2;
 
-  // Resolve CSS vars from the live DOM — html-to-image can't resolve var()
-  // references defined outside the captured element (e.g. on .dec-root).
-  const rootStyle = getComputedStyle(document.documentElement);
-  const edgeColor = rootStyle.getPropertyValue("--dec-edge-selected").trim() || "#aea6a6";
-  const edgeColorCondition =
-    rootStyle.getPropertyValue("--dec-edge-selected-condition").trim() || edgeColor;
-  const edgeColorError = rootStyle.getPropertyValue("--dec-error-accent").trim() || "#ef4444";
-
-  // Inline resolved colours before capture; re-query on restore rather than
-  // saving refs, since React Flow may replace SVG elements during the await.
-  const applyStroke = (selector: string, color: string) => {
-    viewport.querySelectorAll<SVGElement>(selector).forEach((el) => {
-      el.style.stroke = color;
-    });
-  };
-
-  const clearStroke = (selector: string) => {
-    viewport.querySelectorAll<SVGElement>(selector).forEach((el) => {
-      el.style.stroke = "";
-    });
-  };
-
-  applyStroke(".edge-line", edgeColor);
-  applyStroke(".edge-line.condition", edgeColorCondition);
-  applyStroke(".edge-line.error", edgeColorError);
+  // Edge colours are defined via CSS custom properties and Tailwind classes on
+  // ancestor elements. When html-to-image serialises the SVG, those rules are
+  // no longer in scope and stroke colours are lost. Fix: read the browser's
+  // fully-resolved computed stroke from each live element and set it as an
+  // inline style so the value is self-contained in the serialised output.
+  viewport.querySelectorAll<SVGElement>(".edge-line").forEach((el) => {
+    el.style.stroke = getComputedStyle(el).stroke;
+  });
 
   let dataUrl: string;
   try {
@@ -86,10 +71,12 @@ export async function exportDiagramAsPng(
       },
     });
   } finally {
-    // Re-query after the await — refs captured before toPng may be stale.
-    clearStroke(".edge-line");
-    clearStroke(".edge-line.condition");
-    clearStroke(".edge-line.error");
+    // Clear inline strokes by re-querying the live DOM. Refs captured before
+    // toPng are stale — React Flow may have replaced SVG elements during the
+    // await when isExporting triggered a re-render.
+    viewport.querySelectorAll<SVGElement>(".edge-line").forEach((el) => {
+      el.style.stroke = "";
+    });
   }
 
   const link = document.createElement("a");
