@@ -8,6 +8,13 @@
   },
   "versionGroups": [
     {
+      "label": "Only language-service may depend on Volar. See the Architecture section in packages/language-service/README.md.",
+      "dependencies": ["@volar/**", "volar-service-*"],
+      "packages": ["!@openworkflowspec/language-service"],
+      "dependencyTypes": ["prod", "dev", "peer"],
+      "isBanned": true
+    },
+    {
       "label": "Ignore root package version",
       "packages": ["open-workflow-editor"],
       "dependencyTypes": ["local"],

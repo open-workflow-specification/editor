@@ -1,0 +1,50 @@
+{
+  "name": "@openworkflowspec/language-service",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Open Workflow language service foundation",
+  "keywords": [],
+  "homepage": "https://github.com/open-workflow-specification/editor",
+  "bugs": {
+    "url": "https://github.com/open-workflow-specification/editor/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-workflow-specification/editor.git"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf ./dist",
+    "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm run build:dev && pnpm test",
+    "lint": "oxlint --config .oxlintrc.json src/ tests/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@volar/language-service": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

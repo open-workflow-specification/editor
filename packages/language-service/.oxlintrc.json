@@ -1,0 +1,22 @@
+{
+  "extends": ["../../.oxlintrc.json"],
+  "overrides": [
+    {
+      "files": ["src/**/*.{ts,tsx}"],
+      "excludeFiles": ["src/volar/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@volar/*", "volar-service-*"],
+                "message": "Volar dependencies may only be imported from src/volar. See the Architecture section in README.md."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
