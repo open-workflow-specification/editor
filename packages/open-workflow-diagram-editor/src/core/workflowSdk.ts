@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { load, dump } from "js-yaml";
+import { load } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
 import { fixNodesConnections } from "./graph";
 import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
@@ -295,10 +295,9 @@ export function serializeWorkflow(
   model: sdk.Specification.Workflow,
   format: ContentFormat,
 ): string {
-  // The SDK validates the model before serializing it and it may cause validation exceptions
-  // Even if we have a model with validation errors we want it to be serialized
-  const json = JSON.stringify(model);
-  if (format === "json") return json;
-  // dump only works with plain objects.
-  return dump(JSON.parse(json));
+  if (format === "json") {
+    return sdk.Classes.Workflow.serialize(model, { format: "json", validate: false });
+  }
+
+  return sdk.Classes.Workflow.serialize(model, { format: "yaml", validate: false });
 }

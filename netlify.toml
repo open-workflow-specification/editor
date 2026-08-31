@@ -28,7 +28,20 @@
   publish = "packages/open-workflow-diagram-editor/dist-storybook"
   ignore = """
     set -e -o pipefail
-    git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+
+    if [ -n "${REVIEW_ID:-}" ]; then
+      # For PR previews, fetch GitHub's synthetic merge commit.
+      FETCH_REF="refs/pull/${REVIEW_ID}/merge"
+    else
+      # For branch builds, fetch the branch being deployed.
+      FETCH_REF="$BRANCH"
+    fi
+
+    # Always deploy if fetch fails.
+    git fetch --no-tags --depth=2 origin "$FETCH_REF" || exit 1
+    BASE_REF="$(git rev-parse FETCH_HEAD^1)"
+    echo "FETCH_REF=$FETCH_REF BASE_REF=$BASE_REF"
+
     npm i -g "pnpm@$PNPM_VERSION"
-    ! pnpm -F '...[origin/main]' -rc exec 'echo "$PNPM_PACKAGE_NAME"' | grep -Fqx "$PREVIEW_PACKAGE_NAME"
+    ! pnpm -F "...[$BASE_REF]" -rc exec 'echo "$PNPM_PACKAGE_NAME"' | grep -Fqx "$PREVIEW_PACKAGE_NAME"
   """

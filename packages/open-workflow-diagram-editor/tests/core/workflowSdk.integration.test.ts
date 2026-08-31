@@ -351,12 +351,17 @@ describe("buildFlatGraph", () => {
     expect(graph).toMatchSnapshot();
   });
 
-  it("buildFlatGraph exception", () => {
+  it("returns a minimal graph for a workflow with no tasks", () => {
     const { model } = parseWorkflow(EMPTY_WORKFLOW_JSON);
     expect(model).not.toBeNull();
 
-    // A model without tasks is invalid however it produces a viable model instance
-    expect(() => buildFlatGraph(model!)).toThrow();
+    // A model with empty `do` is invalid but the SDK now handles it gracefully,
+    // returning a root graph with just entry/exit nodes.
+    const graph = buildFlatGraph(model!);
+    expect(graph.nodes).toHaveLength(2);
+    expect(graph.edges).toHaveLength(1);
+    expect(graph.entryNode?.id).toBe("root-entry-node");
+    expect(graph.exitNode?.id).toBe("root-exit-node");
   });
 });
 
