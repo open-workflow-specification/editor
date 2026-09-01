@@ -25,7 +25,7 @@ describe("sanitizeFilename", () => {
 
   it("replaces forbidden characters and whitespace with underscores", () => {
     expect(sanitizeFilename('my workflow/name:with*bad?"<>|chars')).toBe(
-      "my_workflow_name_with_bad____chars",
+      "my_workflow_name_with_bad_____chars",
     );
   });
 
