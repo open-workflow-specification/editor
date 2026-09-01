@@ -15,7 +15,6 @@
  */
 
 import { toPng } from "html-to-image";
-import { getNodesBounds } from "@xyflow/react";
 import type { ReactFlowInstance } from "@xyflow/react";
 
 const PADDING = 40;
@@ -41,7 +40,7 @@ export async function exportDiagramAsPng(
     throw new Error("No nodes to export");
   }
 
-  const { x: minX, y: minY, width, height } = getNodesBounds(nodes);
+  const { x: minX, y: minY, width, height } = reactFlowInstance.getNodesBounds(nodes);
   const contentWidth = width + PADDING * 2;
   const contentHeight = height + PADDING * 2;
 

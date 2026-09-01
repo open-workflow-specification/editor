@@ -28,9 +28,7 @@ import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorC
 import type * as RF from "@xyflow/react";
 import { useWorkflowHistory } from "../react-flow/hooks/useWorkflowHistory";
 
-export type ContextProviderProps = DiagramEditorProps & {
-  diagramDivRef?: React.RefObject<HTMLDivElement | null>;
-};
+export type ContextProviderProps = DiagramEditorProps;
 
 /**
  * Resolves the currently selected node/edge ID against a new model.
@@ -47,9 +45,7 @@ function resolveSelectedId(model: Specification.Workflow, currentId: string | nu
 export const DiagramEditorContextProvider = React.forwardRef<
   DiagramEditorRef,
   React.PropsWithChildren<ContextProviderProps>
->(({ diagramDivRef: diagramDivRefProp, ...props }, ref) => {
-  const internalDivRef = React.useRef<HTMLDivElement | null>(null);
-  const diagramDivRef = diagramDivRefProp ?? internalDivRef;
+>((props, ref) => {
   // Detect the serialization format once from the initial content prop.
   // JSON content starts with `{` (after trimming); everything else is YAML.
   // useState keeps the format in sync with React's render cycle, so consumers
@@ -63,9 +59,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
   const [nodes, setNodes] = React.useState([] as RF.Node[]);
   const [edges, setEdges] = React.useState([] as RF.Edge[]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
-  const [reactFlowInstance, setReactFlowInstance] = React.useState<RF.ReactFlowInstance | null>(
-    null,
-  );
   const [isExporting, setIsExporting] = React.useState(false);
 
   // Read isReadOnly directly from props — no local state copy.
@@ -187,8 +180,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
       edges,
       taskReferences,
       selectedNodeId,
-      reactFlowInstance,
-      setReactFlowInstance,
       setLocale,
       setNodes,
       setEdges,
@@ -203,7 +194,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
       setContent,
       isExporting,
       setIsExporting,
-      diagramDivRef,
     }),
     [
       isReadOnly,
@@ -215,8 +205,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
       edges,
       taskReferences,
       selectedNodeId,
-      reactFlowInstance,
-      setReactFlowInstance,
       setLocale,
       setNodes,
       setEdges,
@@ -231,7 +219,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
       setContent,
       isExporting,
       setIsExporting,
-      diagramDivRef,
     ],
   );
 

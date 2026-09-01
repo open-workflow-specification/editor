@@ -22,6 +22,7 @@ import {
   type DiagramEditorContextType,
 } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
+import { ReactFlowProvider } from "@xyflow/react";
 import { en } from "../../src/i18n/locales/en";
 
 const noop = () => {};
@@ -43,16 +44,13 @@ export const createMockContextValue = (
   edges: [],
   taskReferences: new Set(),
   selectedNodeId: null,
-  reactFlowInstance: null,
   isExporting: false,
-  diagramDivRef: { current: null } as React.RefObject<HTMLDivElement | null>,
 
   // --- dispatch defaults ---
   setLocale: noop,
   setEdges: noop,
   setNodes: noop,
   setSelectedNodeId: noop,
-  setReactFlowInstance: noop,
   setIsExporting: noop,
   setContent: noop,
 
@@ -80,11 +78,13 @@ export const renderWithProviders = (
   const mockContext = createMockContextValue(contextValue);
 
   return render(
-    <DiagramEditorContext.Provider value={mockContext}>
-      <I18nProvider locale={mockContext.locale} dictionaries={{ en }}>
-        <SidebarProvider defaultOpen={true}>{ui}</SidebarProvider>
-      </I18nProvider>
-    </DiagramEditorContext.Provider>,
+    <ReactFlowProvider>
+      <DiagramEditorContext.Provider value={mockContext}>
+        <I18nProvider locale={mockContext.locale} dictionaries={{ en }}>
+          <SidebarProvider defaultOpen={true}>{ui}</SidebarProvider>
+        </I18nProvider>
+      </DiagramEditorContext.Provider>
+    </ReactFlowProvider>,
     renderOptions,
   );
 };

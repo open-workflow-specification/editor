@@ -17,7 +17,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type * as RF from "@xyflow/react";
 import { WorkflowActions } from "../../src/side-panel/WorkflowActions";
 import { parseWorkflow } from "../../src/core/workflowSdk";
 import { renderWithProviders } from "../test-utils/render-helpers";
@@ -114,10 +113,10 @@ describe("WorkflowActions", () => {
     expect(toastMock).toHaveBeenCalledWith(expect.any(String), { description: "Download error" });
   });
 
-  it("should disable the PNG button when reactFlowInstance is null", () => {
+  it("should disable the PNG button when isExporting is true", () => {
     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
 
-    renderWithProviders(<WorkflowActions model={model!} />, { model, reactFlowInstance: null });
+    renderWithProviders(<WorkflowActions model={model!} />, { model, isExporting: true });
 
     expect(screen.getByRole("button", { name: /Download as PNG/i })).toBeDisabled();
   });
@@ -130,11 +129,7 @@ describe("WorkflowActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<WorkflowActions model={model!} />, {
-      model,
-      reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
-      setIsExporting,
-    });
+    renderWithProviders(<WorkflowActions model={model!} />, { model, setIsExporting });
 
     await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
     await vi.waitFor(() => expect(exportSpy).toHaveBeenCalled());
@@ -153,11 +148,7 @@ describe("WorkflowActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<WorkflowActions model={model!} />, {
-      model,
-      reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
-      setIsExporting,
-    });
+    renderWithProviders(<WorkflowActions model={model!} />, { model, setIsExporting });
 
     await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
     await vi.waitFor(() => expect(setIsExporting).toHaveBeenLastCalledWith(false));

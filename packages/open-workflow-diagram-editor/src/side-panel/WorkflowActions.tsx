@@ -17,6 +17,7 @@
 import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { ClipboardPen, Download, ClipboardCheck, FileImage } from "lucide-react";
+import { useReactFlow, useStore } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { exportToMermaid } from "@/core";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -31,7 +32,9 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { reactFlowInstance, setIsExporting, diagramDivRef } = useDiagramEditorContext();
+  const reactFlowInstance = useReactFlow();
+  const diagramDomNode = useStore((s) => s.domNode);
+  const { isExporting, setIsExporting } = useDiagramEditorContext();
 
   React.useEffect(() => {
     return () => {
@@ -76,14 +79,13 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
   };
 
   const handleExportPng = async () => {
-    if (reactFlowInstance === null) return;
     try {
       setIsExporting(true);
       await new Promise((resolve) => setTimeout(resolve, 50));
       await exportDiagramAsPng(
         reactFlowInstance,
         `${sanitizeFilename(model.document?.name)}.png`,
-        diagramDivRef.current,
+        diagramDomNode,
       );
       toast.success(t("toast.download.success"));
     } catch (error) {
@@ -120,7 +122,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         variant="outline"
         size="sm"
         className="dec:cursor-pointer"
-        disabled={reactFlowInstance === null}
+        disabled={isExporting}
       >
         <FileImage />
         {t("sidebar.exportPng.download")}

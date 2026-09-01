@@ -23,10 +23,6 @@ vi.mock("html-to-image", () => ({
   toPng: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
 }));
 
-vi.mock("@xyflow/react", () => ({
-  getNodesBounds: vi.fn().mockReturnValue({ x: 0, y: 0, width: 100, height: 100 }),
-}));
-
 function makeViewport(): void {
   const viewport = document.createElement("div");
   viewport.className = "react-flow__viewport";
@@ -34,7 +30,10 @@ function makeViewport(): void {
 }
 
 function makeInstance(nodes: object[]): ReactFlowInstance {
-  return { getNodes: vi.fn().mockReturnValue(nodes) } as unknown as ReactFlowInstance;
+  return {
+    getNodes: vi.fn().mockReturnValue(nodes),
+    getNodesBounds: vi.fn().mockReturnValue({ x: 0, y: 0, width: 100, height: 100 }),
+  } as unknown as ReactFlowInstance;
 }
 
 describe("exportDiagramAsPng", () => {
