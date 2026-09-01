@@ -15,6 +15,7 @@
  */
 
 import { toPng } from "html-to-image";
+import { getNodesBounds } from "@xyflow/react";
 import type { ReactFlowInstance } from "@xyflow/react";
 
 const PADDING = 40;
@@ -40,22 +41,9 @@ export async function exportDiagramAsPng(
     throw new Error("No nodes to export");
   }
 
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity;
-
-  for (const node of nodes) {
-    const w = node.measured?.width ?? node.width ?? 150;
-    const h = node.measured?.height ?? node.height ?? 50;
-    minX = Math.min(minX, node.position.x);
-    minY = Math.min(minY, node.position.y);
-    maxX = Math.max(maxX, node.position.x + w);
-    maxY = Math.max(maxY, node.position.y + h);
-  }
-
-  const contentWidth = maxX - minX + PADDING * 2;
-  const contentHeight = maxY - minY + PADDING * 2;
+  const { x: minX, y: minY, width, height } = getNodesBounds(nodes);
+  const contentWidth = width + PADDING * 2;
+  const contentHeight = height + PADDING * 2;
 
   // Edge colours are defined via CSS custom properties and Tailwind classes on
   // ancestor elements. When html-to-image serialises the SVG, those rules are
@@ -66,10 +54,13 @@ export async function exportDiagramAsPng(
     el.style.stroke = getComputedStyle(el).stroke;
   });
 
+  const backgroundColor =
+    getComputedStyle(viewport).getPropertyValue("--dec-canvas-bg").trim() || "#ffffff";
+
   let dataUrl: string;
   try {
     dataUrl = await toPng(viewport, {
-      backgroundColor: "#ffffff",
+      backgroundColor,
       width: contentWidth,
       height: contentHeight,
       pixelRatio: SCALE,

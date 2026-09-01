@@ -22,11 +22,12 @@ import { exportToMermaid } from "@/core";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/download";
 import { exportDiagramAsPng } from "@/lib/exportPng";
+import { sanitizeFilename } from "@/lib/utils";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import type { Specification } from "@openworkflowspec/sdk";
 import { toast } from "sonner";
 
-export function ExportActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
+export function WorkflowActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,12 +65,7 @@ export function ExportActions({ model }: { model: Specification.Workflow }): Rea
   const handleDownloadMermaid = () => {
     try {
       const mermaidCode = exportToMermaid(model);
-      const sanitizedName = (model.document?.name || "workflow")
-        .replace(/[/\\:*?"<>|]/g, "_")
-        .replace(/\s+/g, "_")
-        .trim()
-        .substring(0, 200);
-      const filename = `${sanitizedName}.mmd`;
+      const filename = `${sanitizeFilename(model.document?.name)}.mmd`;
       downloadFile(mermaidCode, filename);
       toast.success(t("toast.download.success"));
     } catch (error) {
@@ -82,14 +78,13 @@ export function ExportActions({ model }: { model: Specification.Workflow }): Rea
   const handleExportPng = async () => {
     if (reactFlowInstance === null) return;
     try {
-      const sanitizedName = (model.document?.name || "workflow")
-        .replace(/[/\\:*?"<>|]/g, "_")
-        .replace(/\s+/g, "_")
-        .trim()
-        .substring(0, 200);
       setIsExporting(true);
       await new Promise((resolve) => setTimeout(resolve, 50));
-      await exportDiagramAsPng(reactFlowInstance, `${sanitizedName}.png`, diagramDivRef.current);
+      await exportDiagramAsPng(
+        reactFlowInstance,
+        `${sanitizeFilename(model.document?.name)}.png`,
+        diagramDivRef.current,
+      );
       toast.success(t("toast.download.success"));
     } catch (error) {
       toast.error(t("toast.download.error"), {

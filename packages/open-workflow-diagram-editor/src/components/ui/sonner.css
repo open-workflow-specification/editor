@@ -17,30 +17,15 @@
  @reference "../../styles.css";
 
 @layer sonner {
-  /*
-   * Sonner portals [data-sonner-toaster] directly into document.body, so it is
-   * NOT a descendant of .dec-root.  All selectors here target the toaster and
-   * its children directly (no .dec-root ancestor prefix).
-   *
-   * Explicitly re-assert position:fixed + inset so that host-page styles in
-   * embedded environments (e.g. Quarkus dev-ui) cannot shift the toaster away
-   * from the top-left corner that the position="top-left" prop requests.
-   */
-  [data-sonner-toaster] {
-    --width: 300px !important;
-    position: fixed !important;
-    top: var(--offset, 32px) !important;
-    bottom: auto !important;
-    left: var(--offset, 32px) !important;
-    right: auto !important;
-  }
-  [data-sonner-toast] { background: var(--dec-toast-bg) !important; border-radius: 10px !important; border: 1px solid var(--dec-toast-border) !important; }
-  [data-sonner-toast][data-type="success"] { border-left: 4px solid var(--dec-toast-success) !important; }
-  [data-sonner-toast][data-type="error"]   { border-left: 4px solid var(--dec-error-accent) !important; }
-  [data-sonner-toast][data-type="warning"] { border-left: 4px solid var(--dec-toast-warning) !important; }
-  [data-sonner-toast][data-type="info"]    { border-left: 4px solid var(--dec-toast-info) !important; }
-  [data-sonner-toast] [data-title], [data-sonner-toast] [data-description] { color: var(--dec-toast-text) !important; }
-  [data-sonner-toast] [data-close-button] {
+  /* sonner defaults unlayered, so these overrides need !important */
+  .dec-root [data-sonner-toaster] { --width: 300px !important; }
+  .dec-root [data-sonner-toast] { background: var(--dec-toast-bg) !important; border-radius: 10px !important; border: 1px solid var(--dec-toast-border) !important; }
+  .dec-root [data-sonner-toast][data-type="success"] { border-left: 4px solid var(--dec-toast-success) !important; }
+  .dec-root [data-sonner-toast][data-type="error"]   { border-left: 4px solid var(--dec-error-accent) !important; }
+  .dec-root [data-sonner-toast][data-type="warning"] { border-left: 4px solid var(--dec-toast-warning) !important; }
+  .dec-root [data-sonner-toast][data-type="info"]    { border-left: 4px solid var(--dec-toast-info) !important; }
+  .dec-root [data-sonner-toast] [data-title], .dec-root [data-sonner-toast] [data-description] { color: var(--dec-toast-text) !important; }
+  .dec-root [data-sonner-toast] [data-close-button] {
     position: absolute !important;
     top: 50% !important;
     right: 12px !important;

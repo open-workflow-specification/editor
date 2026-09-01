@@ -19,3 +19,11 @@ import { type ClassValue, clsx } from "clsx";
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
+
+export function sanitizeFilename(name: string | undefined): string {
+  return (name || "workflow")
+    .replace(/[/\\:*?"<>|]/g, "_")
+    .replace(/\s+/g, "_")
+    .trim()
+    .substring(0, 200);
+}

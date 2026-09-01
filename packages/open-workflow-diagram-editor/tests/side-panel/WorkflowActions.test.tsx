@@ -18,7 +18,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type * as RF from "@xyflow/react";
-import { ExportActions } from "../../src/side-panel/ExportActions";
+import { WorkflowActions } from "../../src/side-panel/WorkflowActions";
 import { parseWorkflow } from "../../src/core/workflowSdk";
 import { renderWithProviders } from "../test-utils/render-helpers";
 import { WORKFLOW_WITH_METADATA_JSON } from "../fixtures/workflows";
@@ -28,7 +28,7 @@ import * as download from "../../src/lib/download";
 import * as exportPng from "../../src/lib/exportPng";
 import * as sonner from "sonner";
 
-describe("ExportActions", () => {
+describe("WorkflowActions", () => {
   const toastMock = vi.fn();
   const MERMAID_CODE = "mermaid code";
 
@@ -43,7 +43,7 @@ describe("ExportActions", () => {
     const copySpy = vi.spyOn(clipboard, "copyToClipboard").mockResolvedValue(undefined);
     vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
 
-    renderWithProviders(<ExportActions model={model!} />, { model });
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
 
     const copyButton = screen.getByRole("button", {
       name: /Copy Mermaid Code/i,
@@ -62,7 +62,7 @@ describe("ExportActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<ExportActions model={model!} />, { model });
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
 
     const copyButton = screen.getByRole("button", {
       name: /Copy Mermaid Code/i,
@@ -81,7 +81,7 @@ describe("ExportActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<ExportActions model={model!} />, { model });
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
 
     const downloadButton = screen.getByRole("button", {
       name: /Download as Mermaid File/i,
@@ -103,7 +103,7 @@ describe("ExportActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<ExportActions model={model!} />, { model });
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
 
     const downloadButton = screen.getByRole("button", {
       name: /Download as Mermaid File/i,
@@ -117,7 +117,7 @@ describe("ExportActions", () => {
   it("should disable the PNG button when reactFlowInstance is null", () => {
     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
 
-    renderWithProviders(<ExportActions model={model!} />, { model, reactFlowInstance: null });
+    renderWithProviders(<WorkflowActions model={model!} />, { model, reactFlowInstance: null });
 
     expect(screen.getByRole("button", { name: /Download as PNG/i })).toBeDisabled();
   });
@@ -130,7 +130,7 @@ describe("ExportActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<ExportActions model={model!} />, {
+    renderWithProviders(<WorkflowActions model={model!} />, {
       model,
       reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
       setIsExporting,
@@ -153,7 +153,7 @@ describe("ExportActions", () => {
     vi.spyOn(sonner.toast, "error").mockImplementation(toastMock);
     vi.spyOn(sonner.toast, "success").mockImplementation(toastMock);
 
-    renderWithProviders(<ExportActions model={model!} />, {
+    renderWithProviders(<WorkflowActions model={model!} />, {
       model,
       reactFlowInstance: {} as unknown as RF.ReactFlowInstance,
       setIsExporting,
