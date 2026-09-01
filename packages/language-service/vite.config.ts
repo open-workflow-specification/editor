@@ -28,5 +28,8 @@ export default defineConfig({
       fileName: (format) => (format === "es" ? "index.js" : `index.${format}.js`),
       formats: ["es"],
     },
+    rollupOptions: {
+      external: [/^@volar\//],
+    },
   },
 });
