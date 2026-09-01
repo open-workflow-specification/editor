@@ -46,9 +46,10 @@ describe("exportDiagramAsPng", () => {
 
     mockClick = vi.fn();
     mockLink = { click: mockClick, href: "", download: "" } as unknown as HTMLAnchorElement;
+    const originalCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "a") return mockLink;
-      return document.createElement.call(document, tag);
+      return originalCreateElement(tag);
     });
   });
 
