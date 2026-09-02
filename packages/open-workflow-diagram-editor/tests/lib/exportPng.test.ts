@@ -23,9 +23,14 @@ vi.mock("html-to-image", () => ({
   toPng: vi.fn().mockResolvedValue("data:image/png;base64,mock"),
 }));
 
-function makeViewport(): void {
+function makeViewport(nodeCount = 0): void {
   const viewport = document.createElement("div");
   viewport.className = "react-flow__viewport";
+  for (let i = 0; i < nodeCount; i++) {
+    const node = document.createElement("div");
+    node.className = "react-flow__node";
+    viewport.appendChild(node);
+  }
   document.body.appendChild(viewport);
 }
 
@@ -41,7 +46,7 @@ describe("exportDiagramAsPng", () => {
   let mockLink: HTMLAnchorElement;
 
   beforeEach(() => {
-    makeViewport();
+    makeViewport(1);
 
     mockClick = vi.fn();
     mockLink = { click: mockClick, href: "", download: "" } as unknown as HTMLAnchorElement;

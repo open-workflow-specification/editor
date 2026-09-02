@@ -19,6 +19,14 @@ import type { ReactFlowInstance } from "@xyflow/react";
 
 const PADDING = 40;
 const SCALE = 3;
+const MAX_RENDER_WAIT_FRAMES = 120;
+
+async function waitForAllNodesRendered(root: HTMLElement | Document, expected: number) {
+  for (let frame = 0; frame < MAX_RENDER_WAIT_FRAMES; frame++) {
+    if (root.querySelectorAll(".react-flow__node").length >= expected) return;
+    await new Promise(requestAnimationFrame);
+  }
+}
 
 export async function exportDiagramAsPng(
   reactFlowInstance: ReactFlowInstance,
@@ -35,10 +43,12 @@ export async function exportDiagramAsPng(
     throw new Error("React Flow viewport element not found");
   }
 
-  const nodes = reactFlowInstance.getNodes();
+  const nodes = reactFlowInstance.getNodes().filter((node) => !node.hidden);
   if (nodes.length === 0) {
     throw new Error("No nodes to export");
   }
+
+  await waitForAllNodesRendered(root, nodes.length);
 
   const { x: minX, y: minY, width, height } = reactFlowInstance.getNodesBounds(nodes);
   const contentWidth = width + PADDING * 2;

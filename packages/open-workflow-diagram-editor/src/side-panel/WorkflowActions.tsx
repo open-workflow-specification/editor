@@ -81,7 +81,6 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
   const handleExportPng = async () => {
     try {
       setIsExporting(true);
-      await new Promise((resolve) => setTimeout(resolve, 50));
       await exportDiagramAsPng(
         reactFlowInstance,
         `${sanitizeFilename(model.document?.name)}.png`,
