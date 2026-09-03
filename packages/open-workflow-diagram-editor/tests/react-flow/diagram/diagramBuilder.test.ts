@@ -29,12 +29,14 @@ import {
   TERMINAL_NODE_SIZE,
   getNodeSize,
 } from "../../../src/react-flow/diagram/autoLayout";
-import { parseWorkflow, type SdkError } from "../../../src/core";
+import { parseWorkflow, updateTask, type SdkError } from "../../../src/core";
 import {
   BASIC_VALID_WORKFLOW_JSON,
   BASIC_VALID_WORKFLOW_JSON_TASKS,
+  NESTED_CONTAINERS_WORKFLOW,
 } from "../../fixtures/workflows";
 import { createFlatGraph } from "../../test-utils/graph-helpers";
+import { parseFixture } from "../../test-utils/workflow-helpers";
 import { CATCH_CONTAINER_NODE_TYPE } from "../../../src/react-flow/nodes/taskNodeConfig";
 
 // Type alias for diagram elements to reduce verbosity
@@ -611,7 +613,7 @@ describe("diagramBuilder", () => {
       /* Errors are matched against the node's taskReference (indexed JSON pointer) */
       const target = baseline.nodes.find((node) => node.data.taskReference !== undefined)!;
       const targetId = target.id;
-      const targetReference = target.data.taskReference!;
+      const targetReference = target.data.taskReference as string;
 
       it("does not set hasError on any node when no errors are passed", () => {
         const diagram = buildDiagramElements(model);
@@ -984,4 +986,35 @@ describe("diagramBuilder", () => {
       expect(result.size).toBe(2);
     });
   });
+
+ describe("editable node ids", () => {
+   const model = parseFixture(NESTED_CONTAINERS_WORKFLOW);
+   const diagram = buildDiagramElements(model);
+
+
+   it("resolves every node the panel treats as an editable task", () => {
+     const editableIds = diagram.nodes
+       .filter((node) => node.data.taskReference !== undefined)
+       .map((node) => node.id);
+
+
+     expect(editableIds.length).toBeGreaterThan(0);
+     for (const id of editableIds) {
+       expect(() => updateTask(model, id, { set: { touched: true } })).not.toThrow();
+     }
+   });
+
+
+   it("withholds the editable marker from container frames, whose ids address no task", () => {
+     const frameIds = diagram.nodes
+       .filter((node) => node.data.task !== undefined && node.data.taskReference === undefined)
+       .map((node) => node.id);
+
+
+     expect(frameIds).toEqual(["/do/tryTask/try", "/do/tryTask/catch/do"]);
+     for (const id of frameIds) {
+       expect(() => updateTask(model, id, { set: { touched: true } })).toThrow(/Task not found/);
+     }
+   });
+ });
 });

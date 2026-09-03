@@ -62,6 +62,10 @@
     /* Selection / focus accent - (node rings, edge glow, condition-edge stroke, minimap viewport) */
     --dec-selected-rgb: 59 130 246;
 
+    --dec-accent-text: #2563eb;
+
+    --dec-success-text: #047857;
+
     /* node hover glow */
     --dec-node-hover-glow: rgba(0, 65, 208, 0.3);
 
@@ -69,6 +73,7 @@
     --dec-surface-dark: #1a202c;
     --dec-surface-dark-raised: #1f2937;
     --dec-surface-dark-elevated: #2d3748;
+    --dec-surface-dark-line: #3d4a5c;
 
     /* edges */
     --dec-edge-selected: #aea6a6;
@@ -104,6 +109,8 @@
     
     --dec-edge-selected: #aea6a6;
     --dec-selected-rgb: 96 165 250;
+    --dec-accent-text: #60a5fa;
+    --dec-success-text: #34d399;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
     --dec-node-hover-glow: rgba(255, 255, 255, 0.3);
 

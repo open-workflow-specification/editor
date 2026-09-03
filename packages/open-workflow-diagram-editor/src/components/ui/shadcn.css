@@ -25,6 +25,20 @@
 */
 
 .dec-root {
+  --primary: #2563eb;
+
+  --primary-foreground: #ffffff;
+
+  --background: hsl(0 0% 100%);
+
+  --border: hsl(220 13% 91%);
+
+  --input: hsl(220 13% 91%);
+
+  --accent: hsl(240 4.8% 95.9%);
+
+  --accent-foreground: hsl(240 5.9% 10%);
+
   --tooltip-background: hsl(0 0% 100%);
 
   --tooltip-foreground: hsl(222.2 84% 4.9%);
@@ -47,6 +61,20 @@
 }
 
 .dec-root.dark {
+  --primary: #2563eb;
+
+  --primary-foreground: #ffffff;
+
+  --background: var(--dec-surface-dark);
+
+  --border: var(--dec-surface-dark-line);
+
+  --input: var(--dec-surface-dark-line);
+
+  --accent: var(--dec-surface-dark-line);
+
+  --accent-foreground: hsl(0 0% 98%);
+
   --tooltip-background: hsl(222.2 84% 4.9%);
 
   --tooltip-foreground: hsl(210 40% 98%);
@@ -59,16 +87,30 @@
 
   --sidebar-primary-foreground: hsl(0 0% 100%);
 
-  --sidebar-accent: #3d4a5c;
+  --sidebar-accent: var(--dec-surface-dark-line);
 
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
 
-  --sidebar-border: #3d4a5c;
+  --sidebar-border: var(--dec-surface-dark-line);
 
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 @theme inline {
+  --color-primary: var(--primary);
+
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-background: var(--background);
+
+  --color-border: var(--border);
+
+  --color-input: var(--input);
+
+  --color-accent: var(--accent);
+
+  --color-accent-foreground: var(--accent-foreground);
+
   --color-tooltip-background: var(--tooltip-background);
   
   --color-tooltip-foreground: var(--tooltip-foreground);

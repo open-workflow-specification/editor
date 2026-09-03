@@ -17,3 +17,4 @@
 export { renderWithProviders } from "./render-helpers";
 export { t } from "./translation-helpers";
 export { createFlatGraph } from "./graph-helpers";
+export {nodeAt, parseFixture} from "./workflow-helpers";

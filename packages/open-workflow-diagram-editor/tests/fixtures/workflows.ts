@@ -526,3 +526,44 @@ export const PARSEABLE_INVALID_WORKFLOW_YAML = `
               while: .vet != null
               do:
   `;
+/**
+ * A try/catch task, with a named error variable and a recovery task list.
+ *
+ * Exported separately from the workflow below because the side panel's tests need the task
+ * on its own: a try/catch's TRY and CATCH frames are handed the parent task to display
+ * under an id that addresses no task of their own.
+ */
+export const TRY_CATCH_TASK = {
+  try: [{ fetchPreferences: { call: "http", with: { endpoint: "https://api.example.com" } } }],
+  catch: {
+    errors: { with: { status: 404 } },
+    as: "error",
+    do: [{ setDefaults: { set: { theme: "default" } } }],
+  },
+};
+
+/**
+ * A workflow covering every container kind — fork, for, try/catch and do — one task each.
+ */
+export const NESTED_CONTAINERS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "nested", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      forkTask: {
+        fork: {
+          branches: [
+            { notifyEmail: { call: "http", with: { endpoint: "https://mail.example.com" } } },
+          ],
+        },
+      },
+    },
+    {
+      forTask: {
+        for: { each: "user", in: "${ .users }" },
+        do: [{ assignRole: { set: { role: "admin" } } }],
+      },
+    },
+    { tryTask: TRY_CATCH_TASK },
+    { doTask: { do: [{ storeProfile: { set: { stored: true } } }] } },
+  ],
+};

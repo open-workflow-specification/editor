@@ -19,6 +19,7 @@ export * from "./workflowEditing";
 export * from "./validationErrors";
 export * from "./graph";
 export * from "./taskDetails";
+export * from "./taskDraft";
 export * from "./taskSubType";
 export * from "./elkjs";
 export * from "./mermaidExport";

@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SidePanel } from "../../src/side-panel/SidePanel";
 import { parseWorkflow } from "../../src/core/workflowSdk";
 import { renderWithProviders } from "../test-utils/render-helpers";
@@ -179,4 +180,51 @@ describe("SidePanel", () => {
 
     expect(screen.getByTestId("workflow-info")).toBeInTheDocument();
   });
+
+  describe("edit mode footer", () => {
+       /* The workflow's own task, so the node the panel is given matches what the write path
+      would resolve rather than describing a task the workflow does not contain. */
+   const selectedNode = {
+     id: "/do/step1",
+     type: "set",
+     position: { x: 0, y: 0 },
+     data: {
+       label: "step1",
+       task: { set: { variable: "my first workflow" } },
+       taskReference: "/do/0/step1",
+     },
+   };
+
+
+   const renderWithSelection = () => {
+     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+     return renderWithProviders(<SidePanel />, {
+       model,
+       isReadOnly: false,
+       nodes: [selectedNode],
+       selectedNodeId: selectedNode.id,
+     });
+   };
+
+
+   /* The panel body and the footer are siblings, so this is the wiring assertion: the draft
+      typed into a row is the one the pinned footer sees. When the footer itself decides to
+      show is covered in EditFormFooter's own tests. */
+   it("reaches the same draft the property rows write to", async () => {
+     const user = userEvent.setup();
+     renderWithSelection();
+
+
+     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+
+
+     await user.click(screen.getByText("my first workflow"));
+     await user.type(screen.getByLabelText("set.variable"), "X");
+
+
+     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+     expect(screen.getByText("1 changed")).toBeInTheDocument();
+   });
+ });
+
 });

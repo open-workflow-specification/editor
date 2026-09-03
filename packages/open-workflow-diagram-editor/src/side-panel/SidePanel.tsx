@@ -32,6 +32,8 @@ import { MermaidActions } from "@/side-panel/MermaidActions";
 import { getNodeVisualConfig } from "@/react-flow/nodes/taskNodeConfig";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import "./SidePanel.css";
+import { EditSessionProvider } from "./EditSession";
+import { EditFormFooter } from "./EditFormFooter";
 
 export function SidePanel() {
   const { model, nodes, selectedNodeId } = useDiagramEditorContext();
@@ -66,6 +68,7 @@ export function SidePanel() {
       aria-label={selectedNode ? t("aria.panel.nodeDetails") : t("aria.panel.workflowInfo")}
       role="complementary"
     >
+      <EditSessionProvider>
       <SidebarHeader>
         <div className="dec-sidebar-header-title">
           <span
@@ -107,6 +110,8 @@ export function SidePanel() {
           <MermaidActions model={model} />
         </SidebarFooter>
       ) : null}
+      { selectedNode !== null ? <EditFormFooter node={selectedNode} /> : null }
+      </EditSessionProvider>
     </Sidebar>
   );
 }

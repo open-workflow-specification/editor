@@ -22,6 +22,7 @@ import {
 } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
 import { en } from "../../src/i18n/locales/en";
+import { EditSessionProvider } from "../../src/side-panel/EditSession";
 
 const noop = () => {};
 
@@ -49,6 +50,7 @@ export const createMockContextValue = (
   setNodes: noop,
   setSelectedNodeId: noop,
   setContent: noop,
+  commitWorkflow: noop,
 
   // --- history defaults ---
   submitModel: noop,
@@ -76,7 +78,8 @@ export const renderWithProviders = (
   const Providers = ({ children }: { children: React.ReactNode }) => (
     <DiagramEditorContext.Provider value={mockContext}>
       <I18nProvider locale={mockContext.locale} dictionaries={{ en }}>
-        <SidebarProvider defaultOpen={true}>{children}</SidebarProvider>
+        <SidebarProvider defaultOpen={true}>
+          <EditSessionProvider>{children}</EditSessionProvider></SidebarProvider>
       </I18nProvider>
     </DiagramEditorContext.Provider>
   );

@@ -58,6 +58,12 @@ export const en = {
   "sidebar.duration.title": "Enter an ISO 8601 duration, for example PT30S or PT5M",
   "sidebar.field.item": "item",
   "sidebar.field.items": "items",
+  "sidebar.form.apply": "Apply",
+  "sidebar.form.cancel": "Cancel",
+  "sidebar.form.changed": "changed",
+  "sidebar.form.noChanges": "No changes",
+  "sidebar.form.applied": "Applied",
+
 } as const;
 
 export type TranslationKeys = keyof typeof en;

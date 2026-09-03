@@ -356,3 +356,54 @@ describe("DiagramEditorContextProvider Component", () => {
     });
   });
 });
+
+
+
+  describe("commitWorkflow", () => {
+    const CommitWorkflowButton: React.FC = () => {
+      const { commitWorkflow, model, errors } = useDiagramEditorContext();
+
+      const handleCommit = () => {
+        if (!model) return;
+        
+        // Modify the workflow - change the document name
+        const updated = {
+          ...model,
+          document: { ...model.document, name: "updated-workflow" },
+        };
+        commitWorkflow(updated);
+      };
+
+      return (
+        <div>
+          <button data-testid="commit-button" onClick={handleCommit}>
+            Commit
+          </button>
+          <p data-testid="workflow-name">{model?.document?.name ?? "null"}</p>
+          <p data-testid="error-count">{errors.length}</p>
+        </div>
+      );
+    };
+
+    it("updates the model when a valid workflow is committed", async () => {
+      render(
+        <DiagramEditorContextProvider
+          content={BASIC_VALID_WORKFLOW_YAML}
+          isReadOnly={false}
+          locale="en"
+        >
+          <CommitWorkflowButton />
+        </DiagramEditorContextProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("workflow-name")).toHaveTextContent("valid-workflow-yaml");
+      });
+
+      fireEvent.click(screen.getByTestId("commit-button"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("workflow-name")).toHaveTextContent("updated-workflow");
+      });
+    });
+  });
