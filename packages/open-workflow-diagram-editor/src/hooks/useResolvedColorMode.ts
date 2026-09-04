@@ -14,47 +14,55 @@
  * limitations under the License.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { ColorMode, ResolvedColorMode } from "../types/colorMode";
 
 const DARK_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 function normalizeColorMode(colorMode: string): ColorMode {
-  return colorMode === "light" || colorMode === "dark" || colorMode === "system" ? colorMode : "system";
+  return colorMode === "light" || colorMode === "dark" || colorMode === "system"
+    ? colorMode
+    : "system";
+}
+
+function getMediaQueryList(): MediaQueryList | null {
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia(DARK_MEDIA_QUERY);
+  }
+  return null;
 }
 
 function getSystemColorMode(): ResolvedColorMode {
-  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-    return window.matchMedia(DARK_MEDIA_QUERY).matches ? "dark" : "light";
-  }
-  return "light"; // Default to light
+  return getMediaQueryList()?.matches ? "dark" : "light";
 }
+
+function getServerColorMode(): ResolvedColorMode {
+  return "light";
+}
+
+function noopUnsubscribe(): void {}
 
 export function useResolvedColorMode(colorMode: ColorMode): ResolvedColorMode {
   const normalized = normalizeColorMode(colorMode);
 
-  const [resolvedColorMode, setResolvedColorMode] = useState<ResolvedColorMode>(
-    normalized === "system" ? getSystemColorMode() : normalized,
+  const subscribe = useCallback(
+    (onStoreChanges: () => void) => {
+      if (normalized !== "system") {
+        return noopUnsubscribe;
+      }
+
+      const mediaQuery = getMediaQueryList();
+      if (mediaQuery == null) {
+        return noopUnsubscribe;
+      }
+      mediaQuery.addEventListener("change", onStoreChanges);
+      return () => {
+        mediaQuery.removeEventListener("change", onStoreChanges);
+      };
+    },
+    [normalized],
   );
 
-  useEffect(() => {
-    if (normalized !== "system") {
-      setResolvedColorMode(normalized);
-      return;
-    }
-
-    setResolvedColorMode(getSystemColorMode());
-
-    const mediaQuery = window.matchMedia(DARK_MEDIA_QUERY);
-    const handler = (e: MediaQueryListEvent) => {
-      setResolvedColorMode(e.matches ? "dark" : "light");
-    };
-    mediaQuery.addEventListener("change", handler);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handler);
-    };
-  }, [normalized]);
-
-  return resolvedColorMode;
+  const systemColorMode = useSyncExternalStore(subscribe, getSystemColorMode, getServerColorMode);
+  return normalized === "system" ? systemColorMode : normalized;
 }

@@ -56,6 +56,13 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
   // Config state (non-history)
   const [locale, setLocale] = React.useState<string>(props.locale);
+  const [lastPropsLocale, setLastPropsLocale] = React.useState<string>(props.locale);
+
+  if (props.locale !== lastPropsLocale) {
+    setLastPropsLocale(props.locale);
+    setLocale(props.locale);
+  }
+
   const [nodes, setNodes] = React.useState([] as RF.Node[]);
   const [edges, setEdges] = React.useState([] as RF.Edge[]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
@@ -90,13 +97,18 @@ export const DiagramEditorContextProvider = React.forwardRef<
   // Keep a ref to the latest selectedNodeId so the effect below can read it
   // synchronously without taking it as a dependency (avoids re-seeding on every click).
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
-  selectedNodeIdRef.current = selectedNodeId;
+
+  React.useEffect(() => {
+    selectedNodeIdRef.current = selectedNodeId;
+  });
 
   // Seed history from the external content prop using seedModel (bypasses isReadOnly guard).
   // The real viewport is set by Diagram.tsx once layout completes in edit mode.
   // In read-only mode the placeholder viewport is acceptable since fitView always runs.
   React.useEffect(() => {
     const { model: parsedModel, errors: parsedErrors } = parseWorkflow(props.content);
+    // This will be addressed in the editing feature branch asthe implemntation is changing
+    // oxlint-disable-next-line react/set-state-in-effect
     setErrors(parsedErrors);
     if (parsedModel === null) {
       // Content is unparseable — reset history to null so downstream consumers
@@ -120,11 +132,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
     () => (model ? getTaskReferences(buildFlatGraph(model)) : new Set<string>()),
     [model],
   );
-
-  // Sync locale state when the prop changes.
-  React.useEffect(() => {
-    setLocale(props.locale);
-  }, [props.locale]);
 
   /**
    * Imperative API: load a new workflow from a YAML or JSON string.

@@ -74,20 +74,24 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   // re-triggering the layout effect when they change independently (e.g. selection,
   // viewport, undo/redo).
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
-  selectedNodeIdRef.current = selectedNodeId;
   const pendingViewportRestoreRef = React.useRef(pendingViewportRestore);
-  pendingViewportRestoreRef.current = pendingViewportRestore;
+
   const isReadOnlyRef = React.useRef(isReadOnly);
-  isReadOnlyRef.current = isReadOnly;
   const modelRef = React.useRef(model);
-  modelRef.current = model;
   // Function refs — callbacks change identity across renders but the post-layout
   // setTimeout must always invoke the latest version without re-running layout.
   const submitModelRef = React.useRef(submitModel);
-  submitModelRef.current = submitModel;
   const clearPendingViewportRestoreRef = React.useRef(clearPendingViewportRestore);
-  clearPendingViewportRestoreRef.current = clearPendingViewportRestore;
 
+  // Assigned after commit rather than during render (a render must nt have side effects)
+  React.useEffect(() => {
+    selectedNodeIdRef.current = selectedNodeId;
+    pendingViewportRestoreRef.current = pendingViewportRestore;
+    isReadOnlyRef.current = isReadOnly;
+    modelRef.current = model;
+    submitModelRef.current = submitModel;
+    clearPendingViewportRestoreRef.current = clearPendingViewportRestore;
+  });
   // True once the first layout has been committed to context — gates rendering the canvas
   // so React Flow mounts with nodes already positioned and fitView fires on real content.
   const [layoutReady, setLayoutReady] = React.useState(false);

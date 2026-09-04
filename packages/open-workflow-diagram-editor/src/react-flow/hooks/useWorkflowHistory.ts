@@ -88,12 +88,16 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
   // closing over it — this prevents them from being recreated on every state change,
   // which would retrigger layout effects and cause infinite re-render loops.
   const stateRef = React.useRef(state);
-  stateRef.current = state;
 
   // Keep a ref to the latest isReadOnly so callbacks don't go stale when the prop
   // changes (e.g. Storybook controls toggling the isReadOnly arg).
   const isReadOnlyRef = React.useRef(isReadOnly);
-  isReadOnlyRef.current = isReadOnly;
+
+  // Assigned after commit rather than during render (a render must nt have side effects)
+  React.useEffect(() => {
+    stateRef.current = state;
+    isReadOnlyRef.current = isReadOnly;
+  });
 
   /**
    * Seeds the model from external props.content.
