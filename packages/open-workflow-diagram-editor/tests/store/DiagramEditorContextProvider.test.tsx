@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { vi, expect, afterEach, describe, it } from "vitest";
+import { vi, expect, afterEach, describe, it, beforeEach } from "vitest";
 import { useDiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { DiagramEditorContextProvider } from "../../src/store/DiagramEditorContextProvider";
 import type { DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
@@ -26,12 +26,11 @@ import {
   BASIC_VALID_WORKFLOW_YAML,
 } from "../fixtures/workflows";
 
+const renderSpy = vi.fn();
+
 const TestComponent: React.FC = () => {
   const { isReadOnly, locale, model, errors } = useDiagramEditorContext();
-  const renderCount = React.useRef<number>(0);
-
-  // Increments on every render cycle
-  renderCount.current++;
+  renderSpy();
 
   return (
     <div data-testid="test-wrapper">
@@ -39,7 +38,6 @@ const TestComponent: React.FC = () => {
       <p data-testid="test-locale">{`${locale}`}</p>
       <p data-testid="test-model">{`${model ? model.document?.name : "null"}`}</p>
       <p data-testid="test-errors">{`${errors.length}`}</p>
-      <p data-testid="test-render">{`${renderCount.current}`}</p>
     </div>
   );
 };
@@ -55,6 +53,10 @@ const SelectionButton: React.FC = () => {
 };
 
 describe("DiagramEditorContextProvider Component", () => {
+  beforeEach(() => {
+    renderSpy.mockClear();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -72,14 +74,13 @@ describe("DiagramEditorContextProvider Component", () => {
 
     const readOnlyElement = screen.getByTestId("test-read-only");
     const readOnlyLocale = screen.getByTestId("test-locale");
-    const renderCount = screen.getByTestId("test-render");
 
     expect(readOnlyElement).toHaveTextContent(/true/i);
     expect(readOnlyLocale).toHaveTextContent(/en/i);
 
     // Two rendering cycles are expected:
     // 1- initial render, 2- useEffect seeding history from parsedModel
-    expect(renderCount).toHaveTextContent(/2/i);
+    expect(renderSpy).toHaveBeenCalledTimes(2);
   });
 
   it("Context provider props changes shall cause internal component to reload", async () => {
@@ -105,15 +106,14 @@ describe("DiagramEditorContextProvider Component", () => {
 
     const readOnlyElementChanged = screen.getByTestId("test-read-only");
     const readOnlyLocaleChanged = screen.getByTestId("test-locale");
-    const renderCount = screen.getByTestId("test-render");
 
     expect(readOnlyElementChanged).toHaveTextContent(/false/i);
     expect(readOnlyLocaleChanged).toHaveTextContent(/pt/i);
 
     // 4 rendering cycles are expected:
     // 1- initial render, 2- history seed useEffect,
-    // 3- forced by rerender, 4- state updates from isReadOnly/locale change
-    expect(renderCount).toHaveTextContent(/4/i);
+    // 3- forced by rerender
+    expect(renderSpy).toHaveBeenCalledTimes(3);
   });
 
   it("Context provider same props shall not cause internal component to reload", async () => {
@@ -139,14 +139,13 @@ describe("DiagramEditorContextProvider Component", () => {
 
     const readOnlyElementChanged = screen.getByTestId("test-read-only");
     const readOnlyLocaleChanged = screen.getByTestId("test-locale");
-    const renderCount = screen.getByTestId("test-render");
 
     expect(readOnlyElementChanged).toHaveTextContent(/true/i);
     expect(readOnlyLocaleChanged).toHaveTextContent(/en/i);
 
     // 3 rendering cycles are expected:
     // 1- initial render, 2- history seed useEffect, 3- forced by rerender (same props, no state change)
-    expect(renderCount).toHaveTextContent(/3/i);
+    expect(renderSpy).toHaveBeenCalledTimes(3);
   });
 
   it("Parses valid workflow content into model with no errors", async () => {

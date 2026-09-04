@@ -73,6 +73,7 @@ describe("useResolvedColorMode", () => {
     expect(result.current).toBe("light");
 
     act(() => {
+      matchesDark = true;
       for (const listener of listeners) {
         listener({ matches: true } as MediaQueryListEvent);
       }
@@ -80,7 +81,7 @@ describe("useResolvedColorMode", () => {
     expect(result.current).toBe("dark");
   });
 
-  it('resolves an unknown colorMode value to the system preference', () => {
+  it("resolves an unknown colorMode value to the system preference", () => {
     matchesDark = false;
     // @ts-expect-error testing runtime behavior with an invalid colorMode value
     const { result } = renderHook(() => useResolvedColorMode("invalid"));
