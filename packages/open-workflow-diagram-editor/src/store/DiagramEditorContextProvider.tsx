@@ -100,14 +100,14 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
   React.useEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
-  });
+  }, [selectedNodeId]);
 
   // Seed history from the external content prop using seedModel (bypasses isReadOnly guard).
   // The real viewport is set by Diagram.tsx once layout completes in edit mode.
   // In read-only mode the placeholder viewport is acceptable since fitView always runs.
   React.useEffect(() => {
     const { model: parsedModel, errors: parsedErrors } = parseWorkflow(props.content);
-    // This will be addressed in the editing feature branch asthe implemntation is changing
+    // This will be addressed in the editing feature branch as the implemntation is changing
     // oxlint-disable-next-line react/set-state-in-effect
     setErrors(parsedErrors);
     if (parsedModel === null) {

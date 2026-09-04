@@ -83,7 +83,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   const submitModelRef = React.useRef(submitModel);
   const clearPendingViewportRestoreRef = React.useRef(clearPendingViewportRestore);
 
-  // Assigned after commit rather than during render (a render must nt have side effects)
+  // Assigned after commit rather than during render (a render must not have side effects)
   React.useEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
     pendingViewportRestoreRef.current = pendingViewportRestore;
@@ -91,7 +91,14 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
     modelRef.current = model;
     submitModelRef.current = submitModel;
     clearPendingViewportRestoreRef.current = clearPendingViewportRestore;
-  });
+  }, [
+    selectedNodeId,
+    pendingViewportRestore,
+    isReadOnly,
+    model,
+    submitModel,
+    clearPendingViewportRestore,
+  ]);
   // True once the first layout has been committed to context — gates rendering the canvas
   // so React Flow mounts with nodes already positioned and fitView fires on real content.
   const [layoutReady, setLayoutReady] = React.useState(false);

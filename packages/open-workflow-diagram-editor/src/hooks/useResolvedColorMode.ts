@@ -63,6 +63,9 @@ export function useResolvedColorMode(colorMode: ColorMode): ResolvedColorMode {
     [normalized],
   );
 
-  const systemColorMode = useSyncExternalStore(subscribe, getSystemColorMode, getServerColorMode);
-  return normalized === "system" ? systemColorMode : normalized;
+  return useSyncExternalStore(
+    subscribe,
+    () => (normalized === "system" ? getSystemColorMode() : normalized),
+    () => (normalized === "system" ? getServerColorMode() : normalized),
+  );
 }

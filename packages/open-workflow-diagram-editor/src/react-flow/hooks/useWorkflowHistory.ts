@@ -93,11 +93,11 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
   // changes (e.g. Storybook controls toggling the isReadOnly arg).
   const isReadOnlyRef = React.useRef(isReadOnly);
 
-  // Assigned after commit rather than during render (a render must nt have side effects)
+  // Assigned after commit rather than during render (a render must not have side effects)
   React.useEffect(() => {
     stateRef.current = state;
     isReadOnlyRef.current = isReadOnly;
-  });
+  }, [state, isReadOnly]);
 
   /**
    * Seeds the model from external props.content.
