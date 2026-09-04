@@ -2,6 +2,7 @@ packages:
   - packages/*
   - examples/*
 catalog:
+  "monaco-editor": "0.56.0"
   "@volar/language-service": ^2.4.28
   "@changesets/changelog-github": ^1.0.0
   "@changesets/cli": ^3.0.1

@@ -1,0 +1,78 @@
+{
+  "name": "@openworkflowspec/text-editor",
+  "version": "1.1.0",
+  "private": true,
+  "description": "React Open Workflow text editor component backed by Monaco",
+  "keywords": [],
+  "homepage": "https://github.com/open-workflow-specification/editor",
+  "bugs": {
+    "url": "https://github.com/open-workflow-specification/editor/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/open-workflow-specification/editor.git"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --config .oxlintrc.json src/ stories/ tests/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "clean": "rimraf ./dist",
+    "clean:storybook": "rimraf ./dist-storybook",
+    "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm clean && tsc -p tsconfig.json && vite build && pnpm test && pnpm test-e2e",
+    "test": "vitest run",
+    "start": "storybook dev -p 6007 --no-open",
+    "build:storybook": "pnpm clean:storybook && storybook build --output-dir ./dist-storybook",
+    "test-e2e": "playwright test",
+    "test-e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "monaco-editor": "catalog:"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "catalog:",
+    "@playwright/test": "catalog:",
+    "@storybook/addon-a11y": "catalog:",
+    "@storybook/addon-docs": "catalog:",
+    "@storybook/addon-vitest": "catalog:",
+    "@storybook/react-vite": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
+    "jsdom": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "storybook": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
