@@ -48,6 +48,7 @@ function TooltipContent({
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   const [container, setContainer] = React.useState<HTMLElement>();
   React.useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
     setContainer(document.querySelector<HTMLElement>(".dec-root") ?? undefined);
   }, []);
   return (
