@@ -84,7 +84,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   const clearPendingViewportRestoreRef = React.useRef(clearPendingViewportRestore);
 
   // Assigned after commit rather than during render (a render must not have side effects)
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
     pendingViewportRestoreRef.current = pendingViewportRestore;
     isReadOnlyRef.current = isReadOnly;

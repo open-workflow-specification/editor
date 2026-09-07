@@ -94,7 +94,7 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
   const isReadOnlyRef = React.useRef(isReadOnly);
 
   // Assigned after commit rather than during render (a render must not have side effects)
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     stateRef.current = state;
     isReadOnlyRef.current = isReadOnly;
   }, [state, isReadOnly]);
