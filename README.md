@@ -201,7 +201,7 @@ The `commit-msg` hook will automatically verify DCO compliance.
 
 - **Automated Testing**: All PRs run linting, type checking, unit tests, and E2E tests
 - **Netlify Previews**: Storybook is automatically deployed for PRs modifying the diagram editor package
-- **GitHub Pages**: Each released version is published to [open-workflow-specification.github.io/editor](https://open-workflow-specification.github.io/editor/), built from its git tag. Unlike the Netlify previews, this only ever shows what has been released to npm
+- **GitHub Pages**: Each released version is published to [open-workflow-specification.github.io/editor/latest/](https://open-workflow-specification.github.io/editor/latest/), built from its git tag. Unlike the Netlify previews, this only ever shows what has been released to npm
 - **Dependency Updates**: Automated via Dependabot
 - **License Header Checks**: Apache 2.0 headers verified on all source files
 
