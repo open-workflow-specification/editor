@@ -18,6 +18,8 @@
 
 Official visual diagram editor for the [Open Workflow Specification](https://github.com/open-workflow-specification/specification). A vendor-neutral, embeddable React component with strict separation between core logic and platform APIs.
 
+**[Try the editor](https://open-workflow-specification.github.io/editor/latest/)** — the latest released version.
+
 ## Getting Started
 
 ### Requirements
@@ -30,7 +32,7 @@ npm install react@^19 react-dom@^19
 
 ## Non-React Usage
 
-If your application doesn't use React, you can embed the editor as a Web Component.  
+If your application doesn't use React, you can embed the editor as a Web Component.
 See the [Vanilla Web Component example](https://github.com/open-workflow-specification/editor/tree/main/examples/vanilla-web-component) for a working setup.
 
 ## Installation

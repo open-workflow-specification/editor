@@ -23,11 +23,6 @@ on:
       - main
       - "*.x"
 
-permissions:
-  contents: write
-  pull-requests: read
-  id-token: write
-
 jobs:
   publish:
     if: |
@@ -37,6 +32,13 @@ jobs:
       github.event.pull_request.title == 'chore: version packages' &&
       startsWith(github.event.pull_request.head.ref, 'changeset-release/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
+      version: ${{ steps.released-version.outputs.version }}
     steps:
       - name: Checkout release branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,6 +58,32 @@ jobs:
         run: pnpm build:prod
 
       - name: Publish to npm
+        id: publish
         uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
           publish: pnpm changeset publish
+
+      - name: Override publish output (act only)
+        run: echo "published=true" >> "$GITHUB_OUTPUT"
+        id: publish
+
+      - name: Resolve released preview package version
+        id: released-version
+        if: steps.publish.outputs.published == 'true'
+        run: |
+          VERSION="$(node -p "require('./${{ vars.PREVIEW_PACKAGE_DIR }}/package.json').version")"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+  # Publishes the released Storybook to GitHub Pages.
+  deploy-pages:
+    needs: publish
+    if: needs.publish.outputs.published == 'true' && needs.publish.outputs.version != ''
+    uses: ./.github/workflows/deploy-pages.yaml
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    with:
+      version: ${{ needs.publish.outputs.version }}
+      latest: ${{ github.event.pull_request.base.ref == 'main' }}
+      dry_run: false

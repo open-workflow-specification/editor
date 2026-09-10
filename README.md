@@ -21,6 +21,8 @@ The official **vendor-neutral visual editor** for the [Open Workflow Specificati
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CNCF Sandbox](https://img.shields.io/badge/CNCF-Sandbox-informational)](https://www.cncf.io/projects/serverless-workflow/)
 
+**[Try the editor](https://open-workflow-specification.github.io/editor/latest/)** — the latest released version.
+
 ## Overview
 
 This project provides an interactive, visual diagram editor designed to be:
@@ -199,6 +201,7 @@ The `commit-msg` hook will automatically verify DCO compliance.
 
 - **Automated Testing**: All PRs run linting, type checking, unit tests, and E2E tests
 - **Netlify Previews**: Storybook is automatically deployed for PRs modifying the diagram editor package
+- **GitHub Pages**: Each released version is published to [open-workflow-specification.github.io/editor](https://open-workflow-specification.github.io/editor/), built from its git tag. Unlike the Netlify previews, this only ever shows what has been released to npm
 - **Dependency Updates**: Automated via Dependabot
 - **License Header Checks**: Apache 2.0 headers verified on all source files
 
