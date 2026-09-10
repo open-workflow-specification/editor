@@ -14,18 +14,4 @@
  * limitations under the License.
  */
 
-import type { DetailField } from "@/core/taskDetails";
-import { PropertyField } from "./Fields";
-
-/**
- * Static presentation of a task's flattened properties.
- */
-export function ReadOnlyProperties({ fields }: { fields: DetailField[] }) {
-  return (
-    <dl>
-      {fields.map((field) => (
-        <PropertyField key={field.label} field={field} />
-      ))}
-    </dl>
-  );
-}
+export { useWorkflowErrorsForForm } from "./useWorkflowErrorsForForm";

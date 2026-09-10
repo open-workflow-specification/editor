@@ -57,6 +57,9 @@ export const en = {
   "toast.download.success": "Download started",
   "toast.download.error": "Download failed",
   "sidebar.duration.title": "Enter an ISO 8601 duration, for example PT30S or PT5M",
+  "sidebar.duration.placeholder": "PT30S",
+  "sidebar.then.flowDirectiveGroup": "Flow directive",
+  "sidebar.then.taskGroup": "Task",
   "sidebar.field.item": "item",
   "sidebar.field.items": "items",
   "sidebar.form.apply": "Apply",
@@ -64,6 +67,14 @@ export const en = {
   "sidebar.form.changed": "changed",
   "sidebar.form.noChanges": "No changes",
   "sidebar.form.applied": "Applied",
+  "sidebar.form.selectOption": "Select an option…",
+  "aria.form.taskProperties": "Task properties",
+  "sidebar.map.addProperty": "+ Add property",
+  "sidebar.map.keyPlaceholder": "key",
+  "sidebar.map.valuePlaceholder": "value",
+  "sidebar.map.keyLabel": "Entry key",
+  "sidebar.map.valueLabel": "Entry value",
+  "sidebar.map.deleteEntry": "Delete entry",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

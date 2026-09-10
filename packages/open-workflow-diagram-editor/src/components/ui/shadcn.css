@@ -31,9 +31,33 @@
 
   --background: hsl(0 0% 100%);
 
+  --foreground: hsl(222.2 84% 4.9%);
+
   --border: hsl(220 13% 91%);
 
   --input: hsl(220 13% 91%);
+
+  --ring: #2563eb;
+
+  --muted: hsl(210 40% 96.1%);
+
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+
+  --destructive: hsl(0 84.2% 60.2%);
+
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --secondary: hsl(210 40% 96.1%);
+
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+
+  --card: hsl(0 0% 100%);
+
+  --card-foreground: hsl(222.2 84% 4.9%);
+
+  --popover: hsl(0 0% 100%);
+
+  --popover-foreground: hsl(222.2 84% 4.9%);
 
   --accent: hsl(240 4.8% 95.9%);
 
@@ -67,9 +91,33 @@
 
   --background: var(--dec-surface-dark);
 
+  --foreground: hsl(210 40% 98%);
+
   --border: var(--dec-surface-dark-line);
 
   --input: var(--dec-surface-dark-line);
+
+  --ring: #3b82f6;
+
+  --muted: var(--dec-surface-dark-elevated);
+
+  --muted-foreground: hsl(215 20.2% 65.1%);
+
+  --destructive: hsl(0 62.8% 30.6%);
+
+  --destructive-foreground: hsl(210 40% 98%);
+
+  --secondary: var(--dec-surface-dark-elevated);
+
+  --secondary-foreground: hsl(210 40% 98%);
+
+  --card: var(--dec-surface-dark-raised);
+
+  --card-foreground: hsl(210 40% 98%);
+
+  --popover: var(--dec-surface-dark-raised);
+
+  --popover-foreground: hsl(210 40% 98%);
 
   --accent: var(--dec-surface-dark-line);
 
@@ -103,9 +151,33 @@
 
   --color-background: var(--background);
 
+  --color-foreground: var(--foreground);
+
   --color-border: var(--border);
 
   --color-input: var(--input);
+
+  --color-ring: var(--ring);
+
+  --color-muted: var(--muted);
+
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-destructive: var(--destructive);
+
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-secondary: var(--secondary);
+
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-card: var(--card);
+
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+
+  --color-popover-foreground: var(--popover-foreground);
 
   --color-accent: var(--accent);
 

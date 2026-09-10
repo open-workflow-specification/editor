@@ -29,13 +29,12 @@ const makeNode = (data: BaseNodeData, type = "call"): RF.Node<BaseNodeData> => (
 });
 
 describe("NodeDetailsView", () => {
-  it("renders every task field as a path labelled row under the Properties header", () => {
+  it("renders the Properties section and form for a task node", () => {
     const node = makeNode({
       label: "getPets",
-      // eslint-disable-next-line unicorn/no-thenable -- 'then' is a real SWF directive
       task: {
         call: "http",
-        with: { endpoint: "https://api.example.com" },
+        with: { endpoint: "https://api.example.com", method: "get" },
         // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
         then: "continue",
       },
@@ -45,71 +44,11 @@ describe("NodeDetailsView", () => {
 
     expect(screen.getByTestId("node-details")).toBeInTheDocument();
     expect(screen.getByText("Properties")).toBeInTheDocument();
-    expect(screen.getByText("call")).toBeInTheDocument();
-    expect(screen.getByText("http")).toBeInTheDocument();
-    expect(screen.getByText("with.endpoint")).toBeInTheDocument();
-    expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
-    expect(screen.getByText("then")).toBeInTheDocument();
-    expect(screen.getByText("continue")).toBeInTheDocument();
+    // The form renders a <form> element with the task properties aria-label
+    expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
   });
 
-  it("renders a number field as its literal value", () => {
-    const node = makeNode({
-      label: "step",
-      task: {
-        with: {
-          retries: 42,
-        },
-      },
-    });
-
-    renderWithProviders(<NodeDetailsView node={node} />);
-
-    expect(screen.getByText("with.retries")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
-  });
-
-  it("renders a boolean field as plain text", () => {
-    const node = makeNode({
-      label: "step",
-      task: {
-        with: {
-          enabled: true,
-        },
-      },
-    });
-
-    renderWithProviders(<NodeDetailsView node={node} />);
-
-    expect(screen.getByText("with.enabled")).toBeInTheDocument();
-    expect(screen.getByText("true")).toBeInTheDocument();
-  });
-
-  it.each([
-    { length: 1, text: "1 item" },
-    { length: 2, text: "2 items" },
-  ])("renders an array field as a summary $text", ({ length, text }) => {
-    const items = Array.from({ length }, () => ({}));
-    const node = makeNode({ label: "step", task: { switch: items } });
-
-    renderWithProviders(<NodeDetailsView node={node} />);
-
-    expect(screen.getByText("switch")).toBeInTheDocument();
-    expect(screen.getByText(text)).toBeInTheDocument();
-  });
-
-  it("renders an object field as a placeholder glyph (full value in source)", () => {
-    const node = makeNode({
-      label: "step",
-      task: { with: { a: { b: { client: { config: { z: 1 } } } } } },
-    });
-
-    renderWithProviders(<NodeDetailsView node={node} />);
-    expect(screen.getByText("with.a.b.client.config")).toBeInTheDocument();
-    expect(screen.getByText("{...}")).toBeInTheDocument();
-  });
-
-  it("renders a collapsed Source section with full yaml task", () => {
+  it("renders a collapsed Source section with full yaml task in read-only mode", () => {
     const task = {
       call: "http",
       with: { endpoint: "https://api.example.com" },
@@ -125,7 +64,7 @@ describe("NodeDetailsView", () => {
     );
   });
 
-  it("renders node details message when the task has no task", () => {
+  it("renders the no-details hint when the node has no task", () => {
     const node = makeNode({ label: "start" }, "start");
 
     renderWithProviders(<NodeDetailsView node={node} />);
@@ -137,7 +76,6 @@ describe("NodeDetailsView", () => {
   });
 
   describe("validation errors", () => {
-    /* Errors are attributed by taskReference (the indexed JSON pointer), not by node id */
     const taskReference = "/do/0/getPets";
     const taskReferences = new Set([taskReference]);
 
@@ -159,11 +97,9 @@ describe("NodeDetailsView", () => {
       });
 
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
-      // field label derived relative to the node's taskReference
       const field = document.querySelector(".dec-sidebar-error-field");
       expect(field?.textContent).toBe("with");
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
-      // Properties still render alongside the errors
       expect(screen.getByText("Properties")).toBeInTheDocument();
     });
 
@@ -178,7 +114,6 @@ describe("NodeDetailsView", () => {
       expect(screen.getByTestId("node-details")).toBeInTheDocument();
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
       expect(screen.getByText("something is wrong")).toBeInTheDocument();
-      // No task -> no Properties, no Source, and not the empty hint
       expect(screen.queryByText("Properties")).not.toBeInTheDocument();
       expect(screen.queryByText("No additional details for this node")).not.toBeInTheDocument();
     });
@@ -221,22 +156,6 @@ describe("NodeDetailsView", () => {
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
       expect(document.querySelector(".dec-sidebar-error-field")?.textContent).toBe("with");
     });
-
-    it("does not render the Source section in editable mode", () => {
-      const task = {
-        call: "http",
-        with: { endpoint: "https://api.example.com" },
-      };
-      const node = makeNode({ label: "getPets", task });
-
-      const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
-        isReadOnly: false,
-      });
-
-      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
-      expect(container.querySelector(".dec-sidebar-yaml-summary")).toBeNull();
-      expect(container.querySelector(".dec-sidebar-yaml-pre")).toBeNull();
-    });
   });
 
   describe("read-only and editable modes", () => {
@@ -244,31 +163,60 @@ describe("NodeDetailsView", () => {
       label: "getPets",
       task: {
         call: "http",
-        with: { endpoint: "https://api.example.com" },
+        with: { endpoint: "https://api.example.com", method: "get" },
       },
     });
 
-    const modes = [
-      ["read-only", true],
-      ["editable", false],
-    ] as const;
-
-    /* The read-only/edit split is the same until the react-hook-form editor
-      lands, so both branches render the same property rows. */
-    it.each(modes)("renders the task's property rows in %s mode", (_mode, isReadOnly) => {
-      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly });
+    it("renders the Properties section in read-only mode", () => {
+      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
 
       expect(screen.getByText("Properties")).toBeInTheDocument();
-      expect(screen.getByText("call")).toBeInTheDocument();
-      expect(screen.getByText("http")).toBeInTheDocument();
-      expect(screen.getByText("with.endpoint")).toBeInTheDocument();
-      expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
+      expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
     });
 
-    it.each(modes)("renders no form controls in %s mode", (_mode, isReadOnly) => {
-      const { container } = renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly });
+    it("renders the Properties section in editable mode", () => {
+      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: false });
 
-      expect(container.querySelector("input, textarea, select, [role='switch']")).toBeNull();
+      expect(screen.getByText("Properties")).toBeInTheDocument();
+      expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
+    });
+
+    it("does not render the Source section in editable mode", () => {
+      const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: false,
+      });
+
+      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
+      expect(container.querySelector(".dec-sidebar-yaml-summary")).toBeNull();
+    });
+
+    it("renders the Source section in read-only mode", () => {
+      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
+
+      expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
+    });
+
+    it("renders form controls in editable mode", () => {
+      const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: false,
+      });
+
+      // The schema-driven form renders input/select controls for editable fields
+      expect(container.querySelector("input, textarea, select")).not.toBeNull();
+    });
+
+    it("renders read-only controls in read-only mode", () => {
+      const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: true,
+      });
+
+      // In read-only mode all controls are disabled
+      const controls = container.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+        "input, textarea, select",
+      );
+      for (const control of controls) {
+        expect(control.disabled).toBe(true);
+      }
     });
   });
 });
