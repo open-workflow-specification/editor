@@ -63,10 +63,6 @@ jobs:
         with:
           publish: pnpm changeset publish
 
-      - name: Override publish output (act only)
-        run: echo "published=true" >> "$GITHUB_OUTPUT"
-        id: publish
-
       - name: Resolve released preview package version
         id: released-version
         if: steps.publish.outputs.published == 'true'
