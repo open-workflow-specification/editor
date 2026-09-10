@@ -44,7 +44,7 @@ On merge, the publish workflow automatically (no manual action needed):
 Check CI run at: [https://github.com/open-workflow-specification/editor/actions/workflows/publish-release.yaml](https://github.com/open-workflow-specification/editor/actions/workflows/publish-release.yaml)
 GH Releases: [https://github.com/open-workflow-specification/editor/releases](https://github.com/open-workflow-specification/editor/releases)
 NPM publishing at: [https://www.npmjs.com/package/@openworkflowspec/diagram-editor?activeTab=versions](https://www.npmjs.com/package/@openworkflowspec/diagram-editor?activeTab=versions)
-GitHub Pages: [https://open-workflow-specification.github.io/editor/](https://open-workflow-specification.github.io/editor/)
+GitHub Pages: [https://open-workflow-specification.github.io/editor/latest/](https://open-workflow-specification.github.io/editor/latest/)
 
 ---
 
