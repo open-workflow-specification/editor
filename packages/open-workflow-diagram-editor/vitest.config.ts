@@ -73,7 +73,6 @@ export default defineConfig({
           name: "unit",
           css: true,
           include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
-          exclude: ["tests/**/*.story.test.ts", "tests/**/*.story.test.tsx"],
         },
       },
       {
