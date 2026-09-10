@@ -38,7 +38,7 @@ on:
       latest:
         description: "Set this version as latest"
         type: boolean
-        default: true
+        default: false
       dry_run:
         description: "Run without pushing or deploying"
         type: boolean
