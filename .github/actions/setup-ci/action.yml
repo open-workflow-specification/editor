@@ -22,6 +22,18 @@ inputs:
     description: "Enable pnpm cache. Disable if the workflow does not run pnpm install."
     required: false
     default: "true"
+  pnpmInstall:
+    description: "Run pnpm install after setup."
+    required: false
+    default: "true"
+  working_directory:
+    description: "Working directory for pnpm install."
+    required: false
+    default: "."
+  playwrightInstall:
+    description: "Install Playwright browsers after setup."
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -36,3 +48,15 @@ runs:
       with:
         version: 10.31.0
         cache: ${{ inputs.pnpm_cache == 'true' }}
+
+    - name: Install dependencies
+      if: inputs.pnpmInstall == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: pnpm install ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && '--no-frozen-lockfile' || '' }}
+
+    - name: Install Playwright browsers
+      if: inputs.playwrightInstall == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: pnpm playwright:install:ci

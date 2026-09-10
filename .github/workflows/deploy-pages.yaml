@@ -69,10 +69,9 @@ jobs:
 
       - name: Setup CI
         uses: ./release/.github/actions/setup-ci
-
-      - name: Install dependencies
-        working-directory: release
-        run: pnpm install --frozen-lockfile
+        with:
+          pnpmInstall: true
+          working_directory: release
 
       - name: Build Storybook
         working-directory: release

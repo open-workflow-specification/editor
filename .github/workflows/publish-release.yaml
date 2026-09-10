@@ -47,12 +47,9 @@ jobs:
 
       - name: Setup CI
         uses: ./.github/actions/setup-ci
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install Playwright browsers
-        run: pnpm playwright:install:ci
+        with:
+          pnpmInstall: true
+          playwrightInstall: true
 
       - name: Build packages
         run: pnpm build:prod

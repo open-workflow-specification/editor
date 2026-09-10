@@ -47,12 +47,9 @@ jobs:
 
       - name: Setup CI
         uses: ./.github/actions/setup-ci
-
-      - name: Install dependencies
-        run: pnpm install ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && '--no-frozen-lockfile' || '' }}
-
-      - name: Install Playwright browsers
-        run: pnpm playwright:install:ci
+        with:
+          pnpmInstall: true
+          playwrightInstall: true
 
       - name: Check dependency and package version consistency
         run: pnpm dependencies:check

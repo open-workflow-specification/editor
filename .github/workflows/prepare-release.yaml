@@ -32,9 +32,8 @@ jobs:
 
       - name: Setup CI
         uses: ./.github/actions/setup-ci
-
-      - name: Install dependencies
-        run: pnpm install
+        with:
+          pnpmInstall: true
 
       - name: Create Release Pull Request
         uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
