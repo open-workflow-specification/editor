@@ -269,10 +269,13 @@ do:
     render(<DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />);
 
     expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
-    // The toggle button is inside the diagram canvas which is hidden until the first
-    // layout completes — wait for it to become visible.
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument(),
+    // The toggle button is inside a React Flow Panel, which only mounts once the first
+    // ELK layout cycle completes. Use a generous timeout since jsdom runs all layouts
+    // synchronously and the debounce + layout + state-update chain can take several
+    // seconds under parallel test load.
+    await waitFor(
+      () => expect(screen.getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument(),
+      { timeout: 8000 },
     );
   });
 });

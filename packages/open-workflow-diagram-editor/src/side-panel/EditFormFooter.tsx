@@ -88,7 +88,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
   const changedCount = Object.keys(flattenTask(dirtyFields)).length;
 
   const handleCancel = () => {
-    form.reset();
+    form.reset(task as unknown as Record<string, unknown>);
     setAppliedNodeId(null);
   };
 

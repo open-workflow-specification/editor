@@ -15,20 +15,15 @@
  */
 
 import * as React from "react";
+
 import { cn } from "@/lib/utils";
 
-/**
- * Styled native `<select>` element consistent with the project's Input component.
- */
-function Select({ className, ...props }: React.ComponentProps<"select">) {
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
-    <select
-      data-slot="select"
+    <textarea
+      data-slot="textarea"
       className={cn(
-        "dec:h-7 dec:w-full dec:min-w-0 dec:rounded-md dec:border dec:border-input dec:bg-transparent dec:px-2 dec:py-0.5 dec:text-xs dec:shadow-xs dec:transition-[color,box-shadow] dec:outline-none",
-        "dec:disabled:pointer-events-none dec:disabled:cursor-not-allowed dec:disabled:opacity-50 dec:dark:bg-input/30",
-        "dec:focus-visible:border-ring dec:focus-visible:ring-[3px] dec:focus-visible:ring-ring/50",
-        "dec:aria-invalid:border-destructive dec:aria-invalid:ring-destructive/20 dec:dark:aria-invalid:ring-destructive/40",
+        "dec:flex dec:field-sizing-content dec:min-h-[60px] dec:w-full dec:rounded-md dec:border dec:border-input dec:bg-transparent dec:px-2 dec:py-1.5 dec:text-xs dec:placeholder:text-muted-foreground dec:shadow-xs dec:transition-[border-color,box-shadow] dec:outline-none dec:hover:border-ring/50 dec:focus-visible:border-ring dec:focus-visible:ring-[3px] dec:focus-visible:ring-ring/50 dec:disabled:cursor-not-allowed dec:disabled:opacity-50 dec:aria-invalid:border-destructive dec:aria-invalid:ring-[3px] dec:aria-invalid:ring-destructive/20 dec:dark:bg-input/30 dec:form-textarea",
         className,
       )}
       {...props}
@@ -36,4 +31,4 @@ function Select({ className, ...props }: React.ComponentProps<"select">) {
   );
 }
 
-export { Select };
+export { Textarea };

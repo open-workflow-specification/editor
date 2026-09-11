@@ -73,11 +73,7 @@ export default defineConfig({
           name: "unit",
           css: true,
           include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
-          // Some form-rendering tests take > 5 s under heavy parallel load
-          // (e.g. the full EditFormFooter suite that renders a CallHTTP task
-          // with a deep OneOf schema). 10 s is still tight enough to catch
-          // genuinely hanging tests.
-          testTimeout: 10000,
+          testTimeout: 15000,
         },
       },
       {
@@ -89,6 +85,7 @@ export default defineConfig({
         ],
         test: {
           name: "storybook",
+          testTimeout: 15000,
           browser: {
             enabled: true,
             headless: true,

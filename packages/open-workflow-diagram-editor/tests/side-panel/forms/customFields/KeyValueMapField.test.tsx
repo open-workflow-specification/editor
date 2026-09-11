@@ -30,10 +30,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nProvider } from "@openworkflowspec/i18n";
-import { en } from "../../../src/i18n/locales/en";
-import { KeyValueMapField } from "../../../src/side-panel/forms/customFields/KeyValueMapField";
-import { TaskFormContext } from "../../../src/side-panel/forms/taskFormContext";
-import type { MapField } from "../../../src/side-panel/forms/schemaToFormFields";
+import { en } from "../../../../src/i18n/locales/en";
+import { KeyValueMapField } from "../../../../src/side-panel/forms/customFields/KeyValueMapField";
+import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
+import type { MapField } from "../../../../src/side-panel/forms/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -165,5 +165,96 @@ describe("KeyValueMapField — variant-switch restore", () => {
 
     fireEvent.change(valueInput, { target: { value: '{"assignedTo":"DevTeam"}' } });
     expect(valueInput).toHaveValue('{"assignedTo":"DevTeam"}');
+  });
+
+  it("resynchronizes rows when form.reset is called with new defaultValues", async () => {
+    function ResetTester() {
+      const form = useForm<Record<string, unknown>>({
+        defaultValues: { output: { as: { env: "production" } } },
+      });
+      return (
+        <I18nProvider locale="en" dictionaries={{ en }}>
+          <TaskFormContext.Provider
+            value={{ isReadOnly: false, siblingTaskNames: [], taskData: {} }}
+          >
+            <FormProvider {...form}>
+              <KeyValueMapField field={mapField} />
+              <button
+                type="button"
+                onClick={() => form.reset({ output: { as: { env: "staging", debug: "true" } } })}
+              >
+                Reset form
+              </button>
+            </FormProvider>
+          </TaskFormContext.Provider>
+        </I18nProvider>
+      );
+    }
+
+    const { findAllByRole } = render(<ResetTester />);
+    const inputs = await findAllByRole("textbox");
+    const keyInput = inputs.find((el) =>
+      (el as HTMLInputElement).getAttribute("aria-label")?.toLowerCase().includes("key"),
+    );
+    expect(keyInput).toHaveValue("env");
+
+    // Simulate deleting the entry
+    fireEvent.click(screen.getByRole("button", { name: /delete entry/i }));
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+
+    // Trigger reset with new default values
+    fireEvent.click(screen.getByRole("button", { name: "Reset form" }));
+
+    const restoredInputs = await screen.findAllByRole("textbox");
+    // 2 rows = 4 inputs
+    expect(restoredInputs.length).toBe(4);
+    expect(screen.getByDisplayValue("staging")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("debug")).toBeInTheDocument();
+  });
+
+  it("clears old key in form values when a row key is renamed or removed", async () => {
+    function RemovalTester() {
+      const form = useForm<Record<string, unknown>>({
+        defaultValues: { output: { as: { oldKey: "val" } } },
+      });
+      const [dump, setDump] = React.useState<string>("");
+      return (
+        <I18nProvider locale="en" dictionaries={{ en }}>
+          <TaskFormContext.Provider
+            value={{ isReadOnly: false, siblingTaskNames: [], taskData: {} }}
+          >
+            <FormProvider {...form}>
+              <KeyValueMapField field={mapField} />
+              <button type="button" onClick={() => setDump(JSON.stringify(form.getValues()))}>
+                Dump values
+              </button>
+              <div data-testid="dump">{dump}</div>
+            </FormProvider>
+          </TaskFormContext.Provider>
+        </I18nProvider>
+      );
+    }
+
+    const user = userEvent.setup();
+    render(<RemovalTester />);
+
+    const keyInput = screen.getByDisplayValue("oldKey");
+    await user.clear(keyInput);
+    await user.type(keyInput, "newKey");
+
+    await user.click(screen.getByRole("button", { name: "Dump values" }));
+    let dumpObj = JSON.parse(screen.getByTestId("dump").textContent || "{}") as {
+      output?: { as?: Record<string, unknown> };
+    };
+    expect(dumpObj.output?.as?.oldKey).toBeUndefined();
+    expect(dumpObj.output?.as?.newKey).toBe("val");
+
+    // Remove row
+    await user.click(screen.getByRole("button", { name: /delete entry/i }));
+    await user.click(screen.getByRole("button", { name: "Dump values" }));
+    dumpObj = JSON.parse(screen.getByTestId("dump").textContent || "{}") as {
+      output?: { as?: Record<string, unknown> };
+    };
+    expect(dumpObj.output?.as?.newKey).toBeUndefined();
   });
 });

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type { DereferencedSchema } from "@/core/schemaFilter";
+import type { DereferencedSchema } from "./schemaFilter";
 
 /**
  * A single form field descriptor produced by walking a task's JSON Schema.

@@ -16,8 +16,8 @@
 
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import type { StringField } from "../schemaToFormFields";
+import { Input } from "../ui/input";
+import type { StringField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 import { ScrollableTextField } from "./ScrollableTextField";
@@ -52,7 +52,7 @@ export function StringControl({ field, id }: StringControlProps) {
           <Input
             {...rhfField}
             id={id}
-            value={rhfField.value == null ? "" : String(rhfField.value)}
+            value={typeof rhfField.value === "string" ? rhfField.value : ""}
             disabled={isReadOnly}
             readOnly={isReadOnly}
             placeholder={placeholder}

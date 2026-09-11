@@ -30,10 +30,10 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nProvider } from "@openworkflowspec/i18n";
-import { en } from "../../../src/i18n/locales/en";
-import { FieldControl } from "../../../src/side-panel/forms/FieldControl";
-import { TaskFormContext } from "../../../src/side-panel/forms/taskFormContext";
-import type { NumberField } from "../../../src/side-panel/forms/schemaToFormFields";
+import { en } from "../../../../src/i18n/locales/en";
+import { FieldControl } from "../../../../src/side-panel/forms/FieldControl";
+import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
+import type { NumberField } from "../../../../src/side-panel/forms/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // Helpers

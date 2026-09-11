@@ -25,5 +25,6 @@ export * from "./mermaidExport";
 export * from "./schemaFilter";
 export * from "./schemaWalker";
 export * from "./structuralEqual";
+export * from "./schemaToFormFields";
 /* TEMPORARY — remove with the workaround; see the revert checklist in workflowSdk.ts. */
 export * from "./specWorkarounds";

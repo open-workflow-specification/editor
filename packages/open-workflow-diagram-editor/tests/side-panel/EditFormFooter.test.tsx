@@ -86,16 +86,20 @@ describe("EditFormFooter", () => {
   });
 
   describe("cancel", () => {
-    it("discards the draft and disables Apply", async () => {
+    it("discards the draft, restores form field values, and disables Apply", async () => {
       const user = userEvent.setup();
       renderFooter();
 
       const methodInput = screen.getByLabelText(/^Method$/i);
+      const originalValue = (methodInput as HTMLInputElement).value;
       await user.clear(methodInput);
       await user.type(methodInput, "delete");
+      expect(methodInput).toHaveValue("delete");
+
       await user.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+      expect(methodInput).toHaveValue(originalValue);
     });
   });
 

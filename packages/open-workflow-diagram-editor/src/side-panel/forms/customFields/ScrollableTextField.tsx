@@ -16,8 +16,8 @@
 
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { Textarea } from "@/components/ui/textarea";
-import type { StringField } from "../schemaToFormFields";
+import { Textarea } from "../ui/textarea";
+import type { StringField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 
@@ -50,7 +50,7 @@ export function ScrollableTextField({ field, id }: ScrollableTextFieldProps) {
           <Textarea
             {...rhfField}
             id={id}
-            value={rhfField.value == null ? "" : String(rhfField.value)}
+            value={typeof rhfField.value === "string" ? rhfField.value : ""}
             disabled={isReadOnly}
             readOnly={isReadOnly}
             placeholder={placeholder}

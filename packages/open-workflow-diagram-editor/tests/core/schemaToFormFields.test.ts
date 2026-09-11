@@ -15,12 +15,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { getFormFieldsForNodeType } from "../../../src/core/schemaWalker";
-import type {
-  OneOfField,
-  StringField,
-  ObjectField,
-} from "../../../src/side-panel/forms/schemaToFormFields";
+import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
+import type { OneOfField, StringField, ObjectField } from "../../src/core/schemaToFormFields";
 
 describe("schemaToFormFields endpoint and oneOf unwrapping", () => {
   it("generates clean endpoint options for setTask input.schema.resource.endpoint", () => {

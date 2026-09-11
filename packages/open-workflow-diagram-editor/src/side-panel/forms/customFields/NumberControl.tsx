@@ -16,8 +16,8 @@
 
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import type { NumberField } from "../schemaToFormFields";
+import { Input } from "../ui/input";
+import type { NumberField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 

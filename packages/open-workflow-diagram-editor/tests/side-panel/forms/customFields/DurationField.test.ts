@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ISO_8601_DURATION_PATTERN } from "../../../src/side-panel/forms/customFields/DurationField";
+import { ISO_8601_DURATION_PATTERN } from "../../../../src/side-panel/forms/customFields/DurationField";
 
 // ---------------------------------------------------------------------------
 // ISO_8601_DURATION_PATTERN

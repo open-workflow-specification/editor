@@ -20,13 +20,14 @@ import { useI18n } from "@openworkflowspec/i18n";
 import {
   Combobox,
   ComboboxContent,
+  ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
   ComboboxLabel,
   ComboboxList,
   ComboboxSeparator,
-} from "@/components/ui/combobox";
-import type { ThenField as ThenFieldDescriptor } from "../schemaToFormFields";
+} from "../ui/combobox";
+import type { ThenField as ThenFieldDescriptor } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 
@@ -61,7 +62,7 @@ export function ThenField({ field, id }: ThenFieldProps) {
             <ComboboxInput
               id={id}
               readOnly
-              value={(rhfField.value as string) ?? "—"}
+              value={(rhfField.value as string) || "—"}
               onBlur={rhfField.onBlur}
               name={rhfField.name}
               aria-label={field.label}
@@ -71,21 +72,26 @@ export function ThenField({ field, id }: ThenFieldProps) {
             />
             <ComboboxContent>
               <ComboboxList>
-                <ComboboxLabel>{t("sidebar.then.flowDirectiveGroup")}</ComboboxLabel>
-                {FLOW_DIRECTIVES.map((directive) => (
-                  <ComboboxItem key={directive} value={directive}>
-                    {directive}
-                  </ComboboxItem>
-                ))}
+                <ComboboxItem value="">—</ComboboxItem>
+                <ComboboxGroup>
+                  <ComboboxLabel>{t("sidebar.then.flowDirectiveGroup")}</ComboboxLabel>
+                  {FLOW_DIRECTIVES.map((directive) => (
+                    <ComboboxItem key={directive} value={directive}>
+                      {directive}
+                    </ComboboxItem>
+                  ))}
+                </ComboboxGroup>
                 {siblingTaskNames.length > 0 && (
                   <>
                     <ComboboxSeparator />
-                    <ComboboxLabel>{t("sidebar.then.taskGroup")}</ComboboxLabel>
-                    {siblingTaskNames.map((name) => (
-                      <ComboboxItem key={name} value={name}>
-                        {name}
-                      </ComboboxItem>
-                    ))}
+                    <ComboboxGroup>
+                      <ComboboxLabel>{t("sidebar.then.taskGroup")}</ComboboxLabel>
+                      {siblingTaskNames.map((name) => (
+                        <ComboboxItem key={name} value={name}>
+                          {name}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxGroup>
                   </>
                 )}
               </ComboboxList>

@@ -15,10 +15,8 @@
  */
 
 import { GraphNodeType } from "@openworkflowspec/sdk";
-import { CATCH_CONTAINER_NODE_TYPE } from "@/react-flow/nodes/taskNodeConfig";
 import { getSchemaForDefinition } from "./schemaFilter";
-import { schemaToFormFields } from "@/side-panel/forms/schemaToFormFields";
-import type { FormFieldDescriptor } from "@/side-panel/forms/schemaToFormFields";
+import { schemaToFormFields, FormFieldDescriptor } from "./schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // Node-type → schema definition-name mapping
@@ -26,6 +24,8 @@ import type { FormFieldDescriptor } from "@/side-panel/forms/schemaToFormFields"
 // Maps every graph node type to the `$defs` key that describes its schema.
 // Catch nodes share the tryTask schema because `try.catch` is inlined there.
 // ---------------------------------------------------------------------------
+
+export const CATCH_CONTAINER_NODE_TYPE = "catch-container";
 
 const NODE_TYPE_TO_DEF: Readonly<Record<string, string>> = {
   [GraphNodeType.Call]: "callTask",

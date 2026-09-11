@@ -23,8 +23,8 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@/components/ui/combobox";
-import type { EnumField } from "../schemaToFormFields";
+} from "../ui/combobox";
+import type { EnumField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 

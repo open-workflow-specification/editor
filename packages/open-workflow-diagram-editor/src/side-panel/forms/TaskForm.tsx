@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
 import { getFormFieldsForNodeType, structuralEqual } from "@/core";

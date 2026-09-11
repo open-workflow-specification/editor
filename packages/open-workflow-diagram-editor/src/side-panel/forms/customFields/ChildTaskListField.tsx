@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import type { ChildTaskListField as ChildTaskListFieldDescriptor } from "../schemaToFormFields";
+import type { ChildTaskListField as ChildTaskListFieldDescriptor } from "../../../core/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // ChildTaskListField — read-only list of child task names

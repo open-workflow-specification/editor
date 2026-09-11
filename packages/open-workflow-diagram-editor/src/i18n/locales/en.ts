@@ -47,6 +47,7 @@ export const en = {
   "aria.minimap.hide": "Hide minimap",
   "aria.minimap.show": "Show minimap",
   "aria.badge": "Badge:",
+  "aria.help": "Help",
   "aria.panel.nodeDetails": "Node details panel",
   "aria.panel.workflowInfo": "Workflow information panel",
   "aria.panel.content": "Panel content",

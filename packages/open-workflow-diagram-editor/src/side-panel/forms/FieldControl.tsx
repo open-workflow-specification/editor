@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import type { FormFieldDescriptor } from "./schemaToFormFields";
+import type { FormFieldDescriptor } from "../../core/schemaToFormFields";
 import {
   StringControl,
   NumberControl,

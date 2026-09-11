@@ -1,0 +1,93 @@
+/*
+ * Copyright 2021-Present The Open Workflow Specification Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Form-only shadcn tokens. Keep these out of the generated UI primitives. */
+@theme inline {
+  --color-foreground: var(--foreground);
+  --color-ring: var(--ring);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+}
+
+.dec-task-form {
+  --form-control-bg: #ffffff;
+  --form-control-text: #1f2937;
+  --form-control-border: #cbd5e1;
+  --form-control-border-hover: #94a3b8;
+  --foreground: hsl(222.2 84% 4.9%);
+  --ring: #2563eb;
+  --muted: hsl(210 40% 96.1%);
+  --muted-foreground: hsl(215.4 16.3% 46.9%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-foreground: hsl(222.2 47.4% 11.2%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222.2 84% 4.9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222.2 84% 4.9%);
+}
+
+.dec-root.dark .dec-task-form {
+  --form-control-bg: #1f2937;
+  --form-control-text: #f1f5f9;
+  --form-control-border: #475569;
+  --form-control-border-hover: #64748b;
+  --foreground: hsl(210 40% 98%);
+  --ring: #3b82f6;
+  --muted: var(--dec-surface-dark-elevated);
+  --muted-foreground: hsl(215 20.2% 65.1%);
+  --destructive: hsl(0 62.8% 30.6%);
+  --destructive-foreground: hsl(210 40% 98%);
+  --secondary: var(--dec-surface-dark-elevated);
+  --secondary-foreground: hsl(210 40% 98%);
+  --card: var(--dec-surface-dark-raised);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: var(--dec-surface-dark-raised);
+  --popover-foreground: hsl(210 40% 98%);
+}
+
+/* Keep embedded-host input rules from overriding the form controls. */
+.dec-task-form input[data-slot="input"],
+.dec-task-form textarea[data-slot="textarea"],
+.dec-task-form [data-slot="combobox-input-wrap"] {
+  border: 1px solid var(--form-control-border) !important;
+  background-color: transparent !important;
+  color: var(--form-control-text) !important;
+}
+
+.dec-task-form input[data-slot="input"]:hover,
+.dec-task-form textarea[data-slot="textarea"]:hover,
+.dec-task-form [data-slot="combobox-input-wrap"]:hover {
+  border-color: var(--form-control-border-hover) !important;
+}
+
+.dec-task-form input[data-slot="input"]:focus-visible,
+.dec-task-form textarea[data-slot="textarea"]:focus-visible,
+.dec-task-form [data-slot="combobox-input-wrap"]:focus-visible,
+.dec-task-form [data-slot="combobox-input-wrap"]:focus-within {
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 50%, transparent) !important;
+  outline: none !important;
+}

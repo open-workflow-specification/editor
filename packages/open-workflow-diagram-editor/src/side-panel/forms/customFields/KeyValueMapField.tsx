@@ -15,11 +15,11 @@
  */
 
 import * as React from "react";
-import { useFormContext, type UseFormReturn } from "react-hook-form";
+import { useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
 import { X, Plus } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
-import { Input } from "@/components/ui/input";
-import type { MapField } from "../schemaToFormFields";
+import { Input } from "../ui/input";
+import type { MapField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 
 // ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
   // react-hook-form's path inference over Record<string,unknown> can produce
   // overly-narrow types for runtime-composed key strings.
   const form = useFormContext() as UseFormReturn<Record<string, unknown>>;
-  const { setValue, unregister, getValues } = form;
+  const { setValue, getValues } = form;
 
   // ── Initialise rows ───────────────────────────────────────────────────────
   // Prefer the current RHF value (an object restored by a variant switch) over
@@ -158,14 +158,32 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
     return extractEntries(taskData, field.path);
   });
 
-  // Re-sync rows whenever the task data changes externally (undo/redo, node
-  // switch). `taskData` identity changes whenever TaskForm resets the form.
-  const prevTaskDataRef = React.useRef(taskData);
+  // Re-sync rows on any form reset (node switch, undo/redo, or cancel).
+  // `defaultValues` identity changes whenever form.reset(values) is called,
+  // which covers node switches and cancel (EditFormFooter passes the original
+  // task snapshot). Reading the map value directly from defaultValues is the
+  // most reliable signal because it is independent of taskData identity.
+  const { defaultValues } = useFormState({ control: form.control });
+  const prevDefaultValuesRef = React.useRef(defaultValues);
   React.useEffect(() => {
-    if (prevTaskDataRef.current === taskData) return;
-    prevTaskDataRef.current = taskData;
-    setRows(extractEntries(taskData, field.path));
-  }, [taskData, field.path]);
+    if (prevDefaultValuesRef.current === defaultValues) return;
+    prevDefaultValuesRef.current = defaultValues;
+    // Walk the dot-notation path inside the nested defaultValues object.
+    const parts = field.path ? field.path.split(".") : [];
+    let node: unknown = defaultValues;
+    for (const part of parts) {
+      if (node == null || typeof node !== "object" || Array.isArray(node)) {
+        node = undefined;
+        break;
+      }
+      node = (node as Record<string, unknown>)[part];
+    }
+    if (node != null && typeof node === "object" && !Array.isArray(node)) {
+      setRows(extractEntriesFromObject(node as Record<string, unknown>));
+    } else {
+      setRows([]);
+    }
+  }, [defaultValues, field.path]);
 
   // Keep a stable ref to rows so event handlers can read the current snapshot
   // without needing rows as a dependency (avoids stale-closure issues).
@@ -176,6 +194,13 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
 
   // ── Entry mutation helpers ────────────────────────────────────────────────
 
+  const clearKey = React.useCallback(
+    (key: string) => {
+      setValue(`${field.path}.${key}` as never, undefined as never, { shouldDirty: true });
+    },
+    [field.path, setValue],
+  );
+
   const updateRow = React.useCallback(
     (id: string, newKey: string, rawValueStr: string) => {
       const current = rowsRef.current.find((r) => r.id === id);
@@ -183,9 +208,9 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
 
       const parsed = parseValue(rawValueStr);
 
-      // Rename: unregister the old key before registering the new one.
+      // Rename: clear the old key before registering the new one.
       if (current.key !== newKey && current.key !== "") {
-        unregister(`${field.path}.${current.key}`);
+        clearKey(current.key);
       }
       if (newKey !== "") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,7 +219,7 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
 
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, key: newKey, value: parsed } : r)));
     },
-    [field.path, setValue, unregister],
+    [field.path, setValue, clearKey],
   );
 
   const addRow = React.useCallback(() => {
@@ -205,11 +230,11 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
     (id: string) => {
       const current = rowsRef.current.find((r) => r.id === id);
       if (current?.key) {
-        unregister(`${field.path}.${current.key}`);
+        clearKey(current.key);
       }
       setRows((prev) => prev.filter((r) => r.id !== id));
     },
-    [field.path, unregister],
+    [clearKey],
   );
 
   // ── Count badge ───────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@
 import { describe, expect, it } from "vitest";
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
-import { FieldWithError } from "../../../src/side-panel/forms/customFields/fieldHelpers";
+import { FieldWithError } from "../../../../src/side-panel/forms/customFields/fieldHelpers";
 
 // ---------------------------------------------------------------------------
 // FieldWithError

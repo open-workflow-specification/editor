@@ -17,8 +17,9 @@
 import * as React from "react";
 import { HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { useFormContext } from "react-hook-form";
+import { useI18n } from "@openworkflowspec/i18n";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { FormFieldDescriptor, ObjectField, OneOfField } from "./schemaToFormFields";
+import type { FormFieldDescriptor, ObjectField, OneOfField } from "../../core/schemaToFormFields";
 import { FieldControl } from "./FieldControl";
 import { useTaskFormContext, filterReadOnlyFields, getNestedValue } from "./taskFormContext";
 import {
@@ -27,7 +28,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@/components/ui/combobox";
+} from "./ui/combobox";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,7 @@ function FieldLabel({
   required: boolean;
   description?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className="dec-form-field-label-row">
       <label htmlFor={htmlFor} className="dec-form-field-label">
@@ -102,7 +104,7 @@ function FieldLabel({
             <button
               type="button"
               className="dec-form-field-help"
-              aria-label={`Help: ${label}`}
+              aria-label={`${t("aria.help")}: ${label}`}
               tabIndex={0}
             >
               <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
@@ -122,6 +124,7 @@ function FieldLabel({
 function ObjectFieldRow({ field }: { field: ObjectField }) {
   const [expanded, setExpanded] = React.useState(true);
   const { isReadOnly, taskData } = useTaskFormContext();
+  const { t } = useI18n();
 
   const visibleChildren = isReadOnly
     ? filterReadOnlyFields(field.children, taskData)
@@ -166,7 +169,7 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
               <button
                 type="button"
                 className="dec-form-field-help"
-                aria-label={`Help: ${field.label}`}
+                aria-label={`${t("aria.help")}: ${field.label}`}
               >
                 <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
               </button>
@@ -206,9 +209,14 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
   const [selectedVariantIdx, setSelectedVariantIdx] = React.useState(derivedIdx);
 
   // Re-sync when the selected task changes (taskData identity changes).
-  React.useEffect(() => {
+  // Using a during-render state update avoids the set-state-in-effect lint rule
+  // while preserving the correct behaviour: when derivedIdx changes (i.e. a
+  // different task is selected) the variant resets before the next paint.
+  const [prevDerivedIdx, setPrevDerivedIdx] = React.useState(derivedIdx);
+  if (derivedIdx !== prevDerivedIdx) {
     setSelectedVariantIdx(derivedIdx);
-  }, [derivedIdx]);
+    setPrevDerivedIdx(derivedIdx);
+  }
 
   // Per-variant saved values — preserves field data when switching variants
   // and then switching back, so the user does not have to re-type values.
@@ -294,6 +302,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
           >
             <ComboboxInput
               readOnly
+              disabled={isReadOnly}
               value={variantLabels[selectedVariantIdx] ?? ""}
               aria-label={field.label}
               showClear={false}

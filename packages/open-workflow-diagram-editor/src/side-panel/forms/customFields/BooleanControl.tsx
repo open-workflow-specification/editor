@@ -17,7 +17,7 @@
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { Switch } from "@/components/ui/switch";
-import type { BooleanField } from "../schemaToFormFields";
+import type { BooleanField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 
 // ---------------------------------------------------------------------------

@@ -17,8 +17,8 @@
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
-import { Input } from "@/components/ui/input";
-import type { DurationField as DurationFieldDescriptor } from "../schemaToFormFields";
+import { Input } from "../ui/input";
+import type { DurationField as DurationFieldDescriptor } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 

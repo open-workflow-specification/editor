@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import * as React from "react";
 import type { Specification } from "@openworkflowspec/sdk";
 
 /**
@@ -50,40 +49,20 @@ export function useSiblingTaskNames(
   model: Specification.Workflow | null,
   nodeId: string | undefined,
 ): string[] {
-  return React.useMemo(() => {
-    if (!model || !nodeId) return [];
+  if (!model || !nodeId) return [];
 
-    const segments = nodeId.split("/").filter(Boolean);
-    // Each depth level is a <listProp>/<taskName> pair — need at least one pair.
-    if (segments.length < 2 || segments.length % 2 !== 0) return [];
+  const segments = nodeId.split("/").filter(Boolean);
+  // Each depth level is a <listProp>/<taskName> pair — need at least one pair.
+  if (segments.length < 2 || segments.length % 2 !== 0) return [];
 
-    // Walk every pair except the last to reach the object that owns the parent list.
-    // At each step: current[listProp] is a task array; find the entry keyed by taskName
-    // and descend into its value (the task body).
-    let current: unknown = model;
-    for (let i = 0; i < segments.length - 2; i += 2) {
-      const listProp = segments[i]!;
-      const taskName = segments[i + 1]!;
+  // Walk every pair except the last to reach the object that owns the parent list.
+  // At each step: current[listProp] is a task array; find the entry keyed by taskName
+  // and descend into its value (the task body).
+  let current: unknown = model;
+  for (let i = 0; i < segments.length - 2; i += 2) {
+    const listProp = segments[i]!;
+    const taskName = segments[i + 1]!;
 
-      if (
-        current === null ||
-        current === undefined ||
-        typeof current !== "object" ||
-        Array.isArray(current)
-      ) {
-        return [];
-      }
-
-      const list = (current as Record<string, unknown>)[listProp];
-      if (!Array.isArray(list)) return [];
-
-      // Find the entry { [taskName]: taskBody } and descend into taskBody
-      const entry = (list as Array<Record<string, unknown>>).find((e) => taskName in e);
-      if (!entry) return [];
-      current = entry[taskName];
-    }
-
-    // current is now the object that owns the final list (the model root or a task body)
     if (
       current === null ||
       current === undefined ||
@@ -93,19 +72,37 @@ export function useSiblingTaskNames(
       return [];
     }
 
-    const listProp = segments[segments.length - 2]!;
-    const currentTaskName = segments[segments.length - 1]!;
-
     const list = (current as Record<string, unknown>)[listProp];
     if (!Array.isArray(list)) return [];
 
-    const siblings: string[] = [];
-    for (const entry of list as Array<Record<string, unknown>>) {
-      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
-      const name = Object.keys(entry)[0];
-      if (name && name !== currentTaskName) siblings.push(name);
-    }
+    // Find the entry { [taskName]: taskBody } and descend into taskBody
+    const entry = (list as Array<Record<string, unknown>>).find((e) => taskName in e);
+    if (!entry) return [];
+    current = entry[taskName];
+  }
 
-    return siblings;
-  }, [model, nodeId]);
+  // current is now the object that owns the final list (the model root or a task body)
+  if (
+    current === null ||
+    current === undefined ||
+    typeof current !== "object" ||
+    Array.isArray(current)
+  ) {
+    return [];
+  }
+
+  const listProp = segments[segments.length - 2]!;
+  const currentTaskName = segments[segments.length - 1]!;
+
+  const list = (current as Record<string, unknown>)[listProp];
+  if (!Array.isArray(list)) return [];
+
+  const siblings: string[] = [];
+  for (const entry of list as Array<Record<string, unknown>>) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    const name = Object.keys(entry)[0];
+    if (name && name !== currentTaskName) siblings.push(name);
+  }
+
+  return siblings;
 }

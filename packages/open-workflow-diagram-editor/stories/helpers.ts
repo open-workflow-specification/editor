@@ -26,7 +26,7 @@ const DEFAULT_STORY_ARGS = {
 
 /**
  * Creates a workflow story with default configuration and play function.
- * 
+ *
  * @param workflowContent - The workflow YAML/JSON content to display
  * @returns A configured Story object
  */
@@ -37,8 +37,9 @@ export const createWorkflowStory = (workflowContent: string): Story => {
       content: workflowContent,
     },
     play: async ({ canvas }) => {
-      // Wait for the start node to be rendered to ensure all async state updates are complete
-      await canvas.findByTestId("start-node-root-entry-node");
+      // Wait for the start node to be rendered — large workflows can take several seconds
+      // for ELK auto-layout + React Flow node rendering in headless Chromium.
+      await canvas.findByTestId("start-node-root-entry-node", {}, { timeout: 10000 });
     },
   };
 };
