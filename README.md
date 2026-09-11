@@ -14,12 +14,16 @@
    limitations under the License.
 -->
 
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor?ref=badge_large)
+
 # editor
 
 The official **vendor-neutral visual editor** for the [Open Workflow Specification](https://github.com/open-workflow-specification/specification).
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CNCF Sandbox](https://img.shields.io/badge/CNCF-Sandbox-informational)](https://www.cncf.io/projects/serverless-workflow/)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor?ref=badge_shield)
 
 **[Try the editor](https://open-workflow-specification.github.io/editor/latest/)** — the latest released version.
 
