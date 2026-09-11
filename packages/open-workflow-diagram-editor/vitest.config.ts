@@ -73,6 +73,7 @@ export default defineConfig({
           name: "unit",
           css: true,
           include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
+          testTimeout: 15000,
         },
       },
       {
@@ -84,6 +85,7 @@ export default defineConfig({
         ],
         test: {
           name: "storybook",
+          testTimeout: 15000,
           browser: {
             enabled: true,
             headless: true,

@@ -34,6 +34,9 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import type { TranslationKeys } from "../../i18n/locales/en";
+import { CATCH_CONTAINER_NODE_TYPE } from "@/core";
+
+export { CATCH_CONTAINER_NODE_TYPE };
 
 export interface TaskNodeConfig {
   color: string;
@@ -45,9 +48,6 @@ export interface TerminalNodeConfig {
   icon: ComponentType<{ size?: number; className?: string }>;
   labelKey: TranslationKeys;
 }
-
-/* Custom react-flow only node type for catch nodes that contain child nodes (i.e are containers) (the sdk uses GraphNodeType.Catch for both leaf and container catch nodes) */
-export const CATCH_CONTAINER_NODE_TYPE = "catch-container";
 
 export type TerminalNodeType = typeof GraphNodeType.Entry | typeof GraphNodeType.Exit;
 

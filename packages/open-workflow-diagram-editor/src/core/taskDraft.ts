@@ -14,83 +14,157 @@
  * limitations under the License.
  */
 
-import type { Specification } from "@openworkflowspec/sdk";
-
-/*
- * This module bridges react-hook-form (which uses string field names) with nested task objects                                      
- * (which have deep property paths). It solves a critical problem: react-hook-form interprets                                                                                                                  
- * dots (.), brackets ([]), and slashes (/) as path separators, but workflow task properties  
- * can contain these characters as literal parts of their keys.
+/**
+ * Reconstructs a nested task object from the flat dot-notation form values
+ * produced by `flattenTask` in TaskForm. Arrays (child-task-list values) are
+ * kept as-is.
+ *
+ * For example:
+ *   `{ "for.each": "${items}", "for.in": "${data}" }`
+ * becomes:
+ *   `{ for: { each: "${items}", in: "${data}" } }`
+ *
+ * Empty strings, null, and undefined values are omitted so the resulting
+ * object only carries properties that were actually set.
  */
- 
-export type FieldChange = { segments: string[], value: unknown };
-
-const UNSAFE_SEGMENT_CHARS = /[%./[\]]/g;
-const ESCAPE_SEQUENCE = /%([0-9A-F]{2})/g;
-
-// Escapes special characters in a single path segment to prevent react-hook-form from misinterpreting them
-const encodeSegment = (segment: string): string =>
-    segment.replace(UNSAFE_SEGMENT_CHARS,(char) => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`
-);
-
-// Reverses the encoding to get back the original key name
-const decodeSegment = (segment: string): string =>
-    segment.replace(ESCAPE_SEQUENCE,(_match, hex: string) =>
-    String.fromCharCode(Number.parseInt(hex, 16))
-);
-
-// Converts a property path array into a single encoded string for react-hook-form
-export function fieldName(segments: string[]): string {
-    return segments.map(encodeSegment).join("/");
+export function unflattenValues(flat: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [dotPath, value] of Object.entries(flat)) {
+    if (value === undefined || value === null || value === "") continue;
+    const parts = dotPath.split(".");
+    let current = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i]!;
+      if (
+        current[part] === undefined ||
+        typeof current[part] !== "object" ||
+        Array.isArray(current[part])
+      ) {
+        current[part] = {};
+      }
+      current = current[part] as Record<string, unknown>;
+    }
+    current[parts[parts.length - 1]!] = value;
+  }
+  return result;
 }
 
-// Converts an encoded field name back into the original property path array
-export function parseFieldName(name: string): string[] {
-    return name.split("/").map(decodeSegment);
+/**
+ * Produces an updated task by applying only the dirty form fields onto a deep
+ * clone of the original task.
+ *
+ * The form may render optional sections (e.g. `input`, `output`, `export`)
+ * whose fields all have empty / falsy default values. Reconstructing the task
+ * purely from `getValues()` would inject empty intermediate objects such as
+ * `{ input: { schema: {} } }` that cause the SDK to report missing-required-
+ * property errors for fields the user never intended to fill in.
+ *
+ * By starting from the original task and writing only the paths that the user
+ * actually changed, untouched optional sections are left exactly as they were
+ * — either with their original values or simply absent.
+ *
+ * @param original   - The current task snapshot held in the store, used as
+ *                     the base for the deep clone.
+ * @param allValues  - All flat dot-notation form values from `form.getValues()`.
+ * @param dirtyPaths - Set of dot-notation paths that are dirty according to
+ *                     react-hook-form's `dirtyFields` (top-level keys only is
+ *                     sufficient because `KeyValueMapField` registers individual
+ *                     leaf paths under the map prefix).
+ */
+export function applyDirtyValues(
+  original: Record<string, unknown>,
+  allValues: Record<string, unknown>,
+  dirtyPaths: Set<string>,
+): Record<string, unknown> {
+  // Deep clone the original so we never mutate the store value.
+  const result = deepClone(original);
+
+  for (const [dotPath, value] of Object.entries(allValues)) {
+    if (!isDirtyPath(dotPath, dirtyPaths)) continue;
+
+    // A dirty path with an empty / null value means the user cleared the
+    // field — delete it from the clone rather than writing an empty string.
+    if (value === undefined || value === null || value === "") {
+      deletePath(result, dotPath.split("."));
+    } else {
+      setPath(result, dotPath.split("."), value);
+    }
+  }
+
+  return result;
 }
 
-// Writes a value to a deeply nested property path, creating intermediate objects as needed.
-function writeAtSegments(target: Record<string, unknown>, change: FieldChange): void {
-    const {segments, value} = change;
-    const leafKey = segments[segments.length - 1];
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
 
-    if(leafKey === undefined) {
-        return
-    }
-
-    let node = target
-
-    for (const segment of segments.slice(0, -1)) {
-        const next = node[segment]
-
-        if(Array.isArray(next)) {
-            // TODO not handled yet
-            throw new Error("array editing not implemented yet")
-        } 
-
-        if(typeof next !== "object" || next === null){
-            node[segment] = {}
-        }
-
-        node = node[segment] as Record<string, unknown>
-    }
-
-    if(value === undefined){
-        delete node[leafKey]
-        return
-    }
-
-    node[leafKey] = value
+function deepClone<T>(value: T): T {
+  // JSON round-trip is sufficient: task data is always plain JSON-serialisable.
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/**
+ * Returns true when `dotPath` should be written.
+ *
+ * react-hook-form's `dirtyFields` uses top-level keys for simple scalar
+ * fields and individual leaf paths for `KeyValueMapField` entries (which
+ * register their keys as `mapPath.entryKey`). A path is considered dirty
+ * when it either matches a key in `dirtyPaths` exactly, or when it starts
+ * with a dirty prefix (map-field case).
+ */
+function isDirtyPath(dotPath: string, dirtyPaths: Set<string>): boolean {
+  if (dirtyPaths.has(dotPath)) return true;
+  for (const dirty of dirtyPaths) {
+    if (dotPath.startsWith(dirty + ".")) return true;
+  }
+  return false;
+}
 
-// Applies multiple field changes to a task, returning a new modified task
-export function applyFieldValues(task: Specification.Task, changes: FieldChange[]): Specification.Task {
-    const draft = structuredClone(task) as Record<string, unknown>
+/**
+ * Returns false for path segments that could reach inherited object keys and
+ * cause prototype pollution (__proto__, prototype, constructor).
+ */
+function isSafeKey(key: string): boolean {
+  return key !== "__proto__" && key !== "prototype" && key !== "constructor";
+}
 
-    for(const change of changes) {
-        writeAtSegments(draft, change)
+/** Sets a value at a dot-notation path within `obj`, creating intermediates as needed. */
+function setPath(obj: Record<string, unknown>, parts: string[], value: unknown): void {
+  if (parts.some((p) => !isSafeKey(p))) {
+    throw new Error(`Unsafe path segment in: ${parts.join(".")}`);
+  }
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i]!;
+    if (
+      !Object.prototype.hasOwnProperty.call(current, part) ||
+      typeof current[part] !== "object" ||
+      Array.isArray(current[part])
+    ) {
+      current[part] = Object.create(null) as Record<string, unknown>;
     }
+    current = current[part] as Record<string, unknown>;
+  }
+  current[parts[parts.length - 1]!] = value;
+}
 
-    return draft as Specification.Task
+/** Removes a key at a dot-notation path within `obj`. Cleans up empty parent objects. */
+function deletePath(obj: Record<string, unknown>, parts: string[]): void {
+  if (parts.length === 0) return;
+  if (parts.some((p) => !isSafeKey(p))) {
+    throw new Error(`Unsafe path segment in: ${parts.join(".")}`);
+  }
+  if (parts.length === 1) {
+    delete obj[parts[0]!];
+    return;
+  }
+  const head = parts[0]!;
+  const child = obj[head];
+  if (child !== null && typeof child === "object" && !Array.isArray(child)) {
+    deletePath(child as Record<string, unknown>, parts.slice(1));
+    // Remove the parent if it became empty after deletion.
+    if (Object.keys(child).length === 0) {
+      delete obj[head];
+    }
+  }
 }

@@ -527,6 +527,23 @@ export const PARSEABLE_INVALID_WORKFLOW_YAML = `
               do:
   `;
 /**
+ * "Set Example" workflow — mirrors the SetExample Storybook story
+ * (`stories/examples/workflows/set.yaml`).
+ *
+ * Exercises:
+ * - A single `set` task (`initialize`) with a runtime-expression value
+ * - A schedule block (event-driven trigger)
+ * - Sibling-task resolution: `initialize` has no siblings at the top-level `do` list
+ */
+export const SET_EXAMPLE_WORKFLOW = {
+  document: { dsl: "1.0.3", namespace: "test", name: "set", version: "0.1.0" },
+  schedule: {
+    on: { one: { with: { type: "io.serverlessworkflow.samples.events.trigger.v1" } } },
+  },
+  do: [{ initialize: { set: { startEvent: "${ $workflow.input[0] }" } } }],
+};
+
+/**
  * A try/catch task, with a named error variable and a recovery task list.
  *
  * Exported separately from the workflow below because the side panel's tests need the task

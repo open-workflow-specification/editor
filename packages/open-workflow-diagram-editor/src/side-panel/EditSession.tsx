@@ -17,30 +17,28 @@
 import * as React from "react";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 
-export type DraftValues = Record<string, unknown>;
-
 type EditSessionValue = {
-    form: UseFormReturn<DraftValues>;
-    isEditing: boolean;
-    setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
-}
+  form: UseFormReturn<Record<string, unknown>>;
+};
 
 const EditSessionContext = React.createContext<EditSessionValue | undefined>(undefined);
 
 export function EditSessionProvider({ children }: { children: React.ReactNode }) {
-    const form = useForm<DraftValues>({ defaultValues: {}});
-    const [isEditing, setIsEditing] = React.useState(false);
+  const form = useForm<Record<string, unknown>>({ defaultValues: {} });
 
-    const value = React.useMemo(() => ({ form, isEditing, setIsEditing }), [form, isEditing]);
+  const value = React.useMemo(() => ({ form }), [form]);
 
-    return (<EditSessionContext.Provider value={value}>{<FormProvider {...form}>{children}</FormProvider>}</EditSessionContext.Provider>)
-
+  return (
+    <EditSessionContext.Provider value={value}>
+      <FormProvider {...form}>{children}</FormProvider>
+    </EditSessionContext.Provider>
+  );
 }
 
 export function useEditSession() {
-    const context = React.useContext(EditSessionContext);
-    if (!context) {
-        throw new Error("useEditSession must be used within an EditSessionProvider");
-    }
-    return context;
+  const context = React.useContext(EditSessionContext);
+  if (!context) {
+    throw new Error("useEditSession must be used within an EditSessionProvider");
+  }
+  return context;
 }

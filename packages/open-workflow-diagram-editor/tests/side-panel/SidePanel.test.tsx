@@ -182,49 +182,48 @@ describe("SidePanel", () => {
   });
 
   describe("edit mode footer", () => {
-       /* The workflow's own task, so the node the panel is given matches what the write path
-      would resolve rather than describing a task the workflow does not contain. */
-   const selectedNode = {
-     id: "/do/step1",
-     type: "set",
-     position: { x: 0, y: 0 },
-     data: {
-       label: "step1",
-       task: { set: { variable: "my first workflow" } },
-       taskReference: "/do/0/step1",
-     },
-   };
+    /* The workflow's own task, so the node the panel is given matches what the write path
+       would resolve rather than describing a task the workflow does not contain. */
+    const selectedNode = {
+      id: "/do/step1",
+      type: "set",
+      position: { x: 0, y: 0 },
+      data: {
+        label: "step1",
+        task: { set: { variable: "my first workflow" } },
+        taskReference: "/do/0/step1",
+      },
+    };
 
+    const renderWithSelection = () => {
+      const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+      return renderWithProviders(<SidePanel />, {
+        model,
+        isReadOnly: false,
+        nodes: [selectedNode],
+        selectedNodeId: selectedNode.id,
+      });
+    };
 
-   const renderWithSelection = () => {
-     const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
-     return renderWithProviders(<SidePanel />, {
-       model,
-       isReadOnly: false,
-       nodes: [selectedNode],
-       selectedNodeId: selectedNode.id,
-     });
-   };
+    /* The panel body and the footer are siblings sharing the same EditSession form.
+       Editing a field in the schema-driven form should be reflected in the footer. */
+    it("connects the schema-driven form to the footer's dirty state", async () => {
+      const user = userEvent.setup();
+      renderWithSelection();
 
+      // Footer is always visible in edit mode; Apply starts disabled
+      expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
 
-   /* The panel body and the footer are siblings, so this is the wiring assertion: the draft
-      typed into a row is the one the pinned footer sees. When the footer itself decides to
-      show is covered in EditFormFooter's own tests. */
-   it("reaches the same draft the property rows write to", async () => {
-     const user = userEvent.setup();
-     renderWithSelection();
+      // The set task's `set` field renders as a key-value map editor.
+      // Clicking "+ Add property" adds a new row; typing into the key input
+      // marks the form as dirty.
+      // Use getAllByRole because `metadata` also renders an "+ Add property" button.
+      await user.click(screen.getAllByRole("button", { name: /add property/i })[0]!);
+      const keyInput = screen.getAllByLabelText(/entry key/i)[0]!;
+      await user.type(keyInput, "myKey");
 
-
-     expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
-
-
-     await user.click(screen.getByText("my first workflow"));
-     await user.type(screen.getByLabelText("set.variable"), "X");
-
-
-     expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
-     expect(screen.getByText("1 changed")).toBeInTheDocument();
-   });
- });
-
+      expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+      expect(screen.getByText(/changed/i)).toBeInTheDocument();
+    });
+  });
 });

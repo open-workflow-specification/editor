@@ -507,4 +507,370 @@
     @apply dec:bg-red-300;
   }
     /* end validation errors */
+
+  /* ── Task form ───────────────────────────────────────────────────────── */
+
+  .dec-root .dec-task-form {
+    @apply dec:w-full;
+  }
+
+  .dec-root .dec-task-form-fields {
+    @apply dec:flex dec:flex-col dec:gap-2 dec:py-0.5;
+  }
+
+  /* Single field row (label-row + control) */
+  .dec-root .dec-form-field {
+    @apply dec:flex dec:flex-col dec:gap-0.5;
+  }
+
+  /* Label row: label text + optional ? button */
+  .dec-root .dec-form-field-label-row {
+    @apply dec:flex dec:items-center dec:gap-1;
+  }
+
+  .dec-root .dec-form-field-label {
+    @apply dec:text-[11px] dec:font-normal dec:text-gray-500;
+    overflow-wrap: anywhere;
+  }
+
+  .dec-root.dark .dec-form-field-label {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root .dec-form-field-required {
+    @apply dec:text-red-500;
+  }
+
+  /* Description tooltip trigger button */
+  .dec-root .dec-form-field-help {
+    @apply dec:inline-flex dec:items-center dec:justify-center
+      dec:h-4 dec:w-4 dec:rounded-sm dec:text-gray-400
+      dec:bg-transparent dec:border-0 dec:cursor-pointer dec:shrink-0
+      dec:transition-colors;
+  }
+
+  .dec-root .dec-form-field-help:hover {
+    @apply dec:text-gray-600;
+  }
+
+  .dec-root.dark .dec-form-field-help {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-form-field-help:hover {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root .dec-form-field-help:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: 1px;
+  }
+
+  .dec-root .dec-form-field-help-icon {
+    @apply dec:h-3 dec:w-3;
+  }
+
+  .dec-root .dec-form-field-control {
+    @apply dec:w-full;
+  }
+
+  /* Input + optional inline error */
+  .dec-root .dec-form-field-input-wrap {
+    @apply dec:flex dec:flex-col dec:gap-1;
+  }
+
+  .dec-root .dec-form-field-error {
+    @apply dec:text-xs dec:text-red-600;
+  }
+
+  .dec-root.dark .dec-form-field-error {
+    @apply dec:text-red-400;
+  }
+
+  /* Runtime-expression string input — monospace hint */
+  .dec-root .dec-form-expression-input {
+    font-family: var(--dec-font-mono);
+  }
+
+  /* Scrollable multiline textarea — fixed 3-line height with overflow scroll */
+  .dec-root .dec-form-scrollable-textarea {
+    @apply dec:min-h-0 dec:resize-none dec:overflow-y-auto;
+    field-sizing: fixed;
+    height: calc(3 * 1.5rem + 2 * 0.375rem); /* 3 lines × line-height + top/bottom padding */
+  }
+
+  /* ── Object group (collapsible) ──────────────────────────────────────── */
+
+  .dec-root .dec-form-object-group {
+    @apply dec:flex dec:flex-col dec:rounded-md
+      dec:border dec:border-gray-200 dec:overflow-hidden;
+  }
+
+  .dec-root.dark .dec-form-object-group {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-form-object-header {
+    @apply dec:flex dec:items-center dec:gap-1.5
+      dec:bg-gray-50 dec:transition-colors;
+  }
+
+  .dec-root .dec-form-object-header:hover {
+    @apply dec:bg-gray-100;
+  }
+
+  .dec-root.dark .dec-form-object-header {
+    @apply dec:bg-gray-800/60;
+  }
+
+  .dec-root.dark .dec-form-object-header:hover {
+    @apply dec:bg-gray-800;
+  }
+
+  /* The expand/collapse button fills the available row space */
+  .dec-root .dec-form-object-toggle {
+    @apply dec:flex dec:flex-1 dec:items-center dec:gap-1.5
+      dec:px-2 dec:py-1
+      dec:text-left dec:cursor-pointer
+      dec:border-0 dec:bg-transparent dec:transition-colors;
+  }
+
+  .dec-root .dec-form-object-toggle:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: -1px;
+  }
+
+  .dec-root .dec-form-object-chevron {
+    @apply dec:h-3.5 dec:w-3.5 dec:shrink-0 dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-form-object-chevron {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-form-object-label {
+    @apply dec:text-xs dec:font-medium dec:text-gray-600;
+  }
+
+  .dec-root.dark .dec-form-object-label {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root .dec-form-object-children {
+    @apply dec:flex dec:flex-col dec:gap-2 dec:px-2.5 dec:py-2
+      dec:border-t dec:border-gray-200;
+  }
+
+  .dec-root.dark .dec-form-object-children {
+    @apply dec:border-gray-700;
+  }
+
+  /* ── One-of group (variant selector + sub-fields) ────────────────────── */
+
+  .dec-root .dec-form-oneof-group {
+    @apply dec:flex dec:flex-col dec:gap-2 dec:rounded-md
+      dec:border dec:border-gray-200 dec:p-2;
+  }
+
+  .dec-root.dark .dec-form-oneof-group {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-form-oneof-children {
+    @apply dec:flex dec:flex-col dec:gap-2
+      dec:border-t dec:border-gray-100 dec:pt-2;
+  }
+
+  .dec-root.dark .dec-form-oneof-children {
+    @apply dec:border-gray-700/60;
+  }
+
+  /* ── Child task list ─────────────────────────────────────────────────── */
+
+  .dec-root .dec-form-child-list {
+    @apply dec:flex dec:flex-col dec:gap-0.5 dec:pl-0 dec:list-none;
+  }
+
+  .dec-root .dec-form-child-list-item {
+    @apply dec:text-xs dec:text-gray-700 dec:px-2 dec:py-1
+      dec:rounded-sm dec:bg-gray-100;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-form-child-list-item {
+    @apply dec:text-gray-300 dec:bg-gray-800;
+  }
+
+  .dec-root .dec-form-child-list-empty {
+    @apply dec:text-xs dec:text-gray-400 dec:italic;
+  }
+
+  .dec-root.dark .dec-form-child-list-empty {
+    @apply dec:text-gray-500;
+  }
+
+  /* ── Key-value map editor ────────────────────────────────────────────── */
+
+  .dec-root .dec-map-group {
+    @apply dec:flex dec:flex-col dec:rounded-md
+      dec:border dec:border-gray-200 dec:overflow-hidden;
+  }
+
+  .dec-root.dark .dec-map-group {
+    @apply dec:border-gray-700;
+  }
+
+  /* Header: label + count badge */
+  .dec-root .dec-map-header {
+    @apply dec:flex dec:items-center dec:justify-between dec:gap-2
+      dec:px-2 dec:py-1
+      dec:bg-gray-50;
+  }
+
+  .dec-root.dark .dec-map-header {
+    @apply dec:bg-gray-800/60;
+  }
+
+  .dec-root .dec-map-label {
+    @apply dec:text-xs dec:font-medium dec:text-gray-600;
+  }
+
+  .dec-root.dark .dec-map-label {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root .dec-map-count {
+    @apply dec:text-xs dec:text-gray-400 dec:tabular-nums;
+  }
+
+  .dec-root.dark .dec-map-count {
+    @apply dec:text-gray-500;
+  }
+
+  /* Rows container */
+  .dec-root .dec-map-rows {
+    @apply dec:flex dec:flex-col
+      dec:border-t dec:border-gray-200;
+  }
+
+  .dec-root.dark .dec-map-rows {
+    @apply dec:border-gray-700;
+  }
+
+  /* Single row: key input + value input + delete button */
+  .dec-root .dec-map-row {
+    @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:py-1
+      dec:border-b dec:border-gray-100;
+  }
+
+  .dec-root .dec-map-row:last-child {
+    @apply dec:border-b-0;
+  }
+
+  .dec-root.dark .dec-map-row {
+    @apply dec:border-gray-700/50;
+  }
+
+  .dec-root.dark .dec-map-row:last-child {
+    @apply dec:border-b-0;
+  }
+
+  /* Key input — fixed 40% width; !w-2/5 overrides the Input base's w-full */
+  .dec-root .dec-map-key-input {
+    @apply dec:h-6 dec:!w-2/5 dec:shrink-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+    font-family: var(--dec-font-mono);
+  }
+
+  /* Value input — fill remaining space; !w-0 + flex-1 overrides Input's w-full */
+  .dec-root .dec-map-value-input {
+    @apply dec:h-6 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+  }
+
+  /* Delete row button */
+  .dec-root .dec-map-delete-btn {
+    @apply dec:inline-flex dec:items-center dec:justify-center
+      dec:h-5 dec:w-5 dec:shrink-0 dec:rounded-sm
+      dec:text-gray-400 dec:bg-transparent dec:border-0
+      dec:cursor-pointer dec:transition-colors;
+  }
+
+  .dec-root .dec-map-delete-btn:hover {
+    @apply dec:text-gray-600;
+  }
+
+  .dec-root.dark .dec-map-delete-btn {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-map-delete-btn:hover {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root .dec-map-delete-btn:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: 1px;
+  }
+
+  .dec-root .dec-map-delete-icon {
+    @apply dec:h-3 dec:w-3;
+  }
+
+  /* Read-only rows */
+  .dec-root .dec-map-key-readonly {
+    @apply dec:text-xs dec:text-gray-600 dec:w-2/5 dec:shrink-0 dec:break-all;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-map-key-readonly {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root .dec-map-value-readonly {
+    @apply dec:text-xs dec:text-gray-500 dec:flex-1 dec:break-all;
+  }
+
+  .dec-root.dark .dec-map-value-readonly {
+    @apply dec:text-gray-400;
+  }
+
+  /* Add-property button wrapper — provides the inset padding so the
+     dashed-border button sits with breathing room inside the map group */
+  .dec-root .dec-map-add-btn-wrap {
+    @apply dec:px-2 dec:pb-2 dec:pt-1;
+  }
+
+  /* Add-property button */
+  .dec-root .dec-map-add-btn {
+    @apply dec:inline-flex dec:items-center dec:justify-center dec:gap-1
+      dec:w-full dec:px-2 dec:py-1.5
+      dec:text-[11px] dec:font-medium
+      dec:rounded-sm dec:border dec:border-dashed
+      dec:bg-transparent dec:cursor-pointer dec:transition-colors;
+    color: #0d9488;
+    border-color: #0d9488;
+  }
+
+  .dec-root .dec-map-add-btn:hover {
+    background-color: rgba(13, 148, 136, 0.08);
+  }
+
+  .dec-root.dark .dec-map-add-btn {
+    color: #2dd4bf;
+    border-color: #2dd4bf;
+  }
+
+  .dec-root.dark .dec-map-add-btn:hover {
+    background-color: rgba(45, 212, 191, 0.08);
+  }
+
+  .dec-root .dec-map-add-btn:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: -1px;
+  }
+
+  .dec-root .dec-map-add-icon {
+    @apply dec:h-2.5 dec:w-2.5 dec:shrink-0;
+  }
+
+  /* ── End task form ───────────────────────────────────────────────────── */
 }

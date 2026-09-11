@@ -29,9 +29,13 @@ import type { ReactFlowGraph } from "../../../src/react-flow/diagram/diagramBuil
 import * as core from "../../../src/core";
 
 // Mock the processElkLayout function
-vi.mock("../../../src/core", () => ({
-  processElkLayout: vi.fn(),
-}));
+vi.mock("../../../src/core", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    processElkLayout: vi.fn(),
+  };
+});
 
 describe("autoLayout", () => {
   describe("buildElkGraphFromReactFlowGraph", () => {

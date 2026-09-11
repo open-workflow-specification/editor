@@ -19,7 +19,6 @@ import { GraphNodeType, type Specification } from "@openworkflowspec/sdk";
 import * as RF from "@xyflow/react";
 import { useI18n } from "@openworkflowspec/i18n";
 import {
-  CATCH_CONTAINER_NODE_TYPE,
   type ContainerNodeType,
   type LeafNodeType,
   type TerminalNodeType,
@@ -27,7 +26,12 @@ import {
   containerNodeConfigMap,
   terminalNodeConfigMap,
 } from "./taskNodeConfig";
-import { getCallSubType, getListenSubType, getRunSubType } from "../../core";
+import {
+  CATCH_CONTAINER_NODE_TYPE,
+  getCallSubType,
+  getListenSubType,
+  getRunSubType,
+} from "../../core";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CircleAlert } from "lucide-react";
 
