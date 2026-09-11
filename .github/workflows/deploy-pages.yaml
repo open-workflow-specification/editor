@@ -47,6 +47,7 @@ concurrency:
   group: deploy-pages
   cancel-in-progress: false
 env:
+  DEPLOY_VERSION: ${{ inputs.version }}
   DEPLOY_PREVIEW_PACKAGE_NAME: ${{ vars.PREVIEW_PACKAGE_NAME }}
   DEPLOY_PREVIEW_PACKAGE_DIR: ${{ vars.PREVIEW_PACKAGE_DIR }}
   DEPLOY_PREVIEW_PACKAGE_TAG: ${{ vars.PREVIEW_PACKAGE_NAME }}@${{ inputs.version }}
@@ -72,6 +73,7 @@ jobs:
         with:
           pnpmInstall: true
           working_directory: release
+          pnpm_cache: false # Disable pnpm cache because the release checkout lives under release/, not at the workspace root.
 
       - name: Build Storybook
         working-directory: release
@@ -88,11 +90,11 @@ jobs:
       - name: Add release
         run: |
           BUILD="release/${DEPLOY_PREVIEW_PACKAGE_DIR}/dist-storybook"
-          rm -rf "pages/${{ inputs.version }}"
-          cp -R "${BUILD}" "pages/${{ inputs.version }}"
+          rm -rf "pages/${DEPLOY_VERSION}"
+          cp -R "${BUILD}" "pages/${DEPLOY_VERSION}"
           if [ "${{ inputs.latest }}" = "true" ]; then
             rm -rf pages/latest
-            ln -s "${{ inputs.version }}" pages/latest
+            ln -s "${DEPLOY_VERSION}" pages/latest
           fi
 
       - name: Update gh-pages
@@ -101,7 +103,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -s -m "deploy: ${DEPLOY_PREVIEW_PACKAGE_NAME}@${{ inputs.version }}"
+          git commit -s -m "deploy: ${DEPLOY_PREVIEW_PACKAGE_NAME}@${DEPLOY_VERSION}"
           git push ${{ inputs.dry_run && '--dry-run' || '' }}
 
       - name: Upload Pages artifact
