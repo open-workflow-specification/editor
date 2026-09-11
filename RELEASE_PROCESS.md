@@ -75,6 +75,15 @@ Link to `/latest/` for a URL that follows releases, or to a specific version for
 To backfill an older release or redeploy after a failed run, run the ["Release :: Deploy to GitHub Pages"](https://github.com/open-workflow-specification/editor/actions/workflows/deploy-pages.yaml)
 workflow with the version number, e.g. `1.1.0`. The workflow builds from the corresponding git tag.
 
+Or using the GitHub CLI:
+
+```bash
+gh workflow run deploy-pages.yaml \
+  --repo open-workflow-specification/editor \
+  --field version=1.1.0 \
+  --field latest=false
+```
+
 ---
 
 # Branching Model
