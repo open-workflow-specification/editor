@@ -62,6 +62,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: workflow-source
+
       - name: Checkout release
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -69,7 +74,7 @@ jobs:
           path: release
 
       - name: Setup CI
-        uses: ./release/.github/actions/setup-ci
+        uses: ./workflow-source/.github/actions/setup-ci
         with:
           pnpmInstall: true
           working_directory: release
