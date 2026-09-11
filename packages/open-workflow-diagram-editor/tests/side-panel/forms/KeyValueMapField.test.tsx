@@ -26,7 +26,7 @@
 
 import { describe, it, expect } from "vitest";
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
 import { I18nProvider } from "@openworkflowspec/i18n";
@@ -133,5 +133,37 @@ describe("KeyValueMapField — variant-switch restore", () => {
     const inputs = screen.getAllByRole("textbox");
     // 4 inputs = 2 (restored row) + 2 (new empty row)
     expect(inputs.length).toBe(4);
+  });
+
+  it("preserves object-valued map entry and does not render [object Object]", async () => {
+    const complexObj = { assignedTo: "DevTeam", status: "inProgress" };
+    const { findAllByRole } = render(
+      <MapFieldWrapper presetPath="output.as" presetValue={{ issue: complexObj }} />,
+    );
+
+    const inputs = await findAllByRole("textbox");
+    const keyInput = inputs.find((el) =>
+      (el as HTMLInputElement).getAttribute("aria-label")?.toLowerCase().includes("key"),
+    );
+    const valueInput = inputs.find((el) =>
+      (el as HTMLInputElement).getAttribute("aria-label")?.toLowerCase().includes("value"),
+    );
+    expect(keyInput).toHaveValue("issue");
+    expect(valueInput).toHaveValue(JSON.stringify(complexObj));
+    expect(valueInput).not.toHaveValue("[object Object]");
+  });
+
+  it("parses JSON object string on edit and updates form value with parsed object", async () => {
+    const { findAllByRole } = render(
+      <MapFieldWrapper presetPath="output.as" presetValue={{ test: "initial" }} />,
+    );
+
+    const inputs = await findAllByRole("textbox");
+    const valueInput = inputs.find((el) =>
+      (el as HTMLInputElement).getAttribute("aria-label")?.toLowerCase().includes("value"),
+    )!;
+
+    fireEvent.change(valueInput, { target: { value: '{"assignedTo":"DevTeam"}' } });
+    expect(valueInput).toHaveValue('{"assignedTo":"DevTeam"}');
   });
 });

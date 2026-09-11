@@ -132,34 +132,34 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 
   return (
     <div className="dec-form-object-group">
-      {/* Use a div with role="button" to avoid nesting a <button> inside a <button>
-          when this group appears inside a OneOfFieldRow which has a <button>-less ancestor.
-          The TooltipTrigger inside would otherwise produce invalid nested-button HTML. */}
-      <div
-        role="button"
-        tabIndex={0}
-        className="dec-form-object-header"
-        onClick={() => setExpanded((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setExpanded((v) => !v);
-          }
-        }}
-        aria-expanded={expanded}
-      >
-        {expanded ? (
-          <ChevronDown className="dec-form-object-chevron" aria-hidden="true" />
-        ) : (
-          <ChevronRight className="dec-form-object-chevron" aria-hidden="true" />
-        )}
-        <span className="dec-form-object-label">{field.label}</span>
-        {field.required && (
-          <span className="dec-form-field-required" aria-hidden="true">
-            {" "}
-            *
-          </span>
-        )}
+      {/* Header row: expand/collapse button and optional help button are siblings
+          so that no interactive element is nested inside another. */}
+      <div className="dec-form-object-header">
+        <button
+          type="button"
+          className="dec-form-object-toggle"
+          onClick={() => setExpanded((v) => !v)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setExpanded((v) => !v);
+            }
+          }}
+          aria-expanded={expanded}
+        >
+          {expanded ? (
+            <ChevronDown className="dec-form-object-chevron" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="dec-form-object-chevron" aria-hidden="true" />
+          )}
+          <span className="dec-form-object-label">{field.label}</span>
+          {field.required && (
+            <span className="dec-form-field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
+        </button>
         {field.description !== undefined && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -167,8 +167,6 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
                 type="button"
                 className="dec-form-field-help"
                 aria-label={`Help: ${field.label}`}
-                tabIndex={0}
-                onClick={(e) => e.stopPropagation()}
               >
                 <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
               </button>

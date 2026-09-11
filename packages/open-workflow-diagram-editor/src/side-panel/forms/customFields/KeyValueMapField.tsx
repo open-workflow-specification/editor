@@ -30,7 +30,7 @@ interface MapEntry {
   /** Stable row identity — never changes after creation (survives key renames). */
   id: string;
   key: string;
-  value: string;
+  value: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,46 @@ interface MapEntry {
 /** Generate a stable row id that does not collide across adds/deletes. */
 function newId(): string {
   return Math.random().toString(36).slice(2);
+}
+
+/**
+ * Serializes a value for editing in the text input or display in read-only mode.
+ * Objects and arrays are formatted as JSON strings; null/undefined as ""; others as String(v).
+ */
+function serializeValue(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+/**
+ * Parses a user-entered string back to a preserved JSON type if it represents
+ * a JSON object, array, number, boolean, or null; otherwise returns the raw string.
+ */
+function parseValue(valueStr: string): unknown {
+  const trimmed = valueStr.trim();
+  if (trimmed === "") return "";
+  if (
+    trimmed === "true" ||
+    trimmed === "false" ||
+    trimmed === "null" ||
+    (!isNaN(Number(trimmed)) && trimmed !== "") ||
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[")
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return valueStr;
+    }
+  }
+  return valueStr;
 }
 
 /**
@@ -66,7 +106,7 @@ function extractEntriesFromObject(obj: Record<string, unknown>): MapEntry[] {
   return Object.entries(obj).map(([k, v]) => ({
     id: newId(),
     key: k,
-    value: v == null ? "" : String(v),
+    value: v == null ? "" : v,
   }));
 }
 
@@ -137,9 +177,11 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
   // ── Entry mutation helpers ────────────────────────────────────────────────
 
   const updateRow = React.useCallback(
-    (id: string, newKey: string, newValue: string) => {
+    (id: string, newKey: string, rawValueStr: string) => {
       const current = rowsRef.current.find((r) => r.id === id);
       if (!current) return;
+
+      const parsed = parseValue(rawValueStr);
 
       // Rename: unregister the old key before registering the new one.
       if (current.key !== newKey && current.key !== "") {
@@ -147,12 +189,10 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
       }
       if (newKey !== "") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setValue(`${field.path}.${newKey}` as any, newValue, { shouldDirty: true });
+        setValue(`${field.path}.${newKey}` as any, parsed, { shouldDirty: true });
       }
 
-      setRows((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, key: newKey, value: newValue } : r)),
-      );
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, key: newKey, value: parsed } : r)));
     },
     [field.path, setValue, unregister],
   );
@@ -194,7 +234,7 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
             .map((row) => (
               <div key={row.id} className="dec-map-row">
                 <span className="dec-map-key-readonly">{row.key}</span>
-                <span className="dec-map-value-readonly">{row.value}</span>
+                <span className="dec-map-value-readonly">{serializeValue(row.value)}</span>
               </div>
             ))}
         </div>
@@ -252,6 +292,7 @@ function MapRow({
   onDelete: () => void;
 }) {
   const { t } = useI18n();
+  const serializedValue = serializeValue(row.value);
 
   return (
     <div className="dec-map-row">
@@ -259,12 +300,12 @@ function MapRow({
         className="dec-map-key-input"
         value={row.key}
         placeholder={t("sidebar.map.keyPlaceholder")}
-        onChange={(e) => onUpdate(e.target.value, row.value)}
+        onChange={(e) => onUpdate(e.target.value, serializedValue)}
         aria-label={t("sidebar.map.keyLabel")}
       />
       <Input
         className="dec-map-value-input"
-        value={row.value}
+        value={serializedValue}
         placeholder={t("sidebar.map.valuePlaceholder")}
         onChange={(e) => onUpdate(row.key, e.target.value)}
         aria-label={t("sidebar.map.valueLabel")}

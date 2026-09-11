@@ -85,7 +85,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     return null;
   }
 
-  const changedCount = Object.keys(dirtyFields).length;
+  const changedCount = Object.keys(flattenTask(dirtyFields)).length;
 
   const handleCancel = () => {
     form.reset();
@@ -108,7 +108,10 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     ) as Specification.Task;
     const updatedModel = updateTask(model, node.id, updated);
     commitWorkflow(updatedModel);
-    form.reset(flatValues);
+    // Reset to the current nested form values (not the flat version) so that
+    // RHF's defaultValues stay consistent with the nested Controller paths and
+    // no sibling fields are spuriously marked dirty after apply.
+    form.reset(form.getValues());
     setAppliedNodeId(node.id);
 
     if (dismissTimer.current !== null) {

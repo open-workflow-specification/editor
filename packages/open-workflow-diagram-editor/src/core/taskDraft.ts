@@ -120,17 +120,28 @@ function isDirtyPath(dotPath: string, dirtyPaths: Set<string>): boolean {
   return false;
 }
 
+/**
+ * Returns false for path segments that could reach inherited object keys and
+ * cause prototype pollution (__proto__, prototype, constructor).
+ */
+function isSafeKey(key: string): boolean {
+  return key !== "__proto__" && key !== "prototype" && key !== "constructor";
+}
+
 /** Sets a value at a dot-notation path within `obj`, creating intermediates as needed. */
 function setPath(obj: Record<string, unknown>, parts: string[], value: unknown): void {
+  if (parts.some((p) => !isSafeKey(p))) {
+    throw new Error(`Unsafe path segment in: ${parts.join(".")}`);
+  }
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i]!;
     if (
-      current[part] === undefined ||
+      !Object.prototype.hasOwnProperty.call(current, part) ||
       typeof current[part] !== "object" ||
       Array.isArray(current[part])
     ) {
-      current[part] = {};
+      current[part] = Object.create(null) as Record<string, unknown>;
     }
     current = current[part] as Record<string, unknown>;
   }
@@ -140,6 +151,9 @@ function setPath(obj: Record<string, unknown>, parts: string[], value: unknown):
 /** Removes a key at a dot-notation path within `obj`. Cleans up empty parent objects. */
 function deletePath(obj: Record<string, unknown>, parts: string[]): void {
   if (parts.length === 0) return;
+  if (parts.some((p) => !isSafeKey(p))) {
+    throw new Error(`Unsafe path segment in: ${parts.join(".")}`);
+  }
   if (parts.length === 1) {
     delete obj[parts[0]!];
     return;

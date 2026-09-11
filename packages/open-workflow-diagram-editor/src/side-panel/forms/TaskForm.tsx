@@ -87,8 +87,14 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
 
   // ── Reset form on node change ─────────────────────────────────────────────
   // Runs whenever nodeId changes — covers initial mount and switching nodes.
+  // Pass the task as a nested object so RHF's defaultValues are stored with
+  // the same structure as the registered Controller field paths. Passing flat
+  // dot-notation keys (e.g. "with.method") causes RHF to store them as literal
+  // flat keys in _defaultValues while Controller registration resolves them to
+  // nested paths in _formValues, creating a mismatch that spuriously marks
+  // sibling fields dirty.
   React.useEffect(() => {
-    form.reset(flattenTask(task as unknown));
+    form.reset(task as unknown as Record<string, unknown>);
     // `task` is intentionally excluded: on node change we always reset to the
     // current task snapshot. External task mutations (undo/redo) are handled
     // by the effect below.
@@ -103,11 +109,18 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   React.useEffect(() => {
     if (structuralEqual(task, prevTaskRef.current)) return;
     prevTaskRef.current = task;
-    form.reset(flattenTask(task as unknown));
+    form.reset(task as unknown as Record<string, unknown>);
   }, [task, form]);
 
   // ── Seed SDK errors into form field slots ─────────────────────────────────
-  useWorkflowErrorsForForm(errors, taskReference, taskReferences, form.setError, nodeId);
+  useWorkflowErrorsForForm(
+    errors,
+    taskReference,
+    taskReferences,
+    form.setError,
+    form.clearErrors,
+    nodeId,
+  );
 
   // ── Read-only: filter fields to only those with values ────────────────────
   const visibleFields = React.useMemo(() => {

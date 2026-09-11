@@ -72,14 +72,14 @@ function ComboboxInput({
   showClear?: boolean;
 }) {
   return (
-    <ComboboxPrimitive.Trigger
+    <div
       data-slot="combobox-input-wrap"
       className={cn(
         "dec:relative dec:flex dec:w-full dec:items-center dec:rounded-md dec:border dec:border-input dec:bg-transparent dec:shadow-xs dec:transition-[color,box-shadow] dec:outline-none",
         "dec:dark:bg-input/30",
         "dec:focus-within:border-ring dec:focus-within:ring-[3px] dec:focus-within:ring-ring/50",
         "dec:has-[[aria-invalid=true]]:border-destructive dec:has-[[aria-invalid=true]]:ring-destructive/20 dec:dark:has-[[aria-invalid=true]]:ring-destructive/40",
-        "dec:disabled:pointer-events-none dec:disabled:opacity-50",
+        disabled && "dec:pointer-events-none dec:opacity-50",
         className,
       )}
     >
@@ -91,10 +91,17 @@ function ComboboxInput({
       />
       {showClear && <ComboboxClear disabled={disabled} />}
       {showTrigger && (
-        <ChevronDownIcon className="dec:pointer-events-none dec:mr-2 dec:size-4 dec:shrink-0 dec:text-slate-500 dec:dark:text-slate-400" />
+        <ComboboxPrimitive.Trigger
+          data-slot="combobox-input-trigger"
+          tabIndex={-1}
+          disabled={disabled}
+          className="dec:flex dec:items-center dec:justify-center dec:pr-2 dec:text-slate-500 dec:dark:text-slate-400 dec:focus:outline-none"
+        >
+          <ChevronDownIcon className="dec:pointer-events-none dec:size-4 dec:shrink-0" />
+        </ComboboxPrimitive.Trigger>
       )}
       {children}
-    </ComboboxPrimitive.Trigger>
+    </div>
   );
 }
 

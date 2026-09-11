@@ -612,9 +612,7 @@
 
   .dec-root .dec-form-object-header {
     @apply dec:flex dec:items-center dec:gap-1.5
-      dec:px-2 dec:py-1
-      dec:bg-gray-50 dec:text-left dec:w-full dec:cursor-pointer
-      dec:border-0 dec:transition-colors;
+      dec:bg-gray-50 dec:transition-colors;
   }
 
   .dec-root .dec-form-object-header:hover {
@@ -629,7 +627,15 @@
     @apply dec:bg-gray-800;
   }
 
-  .dec-root .dec-form-object-header:focus-visible {
+  /* The expand/collapse button fills the available row space */
+  .dec-root .dec-form-object-toggle {
+    @apply dec:flex dec:flex-1 dec:items-center dec:gap-1.5
+      dec:px-2 dec:py-1
+      dec:text-left dec:cursor-pointer
+      dec:border-0 dec:bg-transparent dec:transition-colors;
+  }
+
+  .dec-root .dec-form-object-toggle:focus-visible {
     outline: 1px solid rgb(var(--dec-selected-rgb));
     outline-offset: -1px;
   }
