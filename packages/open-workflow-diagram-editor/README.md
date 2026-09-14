@@ -198,3 +198,11 @@ The shadcn CLI doesn't understand pnpm catalogs, so adding a component requires 
    ```bash
    pnpm install
    ```
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).
+
+[elkjs](https://github.com/kieler/elkjs), used for automatic graph layout, is dual-licensed
+`EPL-2.0 OR GPL-3.0-or-later`. `OR` means the recipient chooses, and **this package uses elkjs
+under the Eclipse Public License 2.0**.

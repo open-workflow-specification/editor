@@ -14,7 +14,6 @@
    limitations under the License.
 -->
 
-
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fopen-workflow-specification%2Feditor?ref=badge_large)
 
 # editor
@@ -235,6 +234,12 @@ See [RELEASE_PROCESS.md](./RELEASE_PROCESS.md) for details.
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE).
+
+### elkjs is used under EPL-2.0, not GPL
+
+[elkjs](https://github.com/kieler/elkjs), used for automatic graph layout, is dual-licensed
+`EPL-2.0 OR GPL-3.0-or-later`. `OR` means the recipient chooses, and **this project uses elkjs
+under the Eclipse Public License 2.0**.
 
 ## Related Projects
 
