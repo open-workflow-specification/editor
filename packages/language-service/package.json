@@ -47,6 +47,7 @@
     "rimraf": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vscode-languageserver-textdocument": "catalog:"
   }
 }

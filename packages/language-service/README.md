@@ -22,14 +22,34 @@ The package provides the common infrastructure for Open Workflow language featur
 
 ## Architecture
 
-Volar-specific code is isolated under `src/volar/`. Imports from `@volar/*` outside this directory are prevented by Oxlint.
+Volar-specific code is isolated under `src/volar/`. Imports from `@volar/*` and `volar-service-*` outside this directory are prevented by Oxlint.
 
 ```text
 src/
 ├── index.ts
 └── volar/
-    └── index.ts
+    ├── index.ts
+    └── plugins/
+        └── json.ts        (JSON schema-driven completion via volar-service-json)
 ```
+
+## API
+
+### `createJsonLanguageServicePlugin()`
+
+Creates a Volar `LanguageServicePlugin` for JSON using [`volar-service-json`](https://github.com/volarjs/services/tree/master/packages/json) and the Open Workflow schema exported by `@openworkflowspec/sdk`.
+
+The plugin provides schema-driven JSON completion and can be composed by the host with other Volar language service plugins.
+
+```ts
+import { createJsonLanguageServicePlugin } from "@openworkflowspec/language-service";
+
+const jsonPlugin = createJsonLanguageServicePlugin();
+```
+
+Host integration is responsible for composing this plugin with the other Volar services it needs. See the official [Volar Services documentation](https://volarjs.dev/reference/services/) for the service/plugin model.
+
+`volar-service-json` also exposes its standard JSON diagnostics through the returned plugin. This package does not add custom Open Workflow diagnostics at this stage.
 
 ## Development
 

@@ -159,6 +159,9 @@ catalogs:
     volar-service-json:
       specifier: 0.0.71
       version: 0.0.71
+    vscode-languageserver-textdocument:
+      specifier: ^1.0.14
+      version: 1.0.14
 
 importers:
 
@@ -310,6 +313,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.0(@types/node@26.4.1)(@vitest/browser-playwright@5.0.0)(@vitest/coverage-v8@5.0.0)(@vitest/ui@5.0.0)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      vscode-languageserver-textdocument:
+        specifier: 'catalog:'
+        version: 1.0.14
 
   packages/open-workflow-diagram-editor:
     dependencies:

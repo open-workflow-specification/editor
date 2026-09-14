@@ -14,15 +14,23 @@
  * limitations under the License.
  */
 
-export { createLanguageService } from "@volar/language-service";
+import { create } from "volar-service-json";
+import { workflowSchema } from "@openworkflowspec/sdk";
 
-export type {
-  LanguageService,
-  LanguageServiceContext,
-  LanguageServiceEnvironment,
-  LanguageServicePlugin,
-  LanguageServicePluginInstance,
-  ProjectContext,
-} from "@volar/language-service";
+const DEFAULT_SCHEMA_URI = "urn:open-workflow-specification:workflow-schema";
 
-export { createJsonLanguageServicePlugin } from "./plugins/json";
+export function createJsonLanguageServicePlugin() {
+  return create({
+    getLanguageSettings() {
+      return {
+        schemas: [
+          {
+            uri: workflowSchema.$id || DEFAULT_SCHEMA_URI,
+            fileMatch: ["*.json"],
+            schema: workflowSchema,
+          },
+        ],
+      };
+    },
+  });
+}
