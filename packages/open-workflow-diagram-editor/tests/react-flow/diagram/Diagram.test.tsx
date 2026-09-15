@@ -193,7 +193,7 @@ describe("Diagram Component", () => {
     const mockReactFlow = vi.mocked(ReactFlow);
     const reactFlowProps = mockReactFlow.mock.calls[mockReactFlow.mock.calls.length - 1][0];
     expect(reactFlowProps.nodesDraggable).toBe(false);
-    expect(reactFlowProps.nodesConnectable).toBe(true);
+    expect(reactFlowProps.nodesConnectable).toBe(false);
     expect(reactFlowProps.panOnDrag).toBe(false);
 
     await waitFor(() => {
