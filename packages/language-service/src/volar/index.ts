@@ -25,4 +25,20 @@ export type {
   ProjectContext,
 } from "@volar/language-service";
 
-export { createJsonLanguageServicePlugin } from "./plugins/json";
+import { createJsonSchemaLanguageServicePlugin } from "./json/schema";
+import { createJsonCompletionsPlugin } from "./json/completions";
+import { createJsonCodeLensesPlugin } from "./json/code-lenses";
+
+export {
+  createJsonSchemaLanguageServicePlugin,
+  createJsonCompletionsPlugin,
+  createJsonCodeLensesPlugin,
+};
+
+export function createJsonLanguageServicePlugins() {
+  return [
+    createJsonSchemaLanguageServicePlugin(),
+    createJsonCompletionsPlugin(),
+    createJsonCodeLensesPlugin(),
+  ];
+}

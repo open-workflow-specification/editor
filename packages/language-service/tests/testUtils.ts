@@ -15,6 +15,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
+import type { CompletionList } from "@volar/language-service";
 
 const CURSOR = "🎯";
 
@@ -39,4 +40,15 @@ export function treat(content: string, languageId: "json" | "yaml" = "json") {
     cursorPosition: doc.positionAt(cursorOffset),
     cursorOffset,
   };
+}
+
+/**
+ * Extracts the labels from a completion result for use in test assertions.
+ *
+ * @example
+ * const labels = completionLabels(result);
+ * expect(labels).toContain("document");
+ */
+export function completionLabels(result: CompletionList | null | undefined): string[] {
+  return result?.items.map((i) => i.label) ?? [];
 }

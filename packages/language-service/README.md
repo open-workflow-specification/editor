@@ -26,30 +26,36 @@ Volar-specific code is isolated under `src/volar/`. Imports from `@volar/*` and 
 
 ```text
 src/
-├── index.ts
-└── volar/
-    ├── index.ts
-    └── plugins/
-        └── json.ts        (JSON schema-driven completion via volar-service-json)
+├── samples/               (OWS sample documents)
+├── utils.ts               (shared OWS utilities)
+└── volar/                 (Volar adapters)
 ```
 
 ## API
 
-### `createJsonLanguageServicePlugin()`
+### `createJsonLanguageServicePlugins()`
 
-Creates a Volar `LanguageServicePlugin` for JSON using [`volar-service-json`](https://github.com/volarjs/services/tree/master/packages/json) and the Open Workflow schema exported by `@openworkflowspec/sdk`.
+Creates the default set of Volar `LanguageServicePlugin`s for Open Workflow JSON support.
 
-The plugin provides schema-driven JSON completion and can be composed by the host with other Volar language service plugins.
+It combines the schema, completion, and CodeLens plugins provided by this package.
 
 ```ts
-import { createJsonLanguageServicePlugin } from "@openworkflowspec/language-service";
+import { createJsonLanguageServicePlugins } from "@openworkflowspec/language-service";
 
-const jsonPlugin = createJsonLanguageServicePlugin();
+const plugins = createJsonLanguageServicePlugins();
 ```
 
-Host integration is responsible for composing this plugin with the other Volar services it needs. See the official [Volar Services documentation](https://volarjs.dev/reference/services/) for the service/plugin model.
+### `createJsonSchemaLanguageServicePlugin()`
 
-`volar-service-json` also exposes its standard JSON diagnostics through the returned plugin. This package does not add custom Open Workflow diagnostics at this stage.
+Creates the JSON language service plugin based on `volar-service-json` and the Open Workflow schema.
+
+### `createJsonCompletionsPlugin()`
+
+Creates the Open Workflow-specific JSON completion plugin.
+
+### `createJsonCodeLensesPlugin()`
+
+Creates the Open Workflow JSON CodeLens plugin.
 
 ## Development
 
