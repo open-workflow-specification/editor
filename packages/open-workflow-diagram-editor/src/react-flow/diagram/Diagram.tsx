@@ -256,7 +256,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
           data-testid={"react-flow-canvas"}
           elevateEdgesOnSelect={false}
           nodesDraggable={false}
-          nodesConnectable={!isReadOnly}
+          nodesConnectable={false}
         >
           {minimapVisible && (
             <RF.MiniMap pannable zoomable position={"bottom-left"} maskStrokeWidth={2} />
