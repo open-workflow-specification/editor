@@ -166,7 +166,7 @@ Pull requests automatically trigger:
 
 1. **Fork** the repository and create your branch from `main`.
 2. **Commit** your changes with clear, descriptive messages.
-3. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin. The `commit-msg` hook will automatically verify sign-off is present.
+3. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin. The `commit-msg` hook verifies a sign-off is present. Your git identity must also **match your GitHub account** — see *Git identity* below.
 4. **Verify** your changes by running the appropriate build and/or test commands for the packages you modified.
 5. If your PR changes a package, run `pnpm changeset` and commit the generated `.changeset/*.md` file.  
    As an alternative you may prefer to compare against upstream explicitly:
@@ -183,6 +183,35 @@ Pull requests automatically trigger:
 
 6. **Submit** a Pull Request (PR).
 7. **Review**: At least one maintainer must review and approve your PR before it is merged.
+
+---
+
+### Git identity
+
+Your local git identity must match your GitHub account in **both** name and email:
+
+```bash
+git config --global user.name  "<your GitHub display name, or your username if none is set>"
+git config --global user.email "<your GitHub account email>"
+```
+
+If you have **Keep my email addresses private** enabled (Settings → Emails), use the
+no-reply address shown on that page instead - it looks like
+`12345678+username@users.noreply.github.com`.
+
+**Why this matters.** When a pull request is squash-merged, GitHub writes a brand-new
+commit and takes its author from your GitHub account, while copying your
+`Signed-off-by` line verbatim from your original commit. If the two identities differ —
+even only in the display name — the resulting commit's sign-off no longer matches its
+own author, and it fails the DCO check the next time that commit appears inside a pull
+request.
+
+Check what you are currently committing as:
+
+```bash
+git config --get user.name
+git config --get user.email
+```
 
 ---
 
