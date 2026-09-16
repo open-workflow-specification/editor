@@ -47,5 +47,11 @@ describe("createJsonCodeLensesPlugin", () => {
       const result = instance.provideCodeLenses!(doc, {});
       expect(result).toBeNull();
     });
+
+    it("does not provide a code lens on an empty YAML document", () => {
+      const { doc } = treat("🎯", "yaml");
+      const result = instance.provideCodeLenses!(doc, {});
+      expect(result).toBeNull();
+    });
   });
 });

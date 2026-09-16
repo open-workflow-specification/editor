@@ -46,5 +46,11 @@ describe("createJsonCompletionsPlugin", () => {
       const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
       expect(labels).not.toContain("Insert Hello World workflow");
     });
+
+    it("does not propose Hello World completion on an empty YAML document", async () => {
+      const { doc, cursorPosition } = treat("🎯", "yaml");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).not.toContain("Insert Hello World workflow");
+    });
   });
 });
