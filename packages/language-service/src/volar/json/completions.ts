@@ -35,7 +35,7 @@ export function createJsonCompletionsPlugin(): LanguageServicePlugin {
       return {
         isAdditionalCompletion: true,
         provideCompletionItems(document) {
-          if (!isEmptyWorkflow(document.getText())) {
+          if (document.languageId !== "json" || !isEmptyWorkflow(document.getText())) {
             return null;
           }
 
