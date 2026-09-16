@@ -16,32 +16,30 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createJsonSchemaLanguageServicePlugin } from "../../../src/index";
-import type { LanguageServiceContext, LanguageServicePluginInstance } from "../../../src/index";
-import { treat, completionLabels } from "../../testUtils";
-
-const minimalContext = { env: { workspaceFolders: [] } } as LanguageServiceContext;
+import type { LanguageServicePluginInstance } from "../../../src/index";
+import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
 
 describe("createJsonSchemaLanguageServicePlugin", () => {
   let instance: LanguageServicePluginInstance;
 
   beforeEach(() => {
-    instance = createJsonSchemaLanguageServicePlugin().create(minimalContext);
+    instance = createJsonSchemaLanguageServicePlugin().create(MINIMAL_CONTEXT);
   });
 
   describe("provideCompletionItems", () => {
     it("suggests top-level OWS properties on an empty object", async () => {
       const { doc, cursorPosition } = treat("{🎯}");
-      const result = await instance.provideCompletionItems!(doc, cursorPosition, {});
-      expect(completionLabels(result)).toContain("document");
-      expect(completionLabels(result)).toContain("do");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).toContain("document");
+      expect(labels).toContain("do");
     });
 
     it("suggests document nested properties", async () => {
       const { doc, cursorPosition } = treat('{ "document": { 🎯 }, "do": [] }');
-      const result = await instance.provideCompletionItems!(doc, cursorPosition, {});
-      expect(completionLabels(result)).toContain("dsl");
-      expect(completionLabels(result)).toContain("namespace");
-      expect(completionLabels(result)).toContain("name");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).toContain("dsl");
+      expect(labels).toContain("namespace");
+      expect(labels).toContain("name");
     });
   });
 });

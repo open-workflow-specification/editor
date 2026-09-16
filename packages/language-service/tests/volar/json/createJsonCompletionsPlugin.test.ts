@@ -16,14 +16,8 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createJsonCompletionsPlugin } from "../../../src/index";
-import type {
-  LanguageServiceContext,
-  LanguageServicePlugin,
-  LanguageServicePluginInstance,
-} from "../../../src/index";
-import { treat, completionLabels } from "../../testUtils";
-
-const minimalContext = { env: { workspaceFolders: [] } } as LanguageServiceContext;
+import type { LanguageServicePlugin, LanguageServicePluginInstance } from "../../../src/index";
+import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
 
 describe("createJsonCompletionsPlugin", () => {
   let plugin: LanguageServicePlugin;
@@ -31,26 +25,26 @@ describe("createJsonCompletionsPlugin", () => {
 
   beforeEach(() => {
     plugin = createJsonCompletionsPlugin();
-    instance = plugin.create(minimalContext);
+    instance = plugin.create(MINIMAL_CONTEXT);
   });
 
   describe("provideCompletionItems", () => {
     it("proposes Hello World completion on empty document", async () => {
       const { doc, cursorPosition } = treat("🎯");
-      const result = await instance.provideCompletionItems!(doc, cursorPosition, {});
-      expect(completionLabels(result)).toContain("Insert Hello World workflow");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).toContain("Insert Hello World workflow");
     });
 
     it("does not propose Hello World completion on bare {}", async () => {
       const { doc, cursorPosition } = treat("{🎯}");
-      const result = await instance.provideCompletionItems!(doc, cursorPosition, {});
-      expect(completionLabels(result)).not.toContain("Insert Hello World workflow");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).not.toContain("Insert Hello World workflow");
     });
 
     it("does not propose Hello World completion on partial OWS content", async () => {
       const { doc, cursorPosition } = treat('{ "document": { 🎯 }, "do": [] }');
-      const result = await instance.provideCompletionItems!(doc, cursorPosition, {});
-      expect(completionLabels(result)).not.toContain("Insert Hello World workflow");
+      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      expect(labels).not.toContain("Insert Hello World workflow");
     });
   });
 });

@@ -15,9 +15,19 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import type { CompletionList } from "@volar/language-service";
+import type {
+  CompletionList,
+  LanguageServiceContext,
+  LanguageServicePluginInstance,
+  Position,
+} from "@volar/language-service";
 
 const CURSOR = "🎯";
+
+/**
+ * A minimal Volar LanguageServiceContext suitable for unit tests.
+ */
+export const MINIMAL_CONTEXT = { env: { workspaceFolders: [] } } as LanguageServiceContext;
 
 /**
  * Parses a content string containing a 🎯 cursor marker and returns:
@@ -49,6 +59,29 @@ export function treat(content: string, languageId: "json" | "yaml" = "json") {
  * const labels = completionLabels(result);
  * expect(labels).toContain("document");
  */
-export function completionLabels(result: CompletionList | null | undefined): string[] {
+export function getCompletionLabels(result: CompletionList | null | undefined): string[] {
   return result?.items.map((i) => i.label) ?? [];
+}
+
+/**
+ * Collects completion labels from one or more plugin instances into a single flat array.
+ *
+ * @example
+ * // single instance
+ * const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+ * expect(labels).toContain("document");
+ *
+ * // composed plugins
+ * const labels = await getAllCompletionLabels(instances, doc, cursorPosition);
+ * expect(labels).toContain("document");
+ */
+export async function getAllCompletionLabels(
+  instances: LanguageServicePluginInstance[],
+  document: TextDocument,
+  position: Position,
+): Promise<string[]> {
+  const results = await Promise.all(
+    instances.map((instance) => instance.provideCompletionItems?.(document, position, {})),
+  );
+  return results.flatMap(getCompletionLabels);
 }

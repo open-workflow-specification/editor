@@ -16,21 +16,16 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { createJsonCodeLensesPlugin } from "../../../src/index";
-import type {
-  LanguageServiceContext,
-  LanguageServicePlugin,
-  LanguageServicePluginInstance,
-} from "../../../src/index";
-import { treat } from "../../testUtils";
+import type { LanguageServicePlugin, LanguageServicePluginInstance } from "../../../src/index";
+import { treat, MINIMAL_CONTEXT } from "../../testUtils";
 
 describe("createJsonCodeLensesPlugin", () => {
   let plugin: LanguageServicePlugin;
   let instance: LanguageServicePluginInstance;
 
   beforeEach(() => {
-    const minimalContext = { env: { workspaceFolders: [] } } as LanguageServiceContext;
     plugin = createJsonCodeLensesPlugin();
-    instance = plugin.create(minimalContext);
+    instance = plugin.create(MINIMAL_CONTEXT);
   });
 
   describe("provideCodeLenses", () => {
