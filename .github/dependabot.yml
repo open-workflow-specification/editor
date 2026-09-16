@@ -11,6 +11,12 @@ updates:
       interval: "weekly"
     groups:
       all-dependencies:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+      security-updates:
+        applies-to: security-updates
         patterns:
           - "*"
 
@@ -20,5 +26,11 @@ updates:
       interval: "weekly"
     groups:
       all-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+
+      security-updates:
+        applies-to: security-updates
         patterns:
           - "*"
