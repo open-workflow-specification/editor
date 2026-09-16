@@ -25,7 +25,7 @@ export function createJsonCodeLensesPlugin(): LanguageServicePlugin {
     create() {
       return {
         provideCodeLenses(document) {
-          if (!isEmptyWorkflow(document.getText())) {
+          if (document.languageId !== "json" || !isEmptyWorkflow(document.getText())) {
             return null;
           }
 
