@@ -15,9 +15,15 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { createJsonSchemaLanguageServicePlugin } from "../../../src/index";
 import type { LanguageServicePluginInstance } from "../../../src/index";
-import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
+import {
+  treat,
+  getAllCompletionLabels,
+  getDiagnosticMessages,
+  MINIMAL_CONTEXT,
+} from "../../testUtils";
 
 describe("createJsonSchemaLanguageServicePlugin", () => {
   let instance: LanguageServicePluginInstance;
@@ -40,6 +46,35 @@ describe("createJsonSchemaLanguageServicePlugin", () => {
       expect(labels).toContain("dsl");
       expect(labels).toContain("namespace");
       expect(labels).toContain("name");
+    });
+  });
+
+  describe("provideDiagnostics", () => {
+    it("returns no diagnostics for a valid workflow", async () => {
+      const doc = TextDocument.create(
+        "file:///test.json",
+        "json",
+        1,
+        `{
+        "document": { "dsl": "1.0.3", "namespace": "examples", "name": "hello-world", "version": "0.1.0" },
+        "do": [{ "greet": { "call": "http", "with": { "method": "GET", "endpoint": "https://httpbin.org/get" } } }]
+      }`,
+      );
+      const messages = await getDiagnosticMessages([instance], doc);
+      expect(messages).toHaveLength(0);
+    });
+
+    it("returns diagnostics for a workflow missing the required 'do' property", async () => {
+      const doc = TextDocument.create(
+        "file:///test.json",
+        "json",
+        1,
+        `{
+        "document": { "dsl": "1.0.3", "namespace": "examples", "name": "hello-world", "version": "0.1.0" }
+      }`,
+      );
+      const messages = await getDiagnosticMessages([instance], doc);
+      expect(messages).toContain('Missing property "do".');
     });
   });
 });

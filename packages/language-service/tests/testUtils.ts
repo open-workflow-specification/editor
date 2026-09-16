@@ -16,13 +16,20 @@
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import type {
-  CompletionList,
   LanguageServiceContext,
   LanguageServicePluginInstance,
   Position,
 } from "@volar/language-service";
 
 const CURSOR = "🎯";
+
+/**
+ * A minimal LSP CancellationToken that is never cancelled, suitable for unit tests.
+ */
+const CANCELLATION_TOKEN = {
+  isCancellationRequested: false,
+  onCancellationRequested: () => ({ dispose: () => {} }),
+};
 
 /**
  * A minimal Volar LanguageServiceContext suitable for unit tests.
@@ -53,17 +60,6 @@ export function treat(content: string, languageId: "json" | "yaml" = "json") {
 }
 
 /**
- * Extracts the labels from a completion result for use in test assertions.
- *
- * @example
- * const labels = completionLabels(result);
- * expect(labels).toContain("document");
- */
-export function getCompletionLabels(result: CompletionList | null | undefined): string[] {
-  return result?.items.map((i) => i.label) ?? [];
-}
-
-/**
  * Collects completion labels from one or more plugin instances into a single flat array.
  *
  * @example
@@ -83,5 +79,27 @@ export async function getAllCompletionLabels(
   const results = await Promise.all(
     instances.map((instance) => instance.provideCompletionItems?.(document, position, {})),
   );
-  return results.flatMap(getCompletionLabels);
+  return results.flatMap((result) => result?.items.map((i) => i.label) ?? []);
+}
+
+/**
+ * Collects diagnostic messages from one or more plugin instances into a single flat array.
+ *
+ * @example
+ * // single instance
+ * const messages = await getDiagnosticMessages([instance], doc);
+ * expect(messages).toContain('Missing property "do".');
+ *
+ * // composed plugins
+ * const messages = await getDiagnosticMessages(instances, doc);
+ * expect(messages).toHaveLength(0);
+ */
+export async function getDiagnosticMessages(
+  instances: LanguageServicePluginInstance[],
+  document: TextDocument,
+): Promise<string[]> {
+  const results = await Promise.all(
+    instances.map((instance) => instance.provideDiagnostics?.(document, CANCELLATION_TOKEN)),
+  );
+  return results.flatMap((diags) => diags?.map((d) => d.message) ?? []);
 }
