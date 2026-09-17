@@ -55,7 +55,7 @@ jobs:
         run: pnpm dependencies:check
 
       - name: Build and test
-        run: pnpm build:prod
+        run: pnpm --workspace-concurrency=1 build:prod
 
       - name: Upload Playwright Artifacts
         if: failure()

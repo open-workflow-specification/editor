@@ -22,7 +22,7 @@
 [build]
   command = """
     set -e
-    pnpm -F "${PREVIEW_PACKAGE_NAME}..." build:dev
+    pnpm -F "${PREVIEW_PACKAGE_NAME}..." --workspace-concurrency=1 build:dev
     pnpm -F "$PREVIEW_PACKAGE_NAME" build:storybook
   """
   publish = "packages/open-workflow-diagram-editor/dist-storybook"

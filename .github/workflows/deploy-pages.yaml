@@ -83,7 +83,7 @@ jobs:
       - name: Build Storybook
         working-directory: release
         run: |
-          pnpm -F "${DEPLOY_PREVIEW_PACKAGE_NAME}..." build:dev
+          pnpm -F "${DEPLOY_PREVIEW_PACKAGE_NAME}..." --workspace-concurrency=1 build:dev
           pnpm -F "${DEPLOY_PREVIEW_PACKAGE_NAME}" build:storybook
 
       - name: Checkout gh-pages
