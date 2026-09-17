@@ -52,7 +52,7 @@ jobs:
           playwrightInstall: true
 
       - name: Build packages
-        run: pnpm build:prod
+        run: pnpm --workspace-concurrency=1 build:prod
 
       - name: Publish to npm
         id: publish
