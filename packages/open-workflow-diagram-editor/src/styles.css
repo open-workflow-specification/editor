@@ -15,15 +15,30 @@
  */
 
 /* layer order (Priority: lowest -> highest) */
+
+@import 'tailwindcss' prefix(dec);
+@import './components/ui/shadcn.css';
+@import 'sonner/dist/styles.css';
+
+@layer base {
+  .dec-root,
+  .dec-root *,
+  .dec-root::before,
+  .dec-root::after,
+  .dec-root::backdrop,
+  .dec-root *::before,
+  .dec-root *::after,
+  .dec-root *::backdrop {
+    --tw-border-style: solid;
+  }
+}
+
 @layer base,
   side-panel,
   react-flow-overrides,
   custom-nodes,
   custom-edge-labels,
   sonner;
-
-@import 'tailwindcss' prefix(dec);
-@import './components/ui/shadcn.css';
 
 @custom-variant dark (&:where(.dec-root.dark, .dec-root.dark *));
 

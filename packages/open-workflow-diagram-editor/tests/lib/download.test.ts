@@ -24,8 +24,6 @@ describe("downloadFile", () => {
 
   it("creates and triggers file download", () => {
     const mockClick = vi.fn();
-    const mockAppendChild = vi.fn();
-    const mockRemoveChild = vi.fn();
     const mockElement = {
       click: mockClick,
       href: "",
@@ -35,8 +33,6 @@ describe("downloadFile", () => {
     vi.spyOn(document, "createElement").mockReturnValue(
       mockElement as unknown as HTMLAnchorElement,
     );
-    vi.spyOn(document.body, "appendChild").mockImplementation(mockAppendChild);
-    vi.spyOn(document.body, "removeChild").mockImplementation(mockRemoveChild);
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock-url");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(vi.fn());
 
@@ -44,8 +40,8 @@ describe("downloadFile", () => {
     downloadFile(testCode, "test.mmd");
 
     expect(document.createElement).toHaveBeenCalledWith("a");
+    expect(mockElement.href).toBe("blob:mock-url");
+    expect(mockElement.download).toBe("test.mmd");
     expect(mockClick).toHaveBeenCalled();
-    expect(mockAppendChild).toHaveBeenCalled();
-    expect(mockRemoveChild).toHaveBeenCalled();
   });
 });

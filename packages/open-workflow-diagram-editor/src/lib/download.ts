@@ -24,9 +24,7 @@ export function downloadFile(content: string, filename: string, mimeType = "text
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
-  document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
   setTimeout(() => {
     URL.revokeObjectURL(url);
   }, 100);
