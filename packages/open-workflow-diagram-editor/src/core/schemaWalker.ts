@@ -54,12 +54,16 @@ const _fieldCache = new Map<string, FormFieldDescriptor[]>();
  * Returns the ordered list of `FormFieldDescriptor`s for a given graph node
  * type, or an empty array when no schema definition is registered for it.
  *
- * Results are cached by node type so the schema walk only happens once per
- * definition. The cache is module-scoped and lives for the lifetime of the
+ * Results are cached by `nodeType+format` so the schema walk only happens once
+ * per combination. The cache is module-scoped and lives for the lifetime of the
  * application — schemas do not change at runtime.
  */
-export function getFormFieldsForNodeType(nodeType: string): FormFieldDescriptor[] {
-  const cached = _fieldCache.get(nodeType);
+export function getFormFieldsForNodeType(
+  nodeType: string,
+  format: "json" | "yaml" = "yaml",
+): FormFieldDescriptor[] {
+  const cacheKey = `${nodeType}:${format}`;
+  const cached = _fieldCache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const defName = NODE_TYPE_TO_DEF[nodeType];
@@ -69,8 +73,8 @@ export function getFormFieldsForNodeType(nodeType: string): FormFieldDescriptor[
     const s = getSchemaForDefinition(defName);
     const defs = s.$defs as Record<string, unknown> | undefined;
     const requiredSet = new Set<string>(Array.isArray(s.required) ? (s.required as string[]) : []);
-    const fields = schemaToFormFields(s, defs, requiredSet, "");
-    _fieldCache.set(nodeType, fields);
+    const fields = schemaToFormFields(s, defs, requiredSet, "", format);
+    _fieldCache.set(cacheKey, fields);
     return fields;
   } catch {
     return [];

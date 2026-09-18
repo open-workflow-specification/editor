@@ -35,6 +35,7 @@ export type FormFieldDescriptor =
   | ChildTaskListField
   | ObjectField
   | MapField
+  | JsonField
   | OneOfField;
 
 interface FieldBase {
@@ -89,44 +90,26 @@ export interface ThenField extends FieldBase {
   kind: "then";
 }
 
-/**
- * A property that resolves to an array of tagged task entries.
- * Rendered as a read-only list of child-task names.
- *
- * Identified structurally: an array whose `items.additionalProperties.$ref`
- * points to the task union definition.
- */
+// Custom fields
+
 export interface ChildTaskListField extends FieldBase {
   kind: "child-task-list";
 }
 
-/**
- * A plain object with known sub-properties.
- * Rendered as a collapsible group that recurses into its children.
- */
 export interface ObjectField extends FieldBase {
   kind: "object";
   children: FormFieldDescriptor[];
 }
 
-/**
- * An open-ended key-value map (an object schema with `additionalProperties`
- * set and no fixed `properties` block).
- *
- * Identified structurally so it works with any conforming schema definition —
- * not just `setTask`. Examples: `set`, `with` (custom function call),
- * `headers`, `query`, `environment` in runTask scripts, etc.
- *
- * Rendered as a dynamic list of key/value rows with add and delete controls.
- */
 export interface MapField extends FieldBase {
   kind: "map";
 }
 
-/**
- * A field that can hold one of several variant types (oneOf / anyOf in the
- * schema). Each variant is a sub-schema with its own label and child fields.
- */
+export interface JsonField extends FieldBase {
+  kind: "json";
+  format: "json" | "yaml";
+}
+
 export interface OneOfField extends FieldBase {
   kind: "one-of";
   variants: OneOfVariant[];
@@ -135,7 +118,6 @@ export interface OneOfField extends FieldBase {
 export interface OneOfVariant {
   /** Label for the variant (from schema `title`, or a generated fallback) */
   label: string;
-  /** The fields that belong to this variant */
   fields: FormFieldDescriptor[];
   /**
    * Discriminator predicate: given the actual task value at this field's path,
@@ -150,6 +132,24 @@ export interface OneOfVariant {
 // ---------------------------------------------------------------------------
 
 const RUNTIME_EXPRESSION_PATTERN = /^\s*\$\{.+\}\s*$/;
+
+/** JSON Schema primitive type names that are too generic to use as variant labels. */
+const GENERIC_TYPE_LABELS = new Set(["string", "object", "number", "integer", "boolean", "array"]);
+
+/** Schema keys that are purely descriptive and carry no structural meaning. */
+const SCHEMA_META_KEYS = new Set(["title", "description", "$comment", "examples"]);
+
+/* Returns true when a oneOf/anyOf candidate is the runtime expression schema */
+function isRuntimeExpressionSchema(
+  candidate: Record<string, unknown>,
+  resolved: Record<string, unknown>,
+): boolean {
+  return (
+    (typeof candidate.$ref === "string" && candidate.$ref.includes("runtimeExpression")) ||
+    resolved.title === "RuntimeExpression" ||
+    RUNTIME_EXPRESSION_PATTERN.test(String(resolved.pattern ?? ""))
+  );
+}
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -177,13 +177,10 @@ function resolveRef(
  */
 function isMapSchema(schema: Record<string, unknown>): boolean {
   if (schema.type !== "object" || !!schema.properties) return false;
-  // Explicit additionalProperties — covers schemas like set's object variant
-  // ({ type: "object", additionalProperties: true }).
+
   if (schema.additionalProperties !== undefined && schema.additionalProperties !== false)
     return true;
-  // Bare { type: "object" } with no structural constraints — treat as an open
-  // key-value map. This covers input.from / output.as / export.as which omit
-  // additionalProperties but are semantically identical open maps.
+  // Bare { type: "object" } with no structural constraints — treat as an open key-value map.
   if (schema.additionalProperties === undefined && !schema.oneOf && !schema.anyOf) return true;
   return false;
 }
@@ -191,8 +188,7 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
 /**
  * Returns true if the schema node (or any `$ref` it resolves to) represents
  * a task-list — an array whose `items.additionalProperties.$ref` points to
- * the task union. Detection is purely structural; no definition name is
- * hardcoded beyond the conventional task-union ref pattern.
+ * the task union.
  */
 function isTaskListSchema(
   schema: Record<string, unknown>,
@@ -269,11 +265,16 @@ function formatVariantLabel(title: string): string {
     title === "UriTemplate" ||
     title === "LiteralEndpointURI" ||
     title === "LiteralUriTemplate" ||
-    title === "LiteralUri"
+    title === "LiteralUri" ||
+    title === "LiteralDataSchema"
   ) {
     return "URI";
   }
-  if (title === "RuntimeExpression" || title === "ExpressionEndpointURI") {
+  if (
+    title === "RuntimeExpression" ||
+    title === "ExpressionEndpointURI" ||
+    title === "ExpressionDataSchema"
+  ) {
     return "Expression";
   }
   // Split camelCase into words (e.g. "EndpointConfiguration" -> "Endpoint Configuration")
@@ -312,12 +313,13 @@ export function schemaToFormFields(
   defs?: Record<string, unknown>,
   requiredSet?: Set<string>,
   path = "",
+  format: "json" | "yaml" = "yaml",
 ): FormFieldDescriptor[] {
   const fields: FormFieldDescriptor[] = [];
 
   // Tasks like callTask have a top-level `oneOf` with no own `properties`.
   if (Array.isArray(schema.oneOf) && !schema.properties) {
-    const variants = buildOneOfVariants(schema.oneOf as unknown[], defs, path);
+    const variants = buildOneOfVariants(schema.oneOf as unknown[], defs, path, format);
     if (variants.length > 1) {
       fields.push({
         kind: "one-of",
@@ -349,11 +351,6 @@ export function schemaToFormFields(
     const isRequired = req.has(key);
     const description = typeof prop.description === "string" ? prop.description : undefined;
 
-    // ── Special case: `then` key or flow-directive schema ─────────────────
-    // The `then` property is the canonical transition field and is always
-    // rendered as a sibling-task selector, regardless of its schema shape.
-    // Any other property whose schema structurally matches the flow-directive
-    // pattern (anyOf enum + plain string) is also treated as a `then` field.
     if (key === "then" || isFlowDirectiveSchema(prop, localDefs)) {
       fields.push({
         kind: "then",
@@ -389,7 +386,7 @@ export function schemaToFormFields(
     // ── oneOf / anyOf at property level ────────────────────────────────────
     const candidates = (resolved.oneOf ?? resolved.anyOf) as unknown[] | undefined;
     if (Array.isArray(candidates)) {
-      const variants = buildOneOfVariants(candidates, localDefs, fieldPath);
+      const variants = buildOneOfVariants(candidates, localDefs, fieldPath, format);
       if (variants.length > 1) {
         fields.push({
           kind: "one-of",
@@ -443,7 +440,17 @@ export function schemaToFormFields(
         localDefs,
         childRequired,
         fieldPath,
+        format,
       );
+
+      // Transparent-wrapper elimination: if this object is a loose container
+      // (additionalProperties: true) with exactly one child that is itself an object
+      // group, skip the intermediate wrapper and push the sole child directly.
+      const onlyChild = children.length === 1 ? children[0] : undefined;
+      if (onlyChild?.kind === "object" && resolved.additionalProperties === true) {
+        fields.push(onlyChild);
+        continue;
+      }
       fields.push({
         kind: "object",
         path: fieldPath,
@@ -510,7 +517,7 @@ export function schemaToFormFields(
 
     // ── String ─────────────────────────────────────────────────────────────
     if (resolved.type === "string") {
-      const isRe = RUNTIME_EXPRESSION_PATTERN.test(String(resolved.pattern ?? ""));
+      const isRe = isRuntimeExpressionSchema(prop, resolved);
       // Multi-line heuristic: keys that conventionally hold large text blocks
       const multiline = key === "command" || key === "code" || key === "script";
       fields.push({
@@ -526,8 +533,6 @@ export function schemaToFormFields(
     }
 
     // ── Fallback: treat as free-form string ────────────────────────────────
-    // Multi-line heuristic also applies here for untyped properties (e.g.
-    // SchemaInline.document has no explicit type in the schema).
     const fallbackMultiline = key === "document";
     fields.push({
       kind: "string",
@@ -558,11 +563,7 @@ export function schemaToFormFields(
  * 4. Object type (no const discriminator) → data must be a non-array object.
  * 5. Fallback → always returns false (last variant wins at the call site).
  */
-function buildDiscriminator(
-  resolved: Record<string, unknown>,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _defs: Record<string, unknown> | undefined,
-): (data: unknown) => boolean {
+function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) => boolean {
   const properties = resolved.properties as Record<string, unknown> | undefined;
 
   // Strategy 1: property with `const`
@@ -589,9 +590,19 @@ function buildDiscriminator(
     }
   }
 
-  // Strategy 3: scalar type
-  if (resolved.type === "string" || Array.isArray(resolved.anyOf)) {
+  // Strategy 3: pattern-refined string discriminator.
+  if (typeof resolved.pattern === "string") {
+    // Exact-match: use the schema's own pattern as the discriminator.
+    const rx = new RegExp(resolved.pattern);
+    return (data: unknown) => typeof data === "string" && rx.test(data);
+  }
+  if (resolved.type === "string") {
     return (data: unknown) => typeof data === "string";
+  }
+  if (Array.isArray(resolved.anyOf)) {
+    // anyOf string schema (e.g. uriTemplate) — matches any string that is NOT
+    // a runtime expression, so expression values are never claimed by this branch.
+    return (data: unknown) => typeof data === "string" && !RUNTIME_EXPRESSION_PATTERN.test(data);
   }
   if (resolved.type === "number" || resolved.type === "integer") {
     return (data: unknown) => typeof data === "number";
@@ -613,7 +624,7 @@ function buildDiscriminator(
 
 /** Intermediate representation for a resolved oneOf/anyOf candidate before collapsing. */
 type ResolvedVariant = {
-  kind: "string" | "number" | "boolean" | "enum" | "map" | "object";
+  kind: "string" | "number" | "boolean" | "enum" | "map" | "json" | "object";
   label: string;
   matchesData: (data: unknown) => boolean;
   fields: FormFieldDescriptor[];
@@ -625,7 +636,10 @@ function buildOneOfVariants(
   candidates: unknown[],
   defs: Record<string, unknown> | undefined,
   parentPath: string,
+  format: "json" | "yaml" = "yaml",
 ): OneOfVariant[] {
+  const leafPath = parentPath || "__leaf__";
+
   // First pass: resolve candidate refs and build raw variant list
   const resolvedList = candidates.flatMap((candidate, idx): ResolvedVariant[] => {
     if (!isPlainObject(candidate)) return [];
@@ -647,26 +661,51 @@ function buildOneOfVariants(
             : undefined;
 
     const rawLabel = titleCandidate ? formatVariantLabel(titleCandidate) : `Option ${idx + 1}`;
-    const matchesData = buildDiscriminator(resolved, defs);
+    const matchesData = buildDiscriminator(resolved);
 
     // Variants with no fixed properties and no nested oneOf are either maps or scalars.
     if (!resolved.properties && !Array.isArray(resolved.oneOf)) {
+      // ── Truly-empty schema {} — treat as unconstrained JSON value ─────────
+      const isEmptySchema = Object.keys(resolved).every((k) => SCHEMA_META_KEYS.has(k));
+      if (isEmptySchema) {
+        // Use the schema title when available, otherwise derive from the last
+        // segment of the parent path (e.g. "emit.event.with.data" → "data"),
+        // capitalised. Generic fallback labels like "Option N" are replaced.
+        const isFallbackLabel = /^Option \d+$/.test(rawLabel);
+        const pathSegment = parentPath.split(".").pop() ?? "";
+        const valueLabel = isFallbackLabel
+          ? pathSegment
+            ? pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)
+            : "Value"
+          : rawLabel;
+        const jsonField: JsonField = {
+          kind: "json",
+          format,
+          path: leafPath,
+          label: valueLabel,
+          required: false,
+        };
+        return [
+          {
+            kind: "json" as const,
+            label: valueLabel,
+            // Match any non-string value, including undefined and null.
+            matchesData: (d) => typeof d !== "string",
+            fields: [jsonField],
+            resolved,
+            c,
+          },
+        ];
+      }
+
       // ── Key-value map variant ────────────────────────────────────────────
       if (isMapSchema(resolved)) {
-        const GENERIC_TYPE_LABELS = new Set([
-          "string",
-          "object",
-          "number",
-          "integer",
-          "boolean",
-          "array",
-        ]);
         const isGenericTypeLabel = GENERIC_TYPE_LABELS.has(titleCandidate ?? "");
         const label =
           titleCandidate && !isGenericTypeLabel ? formatVariantLabel(titleCandidate) : "key-value";
         const mapField: MapField = {
           kind: "map",
-          path: parentPath || "__leaf__",
+          path: leafPath,
           label,
           required: false,
         };
@@ -674,7 +713,6 @@ function buildOneOfVariants(
       }
 
       // ── Pure scalar variants ─────────────────────────────────────────────
-      const leafPath = parentPath || "__leaf__";
       let leafField: FormFieldDescriptor;
 
       if (resolved.type === "string" && Array.isArray(resolved.enum)) {
@@ -719,7 +757,7 @@ function buildOneOfVariants(
           resolved.title === "UriTemplate" ||
           parentPath.toLowerCase().endsWith("endpoint") ||
           parentPath.toLowerCase().endsWith("uri");
-        const isRe = RUNTIME_EXPRESSION_PATTERN.test(String(resolved.pattern ?? ""));
+        const isRe = isRuntimeExpressionSchema(c, resolved);
         const placeholder = isUriOrTemplate
           ? "https://example.com/api/{id}"
           : isRe
@@ -751,15 +789,46 @@ function buildOneOfVariants(
     const req = new Set<string>(
       Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
     );
-    const children = schemaToFormFields(resolved as DereferencedSchema, defs, req, parentPath);
+    const children = schemaToFormFields(
+      resolved as DereferencedSchema,
+      defs,
+      req,
+      parentPath,
+      format,
+    );
 
     return [
       { kind: "object" as const, label: rawLabel, matchesData, fields: children, resolved, c },
     ];
   });
 
+  if (resolvedList.some((item) => isRuntimeExpressionSchema(item.c, item.resolved))) {
+    for (const item of resolvedList) {
+      if (item.kind !== "string" || isRuntimeExpressionSchema(item.c, item.resolved)) {
+        continue;
+      }
+      const matchLiteral = item.matchesData;
+      item.matchesData = (data: unknown) =>
+        matchLiteral(data) && !RUNTIME_EXPRESSION_PATTERN.test(String(data));
+    }
+  }
+
   // Second pass: collapse consecutive plain string variants (e.g. RuntimeExpression + UriTemplate)
   // into a single "URI" or "string" variant with URI template placeholder support.
+  //
+  // Exception: when ALL resolved variants are strings (no object/map variants exist), preserve
+  // each variant individually so that semantically distinct modes (e.g. URI Template vs
+  // RuntimeExpression for `source`, `dataschema`, `time`) are surfaced as separate selectable
+  // options in the form rather than collapsed to a single anonymous string input.
+  const allStrings = resolvedList.every((item) => item.kind === "string");
+  if (allStrings && resolvedList.length > 1) {
+    return resolvedList.map((item) => ({
+      label: item.label,
+      fields: item.fields,
+      matchesData: item.matchesData,
+    }));
+  }
+
   const collapsed: OneOfVariant[] = [];
   let mergedStringVariant: {
     label: string;
@@ -775,6 +844,11 @@ function buildOneOfVariants(
         (typeof item.c.$ref === "string" && item.c.$ref.includes("uriTemplate")) ||
         item.resolved.title === "UriTemplate";
 
+      // Carry isRuntimeExpression / placeholder from the first-pass StringField
+      const firstPassField = item.fields[0] as StringField | undefined;
+      const isRe = firstPassField?.isRuntimeExpression ?? false;
+      const inheritedPlaceholder = firstPassField?.placeholder;
+
       const preferredLabel = isUriContext
         ? "URI"
         : item.label === "Option 1" || item.label === "Option 2"
@@ -788,8 +862,12 @@ function buildOneOfVariants(
           label: preferredLabel,
           required: false,
           multiline: false,
-          isRuntimeExpression: false,
-          ...(isUriContext ? { placeholder: "https://example.com/api/{id}" } : {}),
+          isRuntimeExpression: isRe,
+          ...(isUriContext
+            ? { placeholder: "https://example.com/api/{id}" }
+            : inheritedPlaceholder !== undefined
+              ? { placeholder: inheritedPlaceholder }
+              : {}),
         };
         mergedStringVariant = {
           label: preferredLabel,
@@ -798,10 +876,12 @@ function buildOneOfVariants(
         };
       } else {
         mergedStringVariant.matchPredicates.push(item.matchesData);
+        const merged = mergedStringVariant.fields[0] as StringField;
         if (isUriContext) {
           mergedStringVariant.label = "URI";
-          (mergedStringVariant.fields[0] as StringField).placeholder =
-            "https://example.com/api/{id}";
+          merged.placeholder = "https://example.com/api/{id}";
+        } else if (isRe && merged.placeholder === undefined && inheritedPlaceholder !== undefined) {
+          merged.placeholder = inheritedPlaceholder;
         }
       }
     } else {
@@ -810,7 +890,7 @@ function buildOneOfVariants(
         collapsed.push({
           label: mergedStringVariant.label,
           fields: mergedStringVariant.fields,
-          matchesData: (data: unknown) => typeof data === "string" || preds.some((p) => p(data)),
+          matchesData: buildStringMatchesData(preds),
         });
         mergedStringVariant = null;
       }
@@ -827,9 +907,16 @@ function buildOneOfVariants(
     collapsed.push({
       label: mergedStringVariant.label,
       fields: mergedStringVariant.fields,
-      matchesData: (data: unknown) => typeof data === "string" || preds.some((p) => p(data)),
+      matchesData: buildStringMatchesData(preds),
     });
   }
 
   return collapsed;
+}
+
+/**
+ * Builds the `matchesData` predicate for a collapsed/merged string variant.
+ */
+function buildStringMatchesData(preds: ((data: unknown) => boolean)[]): (data: unknown) => boolean {
+  return (data: unknown) => preds.some((p) => p(data));
 }

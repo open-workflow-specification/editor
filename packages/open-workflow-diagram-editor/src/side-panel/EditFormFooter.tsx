@@ -24,6 +24,8 @@ import { useFormState } from "react-hook-form";
 import { updateTask } from "@/core/workflowEditing";
 import { applyDirtyValues } from "@/core/taskDraft";
 import { flattenTask } from "@/side-panel/forms/TaskForm";
+import { computeSentinelDefaults } from "@/side-panel/forms/FormField";
+import { getFormFieldsForNodeType } from "@/core";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { useEditSession } from "./EditSession";
 import { Check } from "lucide-react";
@@ -31,6 +33,9 @@ import type { Specification } from "@openworkflowspec/sdk";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
+
+const SENTINEL_KEY = "__oneof__";
+const SENTINEL_PREFIX = `${SENTINEL_KEY}.`;
 
 type DraftStatusProps = {
   changedCount: number;
@@ -85,10 +90,19 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     return null;
   }
 
-  const changedCount = Object.keys(flattenTask(dirtyFields)).length;
+  // Use the subscribed dirtyFields (public API) for the UI count
+  const changedCount = Object.keys(flattenTask(dirtyFields as Record<string, unknown>)).filter(
+    (p) => !p.startsWith(SENTINEL_PREFIX),
+  ).length;
 
   const handleCancel = () => {
-    form.reset(task as unknown as Record<string, unknown>);
+    const nodeType = node.type ?? "";
+    const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
+    const sentinelDefaults = computeSentinelDefaults(allFields, task as Record<string, unknown>);
+    form.reset({
+      ...(task as Record<string, unknown>),
+      ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
+    });
     setAppliedNodeId(null);
   };
 
@@ -98,20 +112,36 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     // as nested paths internally). Flatten back to dot-notation so applyDirtyValues
     // can match keys against its dirtyPaths set correctly.
     const flatValues = flattenTask(form.getValues());
-    // dirtyFields is also nested: { timeout: { after: { hours: true } } }.
-    // Flatten it the same way to get leaf dot-notation paths.
-    const flatDirty = new Set(Object.keys(flattenTask(dirtyFields)));
+    const rawFlatDirty = Object.keys(flattenTask(dirtyFields));
+    const flatDirty = new Set<string>();
+    // Sentinel paths: dirty solely because the variant selector changed.
+    // Kept separate so applyDirtyValues can handle them correctly — they always
+    // delete the model property unless the field is also independently dirty.
+    const sentinelPaths = new Set<string>();
+    for (const path of rawFlatDirty) {
+      if (path.startsWith(SENTINEL_PREFIX)) {
+        sentinelPaths.add(path.slice(SENTINEL_PREFIX.length));
+      } else {
+        flatDirty.add(path);
+      }
+    }
     const updated = applyDirtyValues(
       task as unknown as Record<string, unknown>,
       flatValues,
       flatDirty,
+      sentinelPaths,
     ) as Specification.Task;
     const updatedModel = updateTask(model, node.id, updated);
     commitWorkflow(updatedModel);
-    // Reset to the current nested form values (not the flat version) so that
-    // RHF's defaultValues stay consistent with the nested Controller paths and
-    // no sibling fields are spuriously marked dirty after apply.
-    form.reset(form.getValues());
+    // Reset to the committed task state (not form.getValues()) so that
+    // defaultValues reflect what was actually saved.
+    const nodeType = node.type ?? "";
+    const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
+    const sentinelDefaults = computeSentinelDefaults(allFields, updated as Record<string, unknown>);
+    form.reset({
+      ...(updated as Record<string, unknown>),
+      ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
+    });
     setAppliedNodeId(node.id);
 
     if (dismissTimer.current !== null) {

@@ -99,6 +99,10 @@ describe("hasValue", () => {
 // filterReadOnlyFields — helpers
 // ---------------------------------------------------------------------------
 
+function makeJson(path: string, format: "json" | "yaml" = "yaml"): FormFieldDescriptor {
+  return { kind: "json", path, label: path, required: false, format };
+}
+
 function makeString(path: string): FormFieldDescriptor {
   return {
     kind: "string",
@@ -226,6 +230,50 @@ describe("filterReadOnlyFields — map fields", () => {
 
   it("excludes a map field when the path holds an array (not an object)", () => {
     const result = filterReadOnlyFields([makeMap("items")], { items: [1, 2, 3] });
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterReadOnlyFields — json fields
+// ---------------------------------------------------------------------------
+
+describe("filterReadOnlyFields — json fields", () => {
+  it("includes a json field when the path has a defined object value", () => {
+    const result = filterReadOnlyFields([makeJson("data")], { data: { key: "val" } });
+    expect(result).toHaveLength(1);
+  });
+
+  it("includes a json field when the value is null (null is valid JSON)", () => {
+    const result = filterReadOnlyFields([makeJson("data")], { data: null });
+    expect(result).toHaveLength(1);
+  });
+
+  it("includes a json field when the value is false (falsy but defined)", () => {
+    const result = filterReadOnlyFields([makeJson("data")], { data: false });
+    expect(result).toHaveLength(1);
+  });
+
+  it("includes a json field when the value is 0", () => {
+    const result = filterReadOnlyFields([makeJson("data")], { data: 0 });
+    expect(result).toHaveLength(1);
+  });
+
+  it("includes a json field when the value is an empty string", () => {
+    // Unlike scalar fields, empty string is a valid JSON string worth displaying.
+    const result = filterReadOnlyFields([makeJson("data")], { data: "" });
+    expect(result).toHaveLength(1);
+  });
+
+  it("excludes a json field when the path is absent (value is undefined)", () => {
+    const result = filterReadOnlyFields([makeJson("data")], {});
+    expect(result).toHaveLength(0);
+  });
+
+  it("excludes a json field when an intermediate path segment is missing", () => {
+    const result = filterReadOnlyFields([makeJson("emit.event.with.data")], {
+      emit: { event: {} },
+    });
     expect(result).toHaveLength(0);
   });
 });

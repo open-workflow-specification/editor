@@ -208,10 +208,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
 
   const [selectedVariantIdx, setSelectedVariantIdx] = React.useState(derivedIdx);
 
-  // Re-sync when the selected task changes (taskData identity changes).
-  // Using a during-render state update avoids the set-state-in-effect lint rule
-  // while preserving the correct behaviour: when derivedIdx changes (i.e. a
-  // different task is selected) the variant resets before the next paint.
+  // Re-sync when the selected task changes (taskData identity changes)
   const [prevDerivedIdx, setPrevDerivedIdx] = React.useState(derivedIdx);
   if (derivedIdx !== prevDerivedIdx) {
     setSelectedVariantIdx(derivedIdx);
@@ -221,21 +218,25 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
   // Per-variant saved values — preserves field data when switching variants
   // and then switching back, so the user does not have to re-type values.
   const savedVariantValues = React.useRef<Map<number, Record<string, unknown>>>(new Map());
+  const { getValues, setValue, register } = useFormContext<Record<string, unknown>>();
+  const sentinelPath = `__oneof__.${field.path}`;
+  const sentinelRef = register(sentinelPath as never);
 
-  const { getValues, setValue } = useFormContext<Record<string, unknown>>();
+  // The initial sentinel value is the committed variant label (derived from
+  // taskData). This is written once on mount so that switching back to the
+  // original variant restores the sentinel to its default value and clears dirty.
+  const commitedVariantLabel = field.variants[derivedIdx]?.label ?? "";
 
   const handleVariantChange = React.useCallback(
     (newIdx: number) => {
       if (newIdx === selectedVariantIdx) return;
 
-      // Save current variant's field values before switching.
-      // getValues() returns a NESTED object so we must use getNestedValue to
-      // traverse dot-notation paths like "output.as" correctly.
+      // Save current variant's field values before switching
       const currentVariant = field.variants[selectedVariantIdx];
       if (currentVariant) {
         const snapshot: Record<string, unknown> = {};
         const allValues = getValues();
-        for (const p of collectLeafPaths(currentVariant.fields)) {
+        for (const p of collectLeafKinds(currentVariant.fields).keys()) {
           snapshot[p] = getNestedValue(allValues as Record<string, unknown>, p);
         }
         savedVariantValues.current.set(selectedVariantIdx, snapshot);
@@ -243,26 +244,54 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
 
       setSelectedVariantIdx(newIdx);
 
+      const newLabel = field.variants[newIdx]?.label ?? "";
+      // Update sentinel: compare against the committed variant label so that
+      // switching back to the original variant marks the sentinel clean.
+      setValue(sentinelPath as never, newLabel as never, {
+        shouldDirty: newLabel !== commitedVariantLabel,
+      });
+
       // Restore saved values for the new variant if previously stored;
-      // otherwise clear its leaf paths so stale values from the old variant
-      // (e.g. an object being rendered in a string input as "[object Object]")
-      // are not left behind.
+      // otherwise clear its leaf paths so stale values from the old variant.
+      // Exception: paths that are shared with the current variant AND whose
+      // field kind is identical are kept as-is. Paths shared by variants of
+      // different kinds must be cleared — the stored value is meaningless across
+      // the kind boundary.
       const saved = savedVariantValues.current.get(newIdx);
       const newVariant = field.variants[newIdx];
+      const currentKindByPath = currentVariant
+        ? collectLeafKinds(currentVariant.fields)
+        : new Map<string, string>();
+      const newKindByPath = newVariant
+        ? collectLeafKinds(newVariant.fields)
+        : new Map<string, string>();
+
       if (saved) {
         for (const [path, value] of Object.entries(saved)) {
           setValue(path, value, { shouldDirty: true });
         }
       } else if (newVariant) {
-        for (const path of collectLeafPaths(newVariant.fields)) {
-          setValue(path, undefined, { shouldDirty: true });
+        for (const [path, newKind] of newKindByPath) {
+          const currentKind = currentKindByPath.get(path);
+          if (currentKind !== newKind) {
+            setValue(path, undefined, { shouldDirty: false });
+          }
+        }
+      }
+
+      // Paths exclusive to the old variant: clear them silently (no dirty
+      // needed — dirty is tracked via the sentinel).
+      for (const path of currentKindByPath.keys()) {
+        if (!newKindByPath.has(path)) {
+          setValue(path, undefined, { shouldDirty: false });
         }
       }
     },
-    [selectedVariantIdx, field.variants, getValues, setValue],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedVariantIdx, field.variants, getValues, setValue, sentinelPath, commitedVariantLabel],
   );
 
-  const variantLabels = field.variants.map((v) => v.label);
+  const variantLabels = React.useMemo(() => field.variants.map((v) => v.label), [field.variants]);
   const currentVariant = field.variants[selectedVariantIdx];
 
   const visibleVariantFields = React.useMemo(() => {
@@ -284,6 +313,9 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
 
   return (
     <div className="dec-form-oneof-group">
+      {/* Hidden sentinel input — keeps the variant selection dirty state in RHF.
+          Only rendered in edit mode; read-only forms never switch variants. */}
+      {!isReadOnly && <input {...sentinelRef} type="hidden" defaultValue={commitedVariantLabel} />}
       <div className="dec-form-field">
         <FieldLabel
           label={field.label}
@@ -332,20 +364,69 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
   );
 }
 
-/** Collects all leaf field paths (non-object, non-one-of) from a descriptor tree. */
-function collectLeafPaths(fields: FormFieldDescriptor[]): string[] {
-  const paths: string[] = [];
+/**
+ * Collects leaf field paths mapped to their effective kind for kind-aware clearing.
+ */
+function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
+  const result = new Map<string, string>();
   for (const f of fields) {
     if (f.kind === "object") {
-      paths.push(...collectLeafPaths(f.children));
+      for (const [p, k] of collectLeafKinds(f.children)) result.set(p, k);
     } else if (f.kind === "one-of") {
-      // Collect from all variants so no path is missed during save
       for (const v of f.variants) {
-        paths.push(...collectLeafPaths(v.fields));
+        for (const [p, k] of collectLeafKinds(v.fields)) result.set(p, k);
       }
+    } else if (f.kind === "string") {
+      result.set(f.path, f.isRuntimeExpression ? "string:re" : "string:plain");
     } else {
-      paths.push(f.path);
+      result.set(f.path, f.kind);
     }
   }
-  return paths;
+  return result;
+}
+
+export function computeSentinelDefaults(
+  fields: FormFieldDescriptor[],
+  taskData: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  collectSentinelDefaults(fields, taskData, result);
+  return result;
+}
+
+function collectSentinelDefaults(
+  fields: FormFieldDescriptor[],
+  taskData: Record<string, unknown>,
+  result: Record<string, unknown>,
+): void {
+  for (const f of fields) {
+    if (f.kind === "object") {
+      collectSentinelDefaults(f.children, taskData, result);
+    } else if (f.kind === "one-of") {
+      const dataAtPath = f.path === "__root__" ? taskData : getNestedValue(taskData, f.path);
+      const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
+      const selectedIdx = idx >= 0 ? idx : 0;
+      const selected = f.variants[selectedIdx];
+      setNestedSentinel(result, f.path, selected?.label ?? "");
+      // Only the selected variant's fields are mounted, so only its nested one-ofs
+      // have a sentinel to match
+      if (selected) {
+        collectSentinelDefaults(selected.fields, taskData, result);
+      }
+    }
+  }
+}
+
+/** Writes `label` at a dot-notation path */
+function setNestedSentinel(result: Record<string, unknown>, path: string, label: string): void {
+  const parts = path.split(".");
+  let obj = result;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i]!;
+    if (typeof obj[part] !== "object" || obj[part] === null) {
+      obj[part] = {};
+    }
+    obj = obj[part] as Record<string, unknown>;
+  }
+  obj[parts[parts.length - 1]!] = label;
 }

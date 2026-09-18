@@ -24,6 +24,7 @@ import {
   DurationField,
   ThenField,
   ChildTaskListField,
+  StructuredValueField,
 } from "./customFields";
 
 // ---------------------------------------------------------------------------
@@ -55,5 +56,7 @@ export function FieldControl({ field, id }: FieldControlProps) {
       return <ThenField field={field} {...idProp} />;
     case "child-task-list":
       return <ChildTaskListField field={field} />;
+    case "json":
+      return <StructuredValueField field={field} {...idProp} />;
   }
 }

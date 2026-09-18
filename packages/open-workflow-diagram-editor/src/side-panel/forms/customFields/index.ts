@@ -15,6 +15,7 @@
  */
 
 export { KeyValueMapField } from "./KeyValueMapField";
+export { StructuredValueField } from "./StructuredValueField";
 export { DurationField } from "./DurationField";
 export { ThenField } from "./ThenField";
 export { ChildTaskListField } from "./ChildTaskListField";

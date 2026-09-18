@@ -18,12 +18,6 @@
  * Reconstructs a nested task object from the flat dot-notation form values
  * produced by `flattenTask` in TaskForm. Arrays (child-task-list values) are
  * kept as-is.
- *
- * For example:
- *   `{ "for.each": "${items}", "for.in": "${data}" }`
- * becomes:
- *   `{ for: { each: "${items}", in: "${data}" } }`
- *
  * Empty strings, null, and undefined values are omitted so the resulting
  * object only carries properties that were actually set.
  */
@@ -53,16 +47,6 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
  * Produces an updated task by applying only the dirty form fields onto a deep
  * clone of the original task.
  *
- * The form may render optional sections (e.g. `input`, `output`, `export`)
- * whose fields all have empty / falsy default values. Reconstructing the task
- * purely from `getValues()` would inject empty intermediate objects such as
- * `{ input: { schema: {} } }` that cause the SDK to report missing-required-
- * property errors for fields the user never intended to fill in.
- *
- * By starting from the original task and writing only the paths that the user
- * actually changed, untouched optional sections are left exactly as they were
- * — either with their original values or simply absent.
- *
  * @param original   - The current task snapshot held in the store, used as
  *                     the base for the deep clone.
  * @param allValues  - All flat dot-notation form values from `form.getValues()`.
@@ -75,6 +59,9 @@ export function applyDirtyValues(
   original: Record<string, unknown>,
   allValues: Record<string, unknown>,
   dirtyPaths: Set<string>,
+
+  // Paths that are dirty solely because the variant selector (sentinel) changed.
+  sentinelPaths: Set<string> = new Set(),
 ): Record<string, unknown> {
   // Deep clone the original so we never mutate the store value.
   const result = deepClone(original);
@@ -88,6 +75,19 @@ export function applyDirtyValues(
       deletePath(result, dotPath.split("."));
     } else {
       setPath(result, dotPath.split("."), value);
+    }
+  }
+
+  // For sentinel-derived paths: delete from the model unless the same path (or
+  // a leaf under it) is independently dirty in dirtyPaths — which means the
+  // user actually edited the field after switching back to it.
+  for (const sentinelPath of sentinelPaths) {
+    const prefix = sentinelPath + ".";
+    const independentlyDirty =
+      dirtyPaths.has(sentinelPath) ||
+      [...dirtyPaths].some((p) => p === sentinelPath || p.startsWith(prefix));
+    if (!independentlyDirty) {
+      deletePath(result, sentinelPath.split("."));
     }
   }
 
@@ -115,7 +115,10 @@ function deepClone<T>(value: T): T {
 function isDirtyPath(dotPath: string, dirtyPaths: Set<string>): boolean {
   if (dirtyPaths.has(dotPath)) return true;
   for (const dirty of dirtyPaths) {
+    // Case 1: dotPath is a leaf under a dirty parent
     if (dotPath.startsWith(dirty + ".")) return true;
+    // Case 2: a dirty leaf is nested under dotPath
+    if (dirty.startsWith(dotPath + ".")) return true;
   }
   return false;
 }

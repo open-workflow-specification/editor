@@ -119,6 +119,13 @@ export function filterReadOnlyFields(
       return hasObjectAtPath(task, field.path) ? [field] : [];
     }
 
+    if (field.kind === "json") {
+      // Show whenever the path has any defined value, including null, false, 0,
+      // and empty strings — all are valid JSON values worth displaying.
+      const v = getNestedValue(task, field.path);
+      return v !== undefined ? [field] : [];
+    }
+
     // For scalar fields: only show when the task actually has a value at the path.
     // This intentionally suppresses required fields whose parent object doesn't exist —
     // a required field inside an optional structure should not appear when that

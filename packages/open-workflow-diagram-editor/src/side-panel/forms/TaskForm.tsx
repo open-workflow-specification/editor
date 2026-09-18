@@ -19,7 +19,7 @@ import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
 import { getFormFieldsForNodeType, structuralEqual } from "@/core";
-import { FormField } from "./FormField";
+import { FormField, computeSentinelDefaults } from "./FormField";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { TaskFormContext, filterReadOnlyFields } from "./taskFormContext";
@@ -79,12 +79,15 @@ export type TaskFormProps = {
 
 export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProps) {
   const { t } = useI18n();
-  const { isReadOnly, model, errors, taskReferences } = useDiagramEditorContext();
+  const { isReadOnly, model, errors, taskReferences, contentFormat } = useDiagramEditorContext();
   const { form } = useEditSession();
   const siblingTaskNames = useSiblingTaskNames(model, nodeId);
 
   // ── Resolve form fields from schema ───────────────────────────────────────
-  const allFields = React.useMemo(() => getFormFieldsForNodeType(nodeType), [nodeType]);
+  const allFields = React.useMemo(
+    () => getFormFieldsForNodeType(nodeType, contentFormat),
+    [nodeType, contentFormat],
+  );
 
   // ── Reset form on node change ─────────────────────────────────────────────
   // Runs whenever nodeId changes — covers initial mount and switching nodes.
@@ -95,7 +98,11 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // nested paths in _formValues, creating a mismatch that spuriously marks
   // sibling fields dirty.
   React.useEffect(() => {
-    form.reset(task as unknown as Record<string, unknown>);
+    const sentinelDefaults = computeSentinelDefaults(allFields, task as Record<string, unknown>);
+    form.reset({
+      ...(task as Record<string, unknown>),
+      ...(Object.keys(sentinelDefaults).length > 0 ? { __oneof__: sentinelDefaults } : {}),
+    });
     // `task` is intentionally excluded: on node change we always reset to the
     // current task snapshot. External task mutations (undo/redo) are handled
     // by the effect below.
@@ -103,15 +110,20 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   }, [nodeId, form]);
 
   // ── Reset when the model changes externally (undo/redo, same node) ────────
-  // Only fires when `task` identity changes while `nodeId` stays the same.
+  // Fires when `task` identity or `allFields` changes while `nodeId` stays the same.
+  // `task` changes on undo/redo; `allFields` changes when `contentFormat` switches.
   // Structural equality guards against spurious resets when the nodes array is
   // rebuilt with identical content.
   const prevTaskRef = React.useRef<Specification.Task>(task);
   React.useEffect(() => {
     if (structuralEqual(task, prevTaskRef.current)) return;
     prevTaskRef.current = task;
-    form.reset(task as unknown as Record<string, unknown>);
-  }, [task, form]);
+    const sentinelDefaults = computeSentinelDefaults(allFields, task as Record<string, unknown>);
+    form.reset({
+      ...(task as Record<string, unknown>),
+      ...(Object.keys(sentinelDefaults).length > 0 ? { __oneof__: sentinelDefaults } : {}),
+    });
+  }, [task, form, allFields]);
 
   // ── Seed SDK errors into form field slots ─────────────────────────────────
   useWorkflowErrorsForForm(

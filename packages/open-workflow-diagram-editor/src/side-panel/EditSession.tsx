@@ -21,15 +21,15 @@ type EditSessionValue = {
   form: UseFormReturn<Record<string, unknown>>;
   /* true while navigation is being blocked by dirty draft (while discard dialog is on screen) */
   isNavigationBlocked: boolean;
-  /* 
+  /*
    * Entry point for anything that would abandon a draft - selecting another node, deselecting, closing panel etc.
    * Runs proceed and returns true on clean draft. Holds proceed and returns false on dirty draft
-  */
+   */
   requestNavigation: (proceed: () => void) => boolean;
   /* Discards draft and proceeds with navigation */
   confirmDiscard: () => void;
-   /* Abandons navigation and keeps the draft */
-  cancelNavigation:() => void;
+  /* Abandons navigation and keeps the draft */
+  cancelNavigation: () => void;
 };
 
 const EditSessionContext = React.createContext<EditSessionValue | undefined>(undefined);
@@ -38,44 +38,51 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
   const form = useForm<Record<string, unknown>>({ defaultValues: {} });
 
   const isDirtyRef = React.useRef(false);
-  React.useEffect(()=>
-    form.subscribe({
-      formState: { isDirty:true },
-      callback: ({isDirty}) =>{
-        isDirtyRef.current = isDirty === true;
-      },
-    }),
-    [form]
-  )
+  React.useEffect(
+    () =>
+      form.subscribe({
+        formState: { isDirty: true },
+        callback: ({ isDirty }) => {
+          isDirtyRef.current = isDirty === true;
+        },
+      }),
+    [form],
+  );
 
-  const [blockedNavigation, setBlockedNavigation] = React.useState<(()=>void) | null>(null);
+  const [blockedNavigation, setBlockedNavigation] = React.useState<(() => void) | null>(null);
 
-  const requestNavigation = React.useCallback((proceed: () => void)=>{
-    if(!isDirtyRef.current){
-      proceed()
+  const requestNavigation = React.useCallback((proceed: () => void) => {
+    if (!isDirtyRef.current) {
+      proceed();
       return true;
     }
 
-    setBlockedNavigation(()=> proceed)
+    setBlockedNavigation(() => proceed);
     return false;
-  }, [])
+  }, []);
 
-    const confirmDiscard = React.useCallback(()=>{
-    if(blockedNavigation === null){
+  const confirmDiscard = React.useCallback(() => {
+    if (blockedNavigation === null) {
       return;
     }
 
-    form.reset();
-    setBlockedNavigation(null)
+    form.reset(form.formState.defaultValues);
+    setBlockedNavigation(null);
     blockedNavigation();
-  }, [blockedNavigation, form])
+  }, [blockedNavigation, form]);
 
-   const cancelNavigation = React.useCallback(()=> setBlockedNavigation(null),[]);
+  const cancelNavigation = React.useCallback(() => setBlockedNavigation(null), []);
 
-   const value = React.useMemo(()=>({
-    form, isNavigationBlocked: blockedNavigation !== null,
-    requestNavigation, confirmDiscard, cancelNavigation
-   }), [form, blockedNavigation,requestNavigation,confirmDiscard,cancelNavigation])
+  const value = React.useMemo(
+    () => ({
+      form,
+      isNavigationBlocked: blockedNavigation !== null,
+      requestNavigation,
+      confirmDiscard,
+      cancelNavigation,
+    }),
+    [form, blockedNavigation, requestNavigation, confirmDiscard, cancelNavigation],
+  );
 
   return (
     <EditSessionContext.Provider value={value}>
