@@ -206,6 +206,27 @@ describe("applyDirtyValues", () => {
     });
   });
 
+  it("keeps a nested selectors value when an ancestor path has the change", () => {
+    // Scenario: raise.error held an error name and the user switched it to an inline
+    // definition, so react-hook-form marks the ancestor `raise.error` dirty - its type changed from string to object.
+    // The nested type/title selectors mounted with the switch and are sentinel-dirty too,
+    // but the values beneath them arrived with the ancestor's change and must survive.
+
+    const original = { raise: { error: "notImplemented" } };
+    const allValues = {
+      "raise.error.type": "https://example.com/errors/nope",
+      "raise.error.status": 418,
+    };
+
+    const dirtyPaths = new Set(["raise.error"]);
+    const sentinelPaths = new Set(["raise.error", "raise.error.type", "raise.error.title"]);
+    const result = applyDirtyValues(original, allValues, dirtyPaths, sentinelPaths);
+
+    expect(result).toEqual({
+      raise: { error: { type: "https://example.com/errors/nope", status: 418 } },
+    });
+  });
+
   it("does not mutate the original object", () => {
     const original = { set: { startEvent: "${x}" } };
     const allValues = { "set.startEvent": "${changed}" };
