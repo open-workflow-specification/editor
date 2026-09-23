@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from "vitest";
 import { unflattenValues, applyDirtyValues } from "../../src/core/taskDraft";
+import { switchCase } from "../test-utils";
 
 describe("unflattenValues", () => {
   it("reconstructs a single-level object", () => {
@@ -206,24 +207,70 @@ describe("applyDirtyValues", () => {
     });
   });
 
-  it("keeps a nested selectors value when an ancestor path has the change", () => {
-    // Scenario: raise.error held an error name and the user switched it to an inline
-    // definition, so react-hook-form marks the ancestor `raise.error` dirty - its type changed from string to object.
-    // The nested type/title selectors mounted with the switch and are sentinel-dirty too,
-    // but the values beneath them arrived with the ancestor's change and must survive.
-
-    const original = { raise: { error: "notImplemented" } };
-    const allValues = {
-      "raise.error.type": "https://example.com/errors/nope",
-      "raise.error.status": 418,
+  describe("applyDirtyValues with array values", () => {
+    // The switch-case editor registers `switch.0.<name>.when`, but `flattenTask`
+    // collapses an array to a single key — so the whole list arrives here as one dirty value
+    const original = {
+      switch: [
+        switchCase("electronicOrder", "fulfillElectronic", "${ .type == 'e' }"),
+        switchCase("fallback", "reject"),
+      ],
     };
 
-    const dirtyPaths = new Set(["raise.error"]);
-    const sentinelPaths = new Set(["raise.error", "raise.error.type", "raise.error.title"]);
-    const result = applyDirtyValues(original, allValues, dirtyPaths, sentinelPaths);
+    it("writes an edited entry without disturbing its siblings", () => {
+      const edited = [
+        switchCase("electronicOrder", "fulfillElectronic", "${ .type == 'digital' }"),
+        switchCase("fallback", "reject"),
+      ];
 
-    expect(result).toEqual({
-      raise: { error: { type: "https://example.com/errors/nope", status: 418 } },
+      const result = applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(result).toEqual({ switch: edited });
+    });
+
+    it("removes a key the user cleared inside an entry it was told to prune", () => {
+      const edited = [
+        switchCase("electronicOrder", "fulfillElectronic", ""),
+        switchCase("fallback", "reject"),
+      ];
+
+      const result = applyDirtyValues(
+        original,
+        { switch: edited },
+        new Set(["switch"]),
+        new Set(),
+        new Map(),
+        new Map(),
+        new Set(["switch"]),
+      );
+
+      expect(result).toEqual({
+        switch: [
+          switchCase("electronicOrder", "fulfillElectronic"),
+          switchCase("fallback", "reject"),
+        ],
+      });
+    });
+
+    it("keeps an empty value in an array it was not told to prune", () => {
+      const authored = { listen: { to: { all: [{ with: { type: "" } }] } } };
+      const edited = [{ with: { type: "" } }];
+
+      const result = applyDirtyValues(
+        authored,
+        { "listen.to.all": edited },
+        new Set(["listen.to.all"]),
+      );
+
+      expect(result).toEqual({ listen: { to: { all: [{ with: { type: "" } }] } } });
+    });
+
+    it("leaves the draft it was given untouched", () => {
+      const edited = [switchCase("electronicOrder", "fulfillElectronic", "")];
+
+      applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(edited[0]!.electronicOrder).toHaveProperty("when", "");
     });
   });
 

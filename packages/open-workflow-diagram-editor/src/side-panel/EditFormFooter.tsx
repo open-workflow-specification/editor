@@ -36,6 +36,7 @@ import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { useEditSession } from "./EditSession";
 import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
+import { collectFormListPaths } from "./forms/taskFormContext";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
@@ -217,6 +218,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       sentinelPaths,
       sentinelConstWrites,
       sentinelStalePaths,
+      collectFormListPaths(getFormFieldsForNodeType(node.type ?? "")),
     ) as Specification.Task;
     const updatedModel = updateTask(model, node.id, updated);
     commitWorkflow(updatedModel);

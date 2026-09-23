@@ -45,6 +45,28 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
   return result;
 }
 
+/* Removes empty values (null, undefined, "") from objects and arrays.
+ * Used to clean up ordered maps where clearing a field means deleting it.
+ */
+function pruneEmptyLeaves<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => pruneEmptyLeaves(entry)) as T;
+  }
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const result: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === undefined || v === null || v === "") {
+      continue;
+    }
+    result[key] = pruneEmptyLeaves(v);
+  }
+  return result as T;
+}
+
 /**
  * Produces an updated task by applying only the dirty form fields onto a deep
  * clone of the original task.
@@ -72,6 +94,9 @@ export function applyDirtyValues(
   // For each sentinel-dirty path, the model paths that belong exclusively to
   // the previously active variant(s) and must be removed from the result.
   sentinelStalePaths: Map<string, string[]> = new Map(),
+  // Paths holding a list the user edits through an `ordered-map`
+  // Only these get their empty leaves pruned, because clearing a control is how you remove a key there.
+  formListPaths: Set<string> = new Set(),
 ): Record<string, unknown> {
   // Deep clone the original so we never mutate the store value.
   const result = deepClone(original);
@@ -87,6 +112,8 @@ export function applyDirtyValues(
         prune: !sentinelPaths.has(dotPath),
         protectedKey: taskTypeKey,
       });
+    } else if (Array.isArray(value) && formListPaths.has(dotPath)) {
+      setPath(result, dotPath.split("."), pruneEmptyLeaves(value));
     } else {
       setPath(result, dotPath.split("."), value);
     }

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import * as React from "react";
 import { Controller } from "react-hook-form";
 import { Input } from "../ui/input";
-import type { StringField } from "../../../core/schemaToFormFields";
+import { RUNTIME_EXPRESSION_PATTERN, type StringField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 import { ScrollableTextField } from "./ScrollableTextField";
@@ -61,7 +60,7 @@ function SingleLineStringControl({ field, id }: StringControlProps) {
           typeof live === "string" &&
           !fieldState.isDirty
         ) {
-          const liveIsExpression = /^\s*\$\{.+\}\s*$/.test(live);
+          const liveIsExpression = RUNTIME_EXPRESSION_PATTERN.test(live);
           if (liveIsExpression !== field.isRuntimeExpression) {
             inputValue = "";
           }

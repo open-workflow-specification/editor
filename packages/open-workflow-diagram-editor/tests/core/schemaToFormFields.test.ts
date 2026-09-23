@@ -22,6 +22,7 @@ import type {
   ObjectField,
   JsonField,
   FormFieldDescriptor,
+  OrderedMapField,
 } from "../../src/core/schemaToFormFields";
 
 describe("schemaToFormFields endpoint and oneOf unwrapping", () => {
@@ -678,5 +679,61 @@ describe("OneOfVariant constWrites — call discriminator", () => {
     for (const variant of endpointOneOf?.variants ?? []) {
       expect(variant.constWrites).toEqual({});
     }
+  });
+});
+// ---------------------------------------------------------------------------
+// Arrays
+// ---------------------------------------------------------------------------
+
+/** Every field's kind by path, variants flattened in. */
+function kindsByPath(
+  fields: FormFieldDescriptor[],
+  out = new Map<string, string>(),
+): Map<string, string> {
+  for (const f of fields) {
+    out.set(f.path, f.kind);
+    if (f.kind === "object") kindsByPath(f.children, out);
+    if (f.kind === "one-of") for (const v of f.variants) kindsByPath(v.fields, out);
+  }
+  return out;
+}
+
+describe("schemaToFormFields arrays", () => {
+  it("describes a switch task's cases as an ordered map", () => {
+    const [own] = getFormFieldsForNodeType("switch");
+
+    expect(own?.kind).toBe("ordered-map");
+    expect(own?.path).toBe("switch");
+  });
+
+  it("carries the case's own fields with item-relative paths", () => {
+    const [own] = getFormFieldsForNodeType("switch");
+    const cases = own as OrderedMapField;
+
+    expect(describeFields(cases.itemFields)).toEqual([
+      `when  string  "when"`,
+      `then  then  "then"`,
+    ]);
+  });
+
+  // A free-text control bound to an array writes a plain string over the whole
+  // array on Apply. Every array must therefore resolve to a kind that parses
+  // what it is given back into a value — never the string fallback.
+  it.each([
+    ["run", "run.container.arguments", "string-list"],
+    ["run", "run.shell.arguments", "string-list"],
+    ["listen", "listen.to.all", "json"],
+    ["listen", "listen.to.any", "json"],
+  ])("edits the array at %s %s as a structured value", (nodeType, path, kind) => {
+    expect(kindsByPath(getFormFieldsForNodeType(nodeType)).get(path)).toBe(kind);
+  });
+
+  it.each([
+    ["do", "do"],
+    ["for", "do"],
+    ["fork", "fork.branches"],
+    ["try", "try"],
+  ])("still describes the task list at %s %s as a child task list", (nodeType, path) => {
+    expect(kindsByPath(getFormFieldsForNodeType(nodeType)).get(path)).toBe("child-task-list");
   });
 });
