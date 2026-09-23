@@ -160,7 +160,29 @@ describe("applyDirtyValues", () => {
     const sentinelPaths = new Set(["emit.event.with.data"]);
     const result = applyDirtyValues(original, allValues, dirtyPaths, sentinelPaths);
     expect(result).not.toHaveProperty("emit.event.with.data");
-    expect(result).toEqual({});
+    // Only the switched key goes: the containers around it stay, so the task is still an emit task.
+    expect(result).toEqual({ emit: { event: { with: {} } } });
+  });
+
+  it("keeps the containers around a switched variant that commits no value", () => {
+    const original = { raise: { error: { type: "${ .errorType }" } } };
+    const result = applyDirtyValues(
+      original,
+      { "raise.error.type": undefined },
+      new Set<string>(),
+      new Set(["raise.error.type"]),
+    );
+    expect(result).toEqual({ raise: { error: {} } });
+  });
+
+  it("never removes the key that gives the task its type", () => {
+    const original = { raise: { error: { type: "https://example.com/errors/boom" } } };
+    const result = applyDirtyValues(
+      original,
+      { "raise.error.type": "" },
+      new Set(["raise.error.type"]),
+    );
+    expect(result).toEqual({ raise: {} });
   });
 
   it("keeps a nested selectors value when an ancestor path has the change", () => {
