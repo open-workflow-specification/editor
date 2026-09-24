@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { Controller, useFormContext, useFormState } from "react-hook-form";
+import { Controller } from "react-hook-form";
 import { Input } from "../ui/input";
 import type { StringField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
@@ -41,76 +41,32 @@ export function StringControl({ field, id }: StringControlProps) {
 }
 
 function SingleLineStringControl({ field, id }: StringControlProps) {
-  const { control, getValues, getFieldState } = useFormContext<Record<string, unknown>>();
   const { isReadOnly } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
-  const { defaultValues } = useFormState({ control });
 
   const placeholder = field.placeholder ?? (field.isRuntimeExpression ? "${...}" : undefined);
-
-  // Compute the initial display value.
-  const [inputValue, setInputValue] = React.useState<string>(() => {
-    const live = getValues(field.path as never) as unknown;
-    const wasDirtied = getFieldState(field.path as never).isDirty;
-    // Stale defaultValues restoration after a kind-boundary switch
-    if (typeof live === "string" && !wasDirtied) {
-      const isRe = /^\s*\$\{.+\}\s*$/.test(live);
-      if (isRe !== field.isRuntimeExpression) {
-        return "";
-      }
-    }
-    // Show the live string value, or empty if not a string.
-    return typeof live === "string" ? live : "";
-  });
-
-  // Reset when the task changes (defaultValues identity) or path/isRuntimeExpression changes.
-  const prevDefaultValuesRef = React.useRef(defaultValues);
-  const prevPathRef = React.useRef(field.path);
-  const prevIsReRef = React.useRef(field.isRuntimeExpression);
-  React.useEffect(() => {
-    const pathOrKindChanged =
-      field.path !== prevPathRef.current || field.isRuntimeExpression !== prevIsReRef.current;
-    if (defaultValues === prevDefaultValuesRef.current && !pathOrKindChanged) return;
-    prevDefaultValuesRef.current = defaultValues;
-    prevPathRef.current = field.path;
-    prevIsReRef.current = field.isRuntimeExpression;
-    // Re-derive from the new task state — same logic as the useState initialiser.
-    const live = getValues(field.path as never) as unknown;
-    const wasDirtied = getFieldState(field.path as never).isDirty;
-    if (typeof live === "string" && !wasDirtied) {
-      const isRe = /^\s*\$\{.+\}\s*$/.test(live);
-      if (isRe !== field.isRuntimeExpression) {
-        setInputValue("");
-        return;
-      }
-    }
-    setInputValue(typeof live === "string" ? live : "");
-    // `getValues` and `getFieldState` are plain functions created inside
-    // react-hook-form's `useForm` and are NOT wrapped in useCallback, so their
-    // reference changes on every render. Including them in the dependency array
-    // would re-run this effect on every render. They are intentionally omitted
-    // because the logic only needs to re-run when the form resets (new
-    // `defaultValues` identity) or when the field path / kind changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultValues, field.path, field.isRuntimeExpression]);
 
   return (
     <Controller
       name={field.path}
-      control={control}
-      render={({ field: rhfField }) => {
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-          const val = e.target.value;
-          setInputValue(val);
-          rhfField.onChange(val);
-        };
+      render={({ field: rhfField, fieldState }) => {
+        const live = rhfField.value as unknown;
+        let inputValue = typeof live === "string" ? live : "";
+
+        if (typeof live === "string" && !fieldState.isDirty) {
+          const isRuntimeExpression = /^\s*\$\{.+\}\s*$/.test(live);
+
+          if (isRuntimeExpression !== field.isRuntimeExpression) {
+            inputValue = "";
+          }
+        }
 
         return (
           <FieldWithError errorMessage={errorMessage}>
             <Input
               id={id}
               value={inputValue}
-              onChange={handleChange}
+              onChange={rhfField.onChange}
               onBlur={rhfField.onBlur}
               disabled={isReadOnly}
               readOnly={isReadOnly}
