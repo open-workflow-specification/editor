@@ -20,6 +20,7 @@ export * from "./validationErrors";
 export * from "./graph";
 export * from "./taskDraft";
 export * from "./taskSubType";
+export * from "./taskTypes";
 export * from "./elkjs";
 export * from "./mermaidExport";
 export * from "./schemaFilter";

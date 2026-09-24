@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-const TASK_TYPE_KEYS = new Set([
-  "call",
-  "do",
-  "emit",
-  "for",
-  "fork",
-  "listen",
-  "raise",
-  "run",
-  "set",
-  "switch",
-  "try",
-  "wait",
-]);
-
-/* Returns the key that gives the task its type or undefined when it has none i.e object not a task */
-function getTaskTypeKey(task: Record<string, unknown>): string | undefined {
-  return Object.keys(task).find((key) => TASK_TYPE_KEYS.has(key));
-}
+import { getTaskTypeKey } from "./taskTypes";
 
 /**
  * Reconstructs a nested task object from the flat dot-notation form values

@@ -14,31 +14,11 @@
  * limitations under the License.
  */
 
+import { TASK_TYPE_KEYS } from "./taskTypes";
 import { SdkError, ValidationError } from "./workflowSdk";
 
 /* workflowSdk produces a flat array of errors, but the UI needs them split into two categories: errors that attach to a specific node, and workflow-level errors that don't. This file provides helper functions to filter, sort, and slice that error list.
  */
-
-/* The SDK reports an invalid task as "missing" every other task type, which is
- * noise. These are the missing-type errors to filter out.
- *
- * `catch` is intentionally excluded: a missing-property error on a `catch` is a genuine problem worth surfacing.
- */
-const MISSING_PROP_TASK_TYPES = new Set([
-  "call",
-  "do",
-  "emit",
-  "for",
-  "fork",
-  "listen",
-  "raise",
-  "run",
-  "set",
-  "switch",
-  "try",
-  "wait",
-]);
-
 type NodeError = ValidationError & { path: string };
 
 export function isValidationError(error: SdkError): error is ValidationError {
@@ -58,7 +38,7 @@ function isNoiseError(error: ValidationError): boolean {
   }
 
   const missingProperty = error.object?.["missingProperty"];
-  if (typeof missingProperty === "string" && MISSING_PROP_TASK_TYPES.has(missingProperty)) {
+  if (typeof missingProperty === "string" && TASK_TYPE_KEYS.has(missingProperty)) {
     return true;
   }
 
