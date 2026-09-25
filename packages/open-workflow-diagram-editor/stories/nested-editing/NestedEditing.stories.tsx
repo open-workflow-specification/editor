@@ -52,10 +52,4 @@ export const NestedValidation: Story = createWorkflowStory(workflows.nestedValid
 export const RaiseErrorShapes: Story = createWorkflowStory(workflows.raiseErrorShapes);
 export const RunTaskArray: Story = createWorkflowStory(workflows.runTaskArray);
 export const SetOpenMap: Story = createWorkflowStory(workflows.setOpenMap);
-export const SwitchLockedCases: Story = {
-  args: {
-    ...DEFAULT_STORY_ARGS,
-    isReadOnly: true,
-    content: workflows.switchLockedCases,
-  },
-};
+export const SwitchLockedCases: Story = createWorkflowStory(workflows.switchLockedCases);

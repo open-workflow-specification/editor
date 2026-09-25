@@ -30,12 +30,19 @@ export type TaskFormContextType = {
    * additionally for field-visibility filtering in read-only mode.
    */
   taskData: Record<string, unknown>;
+  /**
+   * Paths a one-of offers both as a `${...}` expression and as another kind of
+   * string. Only these can hold a value left behind by the variant the user
+   * switched away from — see `collectExpressionVariantPaths`.
+   */
+  expressionVariantPaths: Set<string>;
 };
 
 export const TaskFormContext = React.createContext<TaskFormContextType>({
   isReadOnly: false,
   siblingTaskNames: [],
   taskData: {},
+  expressionVariantPaths: new Set(),
 });
 
 export function useTaskFormContext(): TaskFormContextType {
@@ -80,6 +87,78 @@ function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
   return v !== null && v !== undefined && typeof v === "object" && !Array.isArray(v);
 }
 
+/*
+ * Finds paths where a field can be either an expression or a literal string.
+ * These paths need special handling to clear stale values when switching variants.
+ * Example: emit.event.with.source can be a URI or ${...} expression. 
+ * i.e Identifies URI↔Expression variant paths
+*/
+export function collectExpressionVariantPaths(fields: FormFieldDescriptor[]): Set<string> {
+  const byPath = new Map<string, Set<boolean>>();
+
+  const walk = (list: FormFieldDescriptor[], insideOneOf: boolean): void => {
+    for (const field of list) {
+      if (field.kind === "object") {
+        walk(field.children, insideOneOf);
+      } else if (field.kind === "one-of") {
+        for (const variant of field.variants) walk(variant.fields, true);
+      } else if (field.kind === "string" && insideOneOf) {
+        const kinds = byPath.get(field.path) ?? new Set<boolean>();
+        kinds.add(field.isRuntimeExpression);
+        byPath.set(field.path, kinds);
+      }
+    }
+  };
+  walk(fields, false);
+
+  return new Set([...byPath].filter(([, kinds]) => kinds.size > 1).map(([path]) => path));
+}
+
+/* 
+ * Finds paths of arrays edited through form controls (i.e ordered maps).
+ * These arrays get empty values pruned before saving, since clearing a control means "delete this key".
+*/
+export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string> {
+  const paths = new Set<string>();
+
+  const walk = (list: FormFieldDescriptor[]): void => {
+    for (const field of list) {
+      if (field.kind === "ordered-map") paths.add(field.path);
+      else if (field.kind === "object") walk(field.children);
+      else if (field.kind === "one-of") for (const v of field.variants) walk(v.fields);
+    }
+  };
+  walk(fields);
+
+  return paths;
+}
+
+/*
+ * Re-roots field descriptors under a new path prefix.
+ * Used to render ordered map entries with their full paths.
+ * Example: prefixFields([{path: "when"}], "switch.0.electronicOrder")  -> [{path: "switch.0.electronicOrder.when"}] 
+ * i.e Converts relative paths to absolute RHF paths
+*/
+export function prefixFields(fields: FormFieldDescriptor[], prefix: string): FormFieldDescriptor[] {
+  return fields.map((field): FormFieldDescriptor => {
+    const path = `${prefix}.${field.path}`;
+    if (field.kind === "object") {
+      return { ...field, path, children: prefixFields(field.children, prefix) };
+    }
+    if (field.kind === "one-of") {
+      return {
+        ...field,
+        path,
+        variants: field.variants.map((variant) => ({
+          ...variant,
+          fields: prefixFields(variant.fields, prefix),
+        })),
+      };
+    }
+    return { ...field, path };
+  });
+}
+
 /**
  * Recursively filters a field list for read-only display.
  *
@@ -117,6 +196,11 @@ export function filterReadOnlyFields(
     if (field.kind === "map") {
       // Show the map group only when the task contains a non-empty object at this path.
       return hasObjectAtPath(task, field.path) ? [field] : [];
+    }
+
+    if (field.kind === "ordered-map") {
+      const v = getNestedValue(task, field.path);
+      return Array.isArray(v) && v.length > 0 ? [field] : [];
     }
 
     if (field.kind === "json") {

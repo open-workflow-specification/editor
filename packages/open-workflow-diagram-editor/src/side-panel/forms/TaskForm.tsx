@@ -22,7 +22,11 @@ import { getFormFieldsForNodeType, structuralEqual } from "@/core";
 import { FormField, SENTINEL_KEY, computeSentinelDefaults } from "./FormField";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { TaskFormContext, filterReadOnlyFields } from "./taskFormContext";
+import {
+  TaskFormContext,
+  collectExpressionVariantPaths,
+  filterReadOnlyFields,
+} from "./taskFormContext";
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
 
@@ -141,11 +145,21 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     return filterReadOnlyFields(allFields, task as Record<string, unknown>);
   }, [allFields, isReadOnly, task]);
 
+  const expressionVariantPaths = React.useMemo(
+    () => collectExpressionVariantPaths(allFields),
+    [allFields],
+  );
+
   if (allFields.length === 0 || visibleFields.length === 0) return null;
 
   return (
     <TaskFormContext.Provider
-      value={{ isReadOnly, siblingTaskNames, taskData: task as Record<string, unknown> }}
+      value={{
+        isReadOnly,
+        siblingTaskNames,
+        taskData: task as Record<string, unknown>,
+        expressionVariantPaths,
+      }}
     >
       <form
         className="dec-task-form"

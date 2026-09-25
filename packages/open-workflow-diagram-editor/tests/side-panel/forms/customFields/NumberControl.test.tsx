@@ -25,7 +25,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm } from "react-hook-form";
@@ -53,7 +52,7 @@ function NumberControlWrapper({ defaultValue }: { defaultValue?: number }) {
 
   return (
     <I18nProvider locale="en" dictionaries={{ en }}>
-      <TaskFormContext.Provider value={{ isReadOnly: false, siblingTaskNames: [], taskData: {} }}>
+      <TaskFormContext.Provider value={{ isReadOnly: false, siblingTaskNames: [], taskData: {}, expressionVariantPaths: new Set<string>(), }}>
         <FormProvider {...form}>
           <FieldControl field={numberField} id="field-wait-seconds" />
         </FormProvider>

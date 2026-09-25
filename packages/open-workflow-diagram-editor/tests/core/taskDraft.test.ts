@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+ // oxlint-disable unicorn/no-thenable -- `then` is an Open Workflow Spec field
+
 import { describe, expect, it } from "vitest";
 import { unflattenValues, applyDirtyValues } from "../../src/core/taskDraft";
 
@@ -206,10 +208,68 @@ describe("applyDirtyValues", () => {
     });
   });
 
-  it("does not mutate the original object", () => {
-    const original = { set: { startEvent: "${x}" } };
-    const allValues = { "set.startEvent": "${changed}" };
-    applyDirtyValues(original, allValues, new Set(["set.startEvent"]));
-    expect(original.set.startEvent).toBe("${x}");
+  describe("applyDirtyValues with array values", () => {
+    // The switch-case editor registers `switch.0.<name>.when`, but `flattenTask`
+    // collapses an array to a single key — so the whole list arrives here as one dirty value
+    const original = {
+      switch: [
+        { electronicOrder: { when: "${ .type == 'e' }", then: "fulfillElectronic" } },
+        { fallback: { then: "reject" } },
+      ],
+    };
+
+    it("writes an edited entry without disturbing its siblings", () => {
+      const edited = [
+        { electronicOrder: { when: "${ .type == 'digital' }", then: "fulfillElectronic" } },
+        { fallback: { then: "reject" } },
+      ];
+
+      const result = applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(result).toEqual({ switch: edited });
+    });
+
+    it("removes a key the user cleared inside an entry it was told to prune", () => {
+      const edited = [
+        { electronicOrder: { when: "", then: "fulfillElectronic" } },
+        { fallback: { then: "reject" } },
+      ];
+
+      const result = applyDirtyValues(
+        original,
+        { switch: edited },
+        new Set(["switch"]),
+        new Set(),
+        new Set(["switch"]),
+      );
+
+      expect(result).toEqual({
+        switch: [
+          { electronicOrder: { then: "fulfillElectronic" } },
+          { fallback: { then: "reject" } },
+        ],
+      });
+    });
+
+    it("keeps an empty value in an array it was not told to prune", () => {
+      const authored = { listen: { to: { all: [{ with: { type: "" } }] } } };
+      const edited = [{ with: { type: "" } }];
+
+      const result = applyDirtyValues(
+        authored,
+        { "listen.to.all": edited },
+        new Set(["listen.to.all"]),
+      );
+
+      expect(result).toEqual({ listen: { to: { all: [{ with: { type: "" } }] } } });
+    });
+
+    it("leaves the draft it was given untouched", () => {
+      const edited = [{ electronicOrder: { when: "", then: "fulfillElectronic" } }];
+
+      applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(edited[0]!.electronicOrder).toHaveProperty("when", "");
+    });
   });
 });

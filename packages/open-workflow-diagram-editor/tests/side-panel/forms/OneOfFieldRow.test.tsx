@@ -59,7 +59,7 @@ const dataField: JsonField = {
   required: false,
 };
 
-const taskFormContextValue = { isReadOnly: false, siblingTaskNames: [], taskData: {} } as const;
+const taskFormContextValue = { isReadOnly: false, siblingTaskNames: [], taskData: {}, expressionVariantPaths: new Set<string>(), } as const;
 
 function getTextarea() {
   return screen.getByRole("textbox") as HTMLTextAreaElement;

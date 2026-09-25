@@ -37,6 +37,7 @@ export type FormFieldDescriptor =
   | ObjectField
   | MapField
   | JsonField
+  | OrderedMapField
   | OneOfField;
 
 interface FieldBase {
@@ -97,6 +98,14 @@ export interface ChildTaskListField extends FieldBase {
   kind: "child-task-list";
 }
 
+/* A map where order is significant, written as array of single key objects with a user defined name e.g switch
+ * In schema terms: an array whose `items` is an object with `minProperties: 1`,
+ * `maxProperties: 1` and an `additionalProperties` sub-schema of its own.
+ */
+export interface OrderedMapField extends FieldBase {
+  kind: "ordered-map";
+  itemFields: FormFieldDescriptor[];
+}
 export interface ObjectField extends FieldBase {
   kind: "object";
   children: FormFieldDescriptor[];
@@ -110,7 +119,6 @@ export interface JsonField extends FieldBase {
   kind: "json";
   format: ContentFormat;
 }
-
 export interface OneOfField extends FieldBase {
   kind: "one-of";
   variants: OneOfVariant[];
@@ -187,6 +195,17 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
 }
 
 /**
+ *  Returns the items schema for an array, following one $ref if present.
+ *  Used by both task lists and ordered maps to get the array's item structure
+ */
+function arrayItemsSchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const node = typeof schema.$ref === "string" ? resolveRef(schema.$ref, defs) : schema;
+  return node?.type === "array" && isPlainObject(node.items) ? node.items : undefined;
+}
+/**
  * Returns true if the schema node (or any `$ref` it resolves to) represents
  * a task-list — an array whose `items.additionalProperties.$ref` points to
  * the task union.
@@ -195,23 +214,30 @@ function isTaskListSchema(
   schema: Record<string, unknown>,
   defs: Record<string, unknown> | undefined,
 ): boolean {
-  let node: Record<string, unknown> = schema;
+  const entry = arrayItemsSchema(schema, defs)?.additionalProperties;
+  const ref = isPlainObject(entry) ? entry.$ref : undefined;
 
-  // Follow one level of $ref
-  if (typeof node.$ref === "string") {
-    const resolved = resolveRef(node.$ref, defs);
-    if (!resolved) return false;
-    node = resolved;
+  return typeof ref === "string" && (ref === "#/$defs/task" || ref.endsWith("/task"));
+}
+
+/*
+* Checks if this is an ordered map (eg switch cases).
+* An ordered map is an array where each item is a single-key object
+* with user-defined names (e.g. { "electronicOrder": {...} }).
+* Returns the schema for one entry, or undefined if not an ordered map.
+ */
+
+function orderedMapEntrySchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const items = arrayItemsSchema(schema, defs);
+  if (items?.minProperties !== 1 || items?.maxProperties !== 1) {
+    return undefined;
   }
 
-  if (node.type !== "array") return false;
-  const items = node.items;
-  if (!isPlainObject(items)) return false;
-  const ap = (items as Record<string, unknown>).additionalProperties;
-  if (!isPlainObject(ap)) return false;
-  const apRef = ap.$ref;
-  // Matches any ref whose last path segment is "task" (e.g. "#/$defs/task")
-  return typeof apRef === "string" && (apRef === "#/$defs/task" || apRef.endsWith("/task"));
+  const entry = items.additionalProperties;
+  return isPlainObject(entry) && isPlainObject(entry.properties) ? entry : undefined;
 }
 
 /**
@@ -396,6 +422,30 @@ export function schemaToFormFields(
       continue;
     }
 
+    // ── Ordered map list ────────────────────────────────────────────────────
+    const itemSchema = orderedMapEntrySchema(resolved, localDefs);
+    if (itemSchema) {
+      const itemRequired = new Set<string>(
+        Array.isArray(itemSchema.required) ? (itemSchema.required as string[]) : [],
+      );
+
+      fields.push({
+        kind: "ordered-map",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+        itemFields: schemaToFormFields(
+          itemSchema as DereferencedSchema,
+          localDefs,
+          itemRequired,
+          "",
+          format,
+        ),
+      });
+      continue;
+    }
+
     // ── oneOf / anyOf at property level ────────────────────────────────────
     const candidates = (resolved.oneOf ?? resolved.anyOf) as unknown[] | undefined;
     if (Array.isArray(candidates)) {
@@ -508,6 +558,20 @@ export function schemaToFormFields(
     ) {
       fields.push({
         kind: "duration",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+      });
+      continue;
+    }
+
+    // ── Any other array ───────────────────────────────────────────────────
+    // Fallback for other arrays - the same textarea 'json' uses elsewhere
+    if (resolved.type === "array") {
+      fields.push({
+        kind: "json",
+        format,
         path: fieldPath,
         label: deriveLabel(prop, key),
         ...withDesc(description),

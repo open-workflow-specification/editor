@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import * as React from "react";
 import { Controller } from "react-hook-form";
 import { Input } from "../ui/input";
 import type { StringField } from "../../../core/schemaToFormFields";
@@ -41,10 +40,11 @@ export function StringControl({ field, id }: StringControlProps) {
 }
 
 function SingleLineStringControl({ field, id }: StringControlProps) {
-  const { isReadOnly } = useTaskFormContext();
+  const { isReadOnly, expressionVariantPaths } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
 
   const placeholder = field.placeholder ?? (field.isRuntimeExpression ? "${...}" : undefined);
+  const clearsOnKindsMisMatch = expressionVariantPaths.has(field.path)
 
   return (
     <Controller
@@ -53,7 +53,7 @@ function SingleLineStringControl({ field, id }: StringControlProps) {
         const live = rhfField.value as unknown;
         let inputValue = typeof live === "string" ? live : "";
 
-        if (typeof live === "string" && !fieldState.isDirty) {
+        if (clearsOnKindsMisMatch && typeof live === "string" && !fieldState.isDirty) {
           const isRuntimeExpression = /^\s*\$\{.+\}\s*$/.test(live);
 
           if (isRuntimeExpression !== field.isRuntimeExpression) {

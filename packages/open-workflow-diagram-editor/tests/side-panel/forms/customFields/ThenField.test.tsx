@@ -48,7 +48,7 @@ function ThenFieldWrapper({
   return (
     <div className="dec-root">
       <I18nProvider locale="en" dictionaries={{ en }}>
-        <TaskFormContext.Provider value={{ isReadOnly, siblingTaskNames, taskData: {} }}>
+        <TaskFormContext.Provider value={{ isReadOnly, siblingTaskNames, taskData: {}, expressionVariantPaths: new Set<string>() }}>
           <FormProvider {...form}>
             <ThenField field={thenFieldDescriptor} id="field-then" />
           </FormProvider>

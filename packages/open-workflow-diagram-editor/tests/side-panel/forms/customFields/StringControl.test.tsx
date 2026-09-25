@@ -65,7 +65,7 @@ const exprField: StringField = {
   placeholder: "${...}",
 };
 
-const taskFormContextValue = { isReadOnly: false, siblingTaskNames: [], taskData: {} } as const;
+const taskFormContextValue = { isReadOnly: false, siblingTaskNames: [], taskData: {}, expressionVariantPaths: new Set(["emit.event.with.source"]) } as const;
 
 function getInput() {
   return screen.getByRole("textbox") as HTMLInputElement;
