@@ -30,7 +30,7 @@ do:
         - subscriptionOrder:
             when: ${ .orderType == "subscription" }
             then: fulfillSubscription
-        - default:
+        - anythingElse:
             then: rejectUnknownOrder
   - fulfillElectronic:
       set:

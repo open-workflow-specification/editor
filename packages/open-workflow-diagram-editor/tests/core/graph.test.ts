@@ -21,7 +21,9 @@ import {
   getTaskReferences,
   fixNodesConnections,
   isTargetOutsideSourceParent,
+  getDefaultCaseEdgeIds,
 } from "../../src/core/graph";
+import { buildFlatGraph, parseWorkflow } from "../../src/core";
 import { createFlatGraph } from "../test-utils/graph-helpers";
 
 describe("graph utils", () => {
@@ -109,6 +111,127 @@ describe("graph utils", () => {
 
     it("returns an empty set for a graph with no task nodes", () => {
       expect(getTaskReferences(createFlatGraph([], []))).toEqual(new Set());
+    });
+  });
+
+  describe("getDefaultCaseEdgeIds", () => {
+    /**
+     * Built through the real SDK rather than hand-rolled graphs: the helper's job
+     * is to agree with how the SDK labels a case edge, so a fake graph would only
+     * assert our own assumptions back at us.
+     */
+    const graphFor = (lines: string[]) => {
+      const { model, errors } = parseWorkflow(
+        [
+          "document:",
+          '  dsl: "1.0.3"',
+          "  namespace: test",
+          "  name: switch-default",
+          '  version: "0.1.0"',
+          "do:",
+          ...lines,
+        ].join("\n"),
+      );
+      expect(errors).toHaveLength(0);
+      return buildFlatGraph(model!);
+    };
+
+    const switchFor = (cases: string[]) =>
+      graphFor([
+        "  - decide:",
+        "      switch:",
+        ...cases,
+        "  - alpha:",
+        "      set: { a: 1 }",
+        "      then: exit",
+        "  - beta:",
+        "      set: { b: 1 }",
+        "      then: exit",
+      ]);
+
+    it.each([
+      {
+        name: "picks the case declaring no `when`, whatever it is named",
+        cases: [
+          "        - checkType:",
+          "            when: .t == 1",
+          "            then: alpha",
+          "        - hello:",
+          "            then: beta",
+        ],
+        expected: ["hello"],
+      },
+      {
+        name: "treats an empty `when` as no condition, as the SDK does",
+        cases: [
+          "        - conditional:",
+          "            when: .t == 1",
+          "            then: alpha",
+          "        - cleared:",
+          '            when: ""',
+          "            then: beta",
+        ],
+        expected: ["cleared"],
+      },
+      {
+        name: "picks an edge several cases share when one of them is the default",
+        cases: [
+          "        - conditional:",
+          "            when: .t == 1",
+          "            then: alpha",
+          "        - unconditional:",
+          "            then: alpha",
+        ],
+        expected: ["conditional / unconditional"],
+      },
+      {
+        name: "picks nothing when every case is conditional",
+        cases: [
+          "        - first:",
+          "            when: .t == 1",
+          "            then: alpha",
+          "        - second:",
+          "            when: .t == 2",
+          "            then: beta",
+        ],
+        expected: [],
+      },
+    ])("$name", ({ cases, expected }) => {
+      const graph = switchFor(cases);
+      const edgeIds = getDefaultCaseEdgeIds(graph);
+
+      expect(graph.edges.filter((edge) => edgeIds.has(edge.id)).map((edge) => edge.label)).toEqual(
+        expected,
+      );
+    });
+
+    it("picks a default case nested inside a container", () => {
+      const graph = graphFor([
+        "  - outer:",
+        "      do:",
+        "        - decide:",
+        "            switch:",
+        "              - conditional:",
+        "                  when: .t == 1",
+        "                  then: inner",
+        "              - otherwise:",
+        "                  then: exit",
+        "        - inner:",
+        "            set: { i: 1 }",
+      ]);
+
+      const edgeIds = getDefaultCaseEdgeIds(graph);
+      const edges = graph.edges.filter((edge) => edgeIds.has(edge.id));
+
+      expect(edges).toHaveLength(1);
+      expect(edges[0]?.label).toBe("otherwise");
+      expect(edges[0]?.sourceId).toBe("/do/outer/do/decide");
+    });
+
+    it("returns nothing for a workflow with no switch at all", () => {
+      const graph = graphFor(["  - initialize:", "      set: { a: 1 }"]);
+
+      expect(getDefaultCaseEdgeIds(graph)).toEqual(new Set());
     });
   });
 

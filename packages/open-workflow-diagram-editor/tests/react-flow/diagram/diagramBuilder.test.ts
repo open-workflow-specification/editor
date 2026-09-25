@@ -112,10 +112,6 @@ const assertEdgeHasBaseProperties = (edge: RF.Edge) => {
   });
 };
 
-const assertEdgeIsAnimated = (edge: RF.Edge) => {
-  expect(edge.animated).toBe(true);
-};
-
 const assertEdgeNodesExist = (edge: RF.Edge, nodeIdSet: Set<string>) => {
   expect(nodeIdSet.has(edge.source)).toBe(true);
   expect(nodeIdSet.has(edge.target)).toBe(true);
@@ -352,11 +348,6 @@ describe("diagramBuilder", () => {
         diagram.edges.forEach(assertEdgeHasBaseProperties);
       });
 
-      it("creates edges with animated property for default label", () => {
-        const defaultEdges = diagram.edges.filter((edge) => edge.data?.label === "default");
-        defaultEdges.forEach(assertEdgeIsAnimated);
-      });
-
       it("only creates edges for existing nodes", () => {
         diagram.edges.forEach((edge) => assertEdgeNodesExist(edge, nodeIdSet));
       });
@@ -411,6 +402,49 @@ describe("diagramBuilder", () => {
           expect(nodeIdSet.has(edge.source)).toBe(true);
           expect(nodeIdSet.has(edge.target)).toBe(true);
         });
+      });
+    });
+
+    describe("default switch case edge (animated)", () => {
+      it("animates the default case edge and leaves the conditional one alone", () => {
+        const content = JSON.stringify({
+          document: {
+            dsl: "1.0.3",
+            name: "switch-default",
+            version: "1.0.0",
+            namespace: "default",
+          },
+          do: [
+            {
+              decide: {
+                switch: [
+                  // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
+                  { conditional: { when: ".t == 1", then: "alpha" } },
+                  // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
+                  { hello: { then: "beta" } },
+                ],
+              },
+            },
+            // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
+            { alpha: { set: { a: 1 }, then: "exit" } },
+            // eslint-disable-next-line unicorn/no-thenable -- then is an Open Workflow Spec field
+            { beta: { set: { b: 1 }, then: "exit" } },
+          ],
+        });
+
+        const diagram = buildDiagramFromWorkflow(content);
+        const animatedByLabel = new Map(
+          diagram.edges
+            .filter((edge) => edge.source === "/do/decide")
+            .map((edge) => [edge.data?.label, edge.animated]),
+        );
+
+        expect(animatedByLabel).toEqual(
+          new Map([
+            ["hello", true],
+            ["conditional", false],
+          ]),
+        );
       });
     });
 

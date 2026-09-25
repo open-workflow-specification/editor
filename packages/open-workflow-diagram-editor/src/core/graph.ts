@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FlatGraph, FlatGraphNode, GraphNodeType } from "@openworkflowspec/sdk";
+import { FlatGraph, FlatGraphNode, GraphNodeType, Specification } from "@openworkflowspec/sdk";
 
 export function getNodesByType(graph: FlatGraph, type: GraphNodeType): FlatGraphNode[] {
   return graph.nodes.filter((node) => node.type === type);
@@ -30,6 +30,53 @@ export function getTaskReferences(graph: FlatGraph): Set<string> {
     }
   }
   return taskReferences;
+}
+
+/*
+ * Returns edge IDs for switch cases without a `when` condition (default cases).
+ * Default cases can have any name - they're identified by the absence of a condition.
+ */
+export function getDefaultCaseEdgeIds(graph: FlatGraph): Set<string> {
+  const defaultCaseNamesBySwitchId = new Map<string, Set<string>>();
+
+  for (const node of graph.nodes) {
+    if (node.type !== GraphNodeType.Switch) {
+      continue;
+    }
+
+    const cases = (node.task as Specification.SwitchTask | undefined)?.switch;
+    if (!Array.isArray(cases)) {
+      continue;
+    }
+
+    const names = new Set<string>();
+    for (const item of cases) {
+      const [name, switchCase] = Object.entries(item ?? {})[0] ?? [];
+      if (name !== undefined && !switchCase?.when) {
+        names.add(name);
+      }
+    }
+    if (names.size > 0) {
+      defaultCaseNamesBySwitchId.set(node.id, names);
+    }
+  }
+  const edgeIds = new Set<string>();
+  if (defaultCaseNamesBySwitchId.size === 0) {
+    return edgeIds;
+  }
+  for (const edge of graph.edges) {
+    const defaultCaseNames = defaultCaseNamesBySwitchId.get(edge.sourceId);
+    if (defaultCaseNames === undefined) {
+      continue;
+    }
+
+    const caseNames = (edge.label ?? "").split(" / ");
+    if (caseNames.some((name) => defaultCaseNames.has(name))) {
+      edgeIds.add(edge.id);
+    }
+  }
+
+  return edgeIds;
 }
 
 // Helper function to check if target is outside source's parent hierarchy
