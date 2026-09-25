@@ -59,6 +59,9 @@ export const en = {
   "toast.download.error": "Download failed",
   "sidebar.duration.title": "Enter an ISO 8601 duration, for example PT30S or PT5M",
   "sidebar.duration.placeholder": "PT30S",
+  "sidebar.mcpProtocolVersion.title":
+    "Enter an MCP protocol version date, for example 2025-06-18 or 2024-11-05",
+  "sidebar.mcpProtocolVersion.placeholder": "2025-06-18",
   "sidebar.then.flowDirectiveGroup": "Flow directive",
   "sidebar.then.taskGroup": "Task",
   "sidebar.field.item": "item",
@@ -76,10 +79,17 @@ export const en = {
   "sidebar.map.keyLabel": "Entry key",
   "sidebar.map.valueLabel": "Entry value",
   "sidebar.map.deleteEntry": "Delete entry",
+  "sidebar.stringList.addItem": "+ Add item",
+  "sidebar.stringList.itemPlaceholder": "value",
+  "sidebar.stringList.itemLabel": "List item",
+  "sidebar.stringList.deleteItem": "Delete item",
   "sidebar.guard.title": "Discard unsaved changes?",
   "sidebar.guard.description": "You have unsaved edits to this node. Leaving will discard them",
   "sidebar.guard.keepEditing": "Keep editing",
   "sidebar.guard.discard": "Discard",
+  "taskList.noTasks": "No child tasks defined.",
+  "taskList.label": "Task list",
+  "taskList.editHint": "Edit tasks by selecting them from the diagram",
 } as const;
 
 export type TranslationKeys = keyof typeof en;

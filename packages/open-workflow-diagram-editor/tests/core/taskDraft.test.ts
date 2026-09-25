@@ -212,4 +212,77 @@ describe("applyDirtyValues", () => {
     applyDirtyValues(original, allValues, new Set(["set.startEvent"]));
     expect(original.set.startEvent).toBe("${x}");
   });
+
+  it("writes constWrites for a sentinel-dirty root one-of path (call type change)", () => {
+    // Simulates: CallHTTP task, user switches to CallMCP, clicks Apply.
+    // The sentinel "__root__" is dirty; constWrites = { call: "mcp" }.
+    const original = { call: "http", with: { method: "GET", endpoint: "https://example.com" } };
+    const allValues = {
+      call: "http",
+      "with.method": "GET",
+      "with.endpoint": "https://example.com",
+    };
+    const dirtyPaths = new Set<string>();
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "mcp" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      dirtyPaths,
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    // The call property must be updated to the new variant's value.
+    expect(result.call).toBe("mcp");
+  });
+
+  it("constWrites for __root__ are placed at root level (not under __root__ key)", () => {
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "GET" };
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      new Set(),
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result).not.toHaveProperty("__root__");
+    expect(result.call).toBe("grpc");
+  });
+
+  it("constWrites are applied even when sentinelPath is independently dirty", () => {
+    // When the user edits a field in the new variant AND changes the variant,
+    // both the independent dirty path and the constWrites must be applied.
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "POST" };
+    const dirtyPaths = new Set(["with.method"]);
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      dirtyPaths,
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result.call).toBe("grpc");
+    expect((result.with as Record<string, unknown>).method).toBe("POST");
+  });
+
+  it("empty constWrites map leaves existing properties unchanged", () => {
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "GET" };
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map<string, Record<string, unknown>>();
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      new Set(),
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result.call).toBe("http");
+  });
 });

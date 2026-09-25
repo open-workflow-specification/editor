@@ -40,9 +40,15 @@ import type { Specification } from "@openworkflowspec/sdk";
 import { EditFormFooter } from "../../src/side-panel/EditFormFooter";
 import { TaskForm } from "../../src/side-panel/forms/TaskForm";
 import { MANAGING_GITHUB_ISSUES_WORKFLOW } from "../fixtures/workflows";
-import { renderWithProviders, createMockContextValue } from "../test-utils/render-helpers";
+import {
+  renderWithProviders,
+  createMockContextValue,
+  FormSpy,
+  type FormRef,
+} from "../test-utils/render-helpers";
 import { nodeAt, parseFixture } from "../test-utils";
-import { useEditSession, EditSessionProvider } from "../../src/side-panel/EditSession";
+import { EditSessionProvider } from "../../src/side-panel/EditSession";
+import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/FormField";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import { DiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
@@ -77,26 +83,8 @@ const EXPR_WORKFLOW = parseFixture({
 });
 const exprEmitNode = nodeAt(EXPR_WORKFLOW, EXPR_NODE_ID);
 
-// Sentinel path prefix used by OneOfFieldRow
-const SENTINEL_PREFIX = "__oneof__." as const;
 const DATA_PATH = "emit.event.with.data" as const;
-const SENTINEL_PATH = `${SENTINEL_PREFIX}${DATA_PATH}.__self__` as const;
-
-/**
- * FormSpy: rendered as a sibling of TaskForm inside the same EditSessionProvider.
- * Exposes the EditSession's form instance via a ref.
- */
-function FormSpy({
-  formRef,
-}: {
-  formRef: React.MutableRefObject<ReturnType<typeof useEditSession>["form"] | null>;
-}) {
-  const { form } = useEditSession();
-  React.useLayoutEffect(() => {
-    formRef.current = form;
-  });
-  return null;
-}
+const SENTINEL_PATH = `${SENTINEL_PREFIX}${DATA_PATH}${SENTINEL_SUFFIX}` as const;
 
 /**
  * Renders the emit TaskForm + EditFormFooter + a FormSpy sibling.
@@ -104,7 +92,7 @@ function FormSpy({
  */
 function renderEmitFooter() {
   const commitWorkflow = vi.fn();
-  const formRef = { current: null as ReturnType<typeof useEditSession>["form"] | null };
+  const formRef: FormRef = { current: null };
 
   renderWithProviders(
     <>
@@ -129,7 +117,7 @@ function renderEmitFooter() {
  */
 function renderExprEmitFooter() {
   const commitWorkflow = vi.fn();
-  const formRef = { current: null as ReturnType<typeof useEditSession>["form"] | null };
+  const formRef: FormRef = { current: null };
 
   renderWithProviders(
     <>
@@ -149,7 +137,7 @@ function renderExprEmitFooter() {
 }
 
 /** Simulate OneOfFieldRow.handleVariantChange for Data → Expression. */
-async function switchDataToExpression(form: ReturnType<typeof useEditSession>["form"]) {
+async function switchDataToExpression(form: FormRef["current"]) {
   await act(async () => {
     // Step 1: sentinel — marks form dirty
     form.setValue(SENTINEL_PATH as never, "Expression" as never, { shouldDirty: true });
@@ -159,7 +147,7 @@ async function switchDataToExpression(form: ReturnType<typeof useEditSession>["f
 }
 
 /** Simulate OneOfFieldRow.handleVariantChange for Expression → Data. */
-async function switchExpressionToData(form: ReturnType<typeof useEditSession>["form"]) {
+async function switchExpressionToData(form: FormRef["current"]) {
   await act(async () => {
     // Step 1: sentinel — marks form dirty ("Data" ≠ committed "Expression")
     form.setValue(SENTINEL_PATH as never, "Data" as never, { shouldDirty: true });
@@ -298,18 +286,14 @@ describe("EditFormFooter — emit task Expression→Data variant switch (express
     await switchExpressionToData(formRef.current!);
     await user.click(screen.getByRole("button", { name: "Apply" }));
 
-    // After apply the form is reset to the committed task (which has no data
-    // property). The old expression string "${ .payload }" must NOT appear in
-    // defaultValues — if it did, StructuredValueField's useEffect would
-    // restore it to the textarea, causing the stale expression to reappear.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const defaultValues = (formRef.current!.control as any)._defaultValues as Record<
-      string,
-      unknown
-    >;
-    const withSection = (defaultValues as { emit?: { event?: { with?: Record<string, unknown> } } })
-      ?.emit?.event?.with;
-    expect(withSection).not.toHaveProperty("data");
+    // Old expression must be gone from defaultValues (may be "" after padding).
+    const defaultValues = (
+      formRef.current!.control as unknown as {
+        _defaultValues: { emit?: { event?: { with?: Record<string, unknown> } } };
+      }
+    )._defaultValues;
+    const withSection = defaultValues?.emit?.event?.with;
+    expect(withSection?.data).not.toBe("${ .payload }");
   });
 });
 
@@ -329,17 +313,8 @@ describe("EditFormFooter — full round-trip: Data(obj)→Expression(ok)→Data(
    */
   function renderWithUpdatableTask(initialTask: Specification.Task, nodeId: string) {
     const commitWorkflow = vi.fn();
-    const formRef = { current: null as ReturnType<typeof useEditSession>["form"] | null };
+    const formRef: FormRef = { current: null };
 
-    function FormSpy() {
-      const { form } = useEditSession();
-      React.useLayoutEffect(() => {
-        formRef.current = form;
-      });
-      return null;
-    }
-
-    // Wrapper that holds task in state so we can update it via rerender.
     function Harness({ task }: { task: Specification.Task }) {
       const mockNode = {
         ...emitNode,
@@ -365,7 +340,7 @@ describe("EditFormFooter — full round-trip: Data(obj)→Expression(ok)→Data(
                     taskReference={mockNode.data.taskReference}
                   />
                   <EditFormFooter node={mockNode} />
-                  <FormSpy />
+                  <FormSpy formRef={formRef} />
                 </EditSessionProvider>
               </SidebarProvider>
             </I18nProvider>
@@ -459,14 +434,13 @@ describe("EditFormFooter — full round-trip: Data(obj)→Expression(ok)→Data(
       rerender(committedNoData);
     });
 
-    // After the task prop updates, defaultValues must not contain "data" or "ok"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const defaultValues = (formRef.current!.control as any)._defaultValues as Record<
-      string,
-      unknown
-    >;
-    const withSection = (defaultValues as { emit?: { event?: { with?: Record<string, unknown> } } })
-      ?.emit?.event?.with;
-    expect(withSection).not.toHaveProperty("data");
+    // Old expression must be gone from defaultValues (may be "" after padding).
+    const defaultValues = (
+      formRef.current!.control as unknown as {
+        _defaultValues: { emit?: { event?: { with?: Record<string, unknown> } } };
+      }
+    )._defaultValues;
+    const withSection = defaultValues?.emit?.event?.with;
+    expect(withSection?.data).not.toBe("ok");
   });
 });

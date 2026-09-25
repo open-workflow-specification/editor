@@ -17,9 +17,11 @@
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import type { ChildTaskListField as ChildTaskListFieldDescriptor } from "../../../core/schemaToFormFields";
+import { TaskListDisplay } from "./TaskListDisplay";
 
 // ---------------------------------------------------------------------------
-// ChildTaskListField — read-only list of child task names
+// ChildTaskListField — reads the RHF-registered task array at field.path
+// and delegates all rendering to TaskListDisplay.
 // ---------------------------------------------------------------------------
 
 export type ChildTaskListFieldProps = {
@@ -33,25 +35,7 @@ export function ChildTaskListField({ field }: ChildTaskListFieldProps) {
     <Controller
       name={field.path}
       control={control}
-      render={({ field: rhfField }) => {
-        const list = rhfField.value;
-        if (!Array.isArray(list) || list.length === 0) {
-          return <span className="dec-form-child-list-empty">—</span>;
-        }
-        const names = list
-          .map((entry) => (entry && typeof entry === "object" ? Object.keys(entry)[0] : undefined))
-          .filter(Boolean) as string[];
-
-        return (
-          <ul className="dec-form-child-list">
-            {names.map((name) => (
-              <li key={name} className="dec-form-child-list-item">
-                {name}
-              </li>
-            ))}
-          </ul>
-        );
-      }}
+      render={({ field: rhfField }) => <TaskListDisplay tasks={rhfField.value} />}
     />
   );
 }

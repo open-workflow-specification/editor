@@ -22,6 +22,8 @@ import {
   BooleanControl,
   EnumControl,
   DurationField,
+  McpProtocolVersionField,
+  StringListField,
   ThenField,
   ChildTaskListField,
   StructuredValueField,
@@ -52,10 +54,14 @@ export function FieldControl({ field, id }: FieldControlProps) {
       return <EnumControl field={field} {...idProp} />;
     case "duration":
       return <DurationField field={field} {...idProp} />;
+    case "mcp-protocol-version":
+      return <McpProtocolVersionField field={field} {...idProp} />;
     case "then":
       return <ThenField field={field} {...idProp} />;
     case "child-task-list":
       return <ChildTaskListField field={field} />;
+    case "string-list":
+      return <StringListField field={field} />;
     case "json":
       return <StructuredValueField field={field} {...idProp} />;
   }

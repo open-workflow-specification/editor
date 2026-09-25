@@ -17,8 +17,11 @@
 export { KeyValueMapField } from "./KeyValueMapField";
 export { StructuredValueField } from "./StructuredValueField";
 export { DurationField } from "./DurationField";
+export { McpProtocolVersionField } from "./McpProtocolVersionField";
+export { StringListField } from "./StringListField";
 export { ThenField } from "./ThenField";
 export { ChildTaskListField } from "./ChildTaskListField";
+export { TaskListDisplay } from "./TaskListDisplay";
 export { ScrollableTextField } from "./ScrollableTextField";
 export { useFieldError, FieldWithError } from "./fieldHelpers";
 export { StringControl } from "./StringControl";

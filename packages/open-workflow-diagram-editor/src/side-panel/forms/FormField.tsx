@@ -114,7 +114,6 @@ function FieldLabel({
               type="button"
               className="dec-form-field-help"
               aria-label={`${t("aria.help")}: ${label}`}
-              tabIndex={0}
             >
               <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
             </button>
@@ -205,17 +204,17 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 
 function OneOfFieldRow({ field }: { field: OneOfField }) {
   const { isReadOnly, taskData } = useTaskFormContext();
-  const {control, getValues, setValue, register} = useFormContext<Record<string, unknown>>();
+  const { control, getValues, setValue, register } = useFormContext<Record<string, unknown>>();
   const sentinelPath = `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
 
   // Watched so the row follows a reset as well as switch
-  const sentinelLabel = useWatch({control, name: sentinelPath as never}) as unknown
+  const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
 
   const derivedIdx = React.useMemo(() => {
-    if(typeof sentinelLabel === "string" && sentinelLabel !==""){
-      const chosen = field.variants.findIndex((v)=> v.label === sentinelLabel)
-      if(chosen !== -1){
-        return chosen
+    if (typeof sentinelLabel === "string" && sentinelLabel !== "") {
+      const chosen = field.variants.findIndex((v) => v.label === sentinelLabel);
+      if (chosen !== -1) {
+        return chosen;
       }
     }
     // For the root one-of the relevant data is the whole task object;
@@ -234,14 +233,15 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
     setPrevDerivedIdx(derivedIdx);
   }
 
-  // Per-variant saved values — preserves field data when switching variants
-  // and then switching back, so the user does not have to re-type values.
+  // Saved field values per variant — restored when switching back.
+  // Cleared when the committed task changes to avoid stale data after reset.
   const savedVariantValues = React.useRef<Map<number, Record<string, unknown>>>(new Map());
+  React.useEffect(() => {
+    savedVariantValues.current.clear();
+  }, [taskData]);
   const sentinelRef = register(sentinelPath as never);
 
-  // The initial sentinel value is the committed variant label (derived from
-  // taskData). This is written once on mount so that switching back to the
-  // original variant restores the sentinel to its default value and clears dirty.
+  // Sentinel default: the committed variant label. Switching back to it clears dirty.
   const commitedVariantLabel = field.variants[derivedIdx]?.label ?? "";
 
   const handleVariantChange = React.useCallback(
@@ -262,15 +262,11 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
       setSelectedVariantIdx(newIdx);
 
       const newLabel = field.variants[newIdx]?.label ?? "";
-      // Update sentinel: always dirty - the default is the committed variants label so returning it clears the flag
+      // Always mark sentinel dirty — the default is the committed label, so switching back clears it.
       setValue(sentinelPath as never, newLabel as never, { shouldDirty: true });
 
-      // Restore saved values for the new variant if previously stored;
-      // otherwise clear its leaf paths so stale values from the old variant.
-      // Exception: paths that are shared with the current variant AND whose
-      // field kind is identical are kept as-is. Paths shared by variants of
-      // different kinds must be cleared — the stored value is meaningless across
-      // the kind boundary.
+      // Restore saved values for the new variant if available; otherwise clear
+      // leaf paths, keeping shared paths whose field kind is unchanged.
       const saved = savedVariantValues.current.get(newIdx);
       const newVariant = field.variants[newIdx];
       const currentKindByPath = currentVariant
@@ -288,7 +284,9 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
         for (const [path, newKind] of newKindByPath) {
           const currentKind = currentKindByPath.get(path);
           if (currentKind !== newKind) {
-            setValue(path, undefined, { shouldDirty: false });
+            // Use "" not undefined: RHF won't overwrite a Controller's held value
+            // with undefined, leaving stale data from the previous variant.
+            setValue(path, "" as never, { shouldDirty: false });
           }
         }
       }
@@ -405,30 +403,45 @@ function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
 export function computeSentinelDefaults(
   fields: FormFieldDescriptor[],
   taskData: Record<string, unknown>,
+  /** Optional: current sentinel label values keyed by field path (dot-notation).
+   *  Used as a fallback when no variant matches the committed data — preserves
+   *  the user's last variant selection instead of snapping back to index 0. */
+  currentSentinels: Record<string, string> = {},
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  collectSentinelDefaults(fields, taskData, result);
+  collectSentinelDefaults(fields, taskData, currentSentinels, result);
   return result;
 }
 
 function collectSentinelDefaults(
   fields: FormFieldDescriptor[],
   taskData: Record<string, unknown>,
+  currentSentinels: Record<string, string>,
   result: Record<string, unknown>,
 ): void {
   for (const f of fields) {
     if (f.kind === "object") {
-      collectSentinelDefaults(f.children, taskData, result);
+      collectSentinelDefaults(f.children, taskData, currentSentinels, result);
     } else if (f.kind === "one-of") {
       const dataAtPath = f.path === "__root__" ? taskData : getNestedValue(taskData, f.path);
       const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
-      const selectedIdx = idx >= 0 ? idx : 0;
+      let selectedIdx: number;
+      if (idx >= 0) {
+        selectedIdx = idx;
+      } else {
+        // No variant matches — fall back to the sentinel label, then to 0.
+        const fallbackLabel = currentSentinels[f.path];
+        const fallbackIdx = fallbackLabel
+          ? f.variants.findIndex((v) => v.label === fallbackLabel)
+          : -1;
+        selectedIdx = fallbackIdx >= 0 ? fallbackIdx : 0;
+      }
       const selected = f.variants[selectedIdx];
       setNestedSentinel(result, f.path, selected?.label ?? "");
       // Only the selected variant's fields are mounted, so only its nested one-ofs
       // have a sentinel to match
       if (selected) {
-        collectSentinelDefaults(selected.fields, taskData, result);
+        collectSentinelDefaults(selected.fields, taskData, currentSentinels, result);
       }
     }
   }

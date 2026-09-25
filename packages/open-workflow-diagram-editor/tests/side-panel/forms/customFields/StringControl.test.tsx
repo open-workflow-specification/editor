@@ -14,27 +14,11 @@
  * limitations under the License.
  */
 
-/**
- * Tests for StringControl's kind-boundary clear behaviour.
- *
- * When a OneOf switches between URI (plain string) and Expression (RE string)
- * variants that share the same path, handleVariantChange calls
- * setValue(path, undefined, { shouldDirty: false }) to clear the stale value.
- * React unmounts the old variant's StringControl and mounts the new one.
- * RHF's Controller restores _defaultValues into _formValues on mount, so
- * rhfField.value would show the other variant's committed value.
- *
- * StringControl must detect this via getValues(path) + isDirty and show an
- * empty input instead — mirroring the fix in StructuredValueField.
- *
- * Uses the same two-phase render pattern as OneOfFieldRow.test.tsx: mount in
- * "other" phase so _state.mount = true, then switch to the target variant.
- */
-
 import { describe, it, expect } from "vitest";
 import * as React from "react";
 import { render, screen, act } from "@testing-library/react";
-import { FormProvider, useForm } from "react-hook-form";
+import userEvent from "@testing-library/user-event";
+import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import { en } from "../../../../src/i18n/locales/en";
 import { StringControl } from "../../../../src/side-panel/forms/customFields/StringControl";
@@ -52,6 +36,7 @@ const uriField: StringField = {
   required: true,
   multiline: false,
   isRuntimeExpression: false,
+  hasExpressionSibling: true,
   placeholder: "https://example.com/api/{id}",
 };
 
@@ -72,13 +57,9 @@ function getInput() {
 }
 
 // ---------------------------------------------------------------------------
-// Two-phase wrapper — mirrors the handleVariantChange pattern
+// Wrappers
 // ---------------------------------------------------------------------------
 
-/**
- * Mounts with a registered dummy input at `path` (so _state.mount = true),
- * then switches to the target StringControl after the test calls doSwitch().
- */
 function TwoPhaseWrapper({
   initialField,
   targetField,
@@ -116,112 +97,111 @@ function TwoPhaseWrapper({
   );
 }
 
+function PlainWrapper({
+  field,
+  defaultValues,
+  formRef,
+}: {
+  field: StringField;
+  defaultValues: Record<string, unknown>;
+  formRef?: React.MutableRefObject<UseFormReturn<Record<string, unknown>> | null>;
+}) {
+  const form = useForm<Record<string, unknown>>({ defaultValues });
+
+  React.useLayoutEffect(() => {
+    if (formRef) formRef.current = form;
+  });
+
+  return (
+    <I18nProvider locale="en" dictionaries={{ en }}>
+      <TaskFormContext.Provider value={taskFormContextValue}>
+        <FormProvider {...form}>
+          <StringControl field={field} />
+        </FormProvider>
+      </TaskFormContext.Provider>
+    </I18nProvider>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe("StringControl — kind-boundary clear on variant switch", () => {
-  it("shows empty input when Expression→URI: committed value is ${...} but URI variant is mounted", async () => {
-    // defaultValues has an expression (committed variant was Expression).
-    // handleVariantChange clears the path (shouldDirty:false), then React
-    // mounts the URI StringControl. It must show empty, not "${.source}".
-    const defaults = { emit: { event: { with: { source: "${.source}" } } } };
-    const triggerRef = React.createRef() as React.MutableRefObject<(() => void) | undefined>;
+  it.each([
+    {
+      direction: "Expression→URI",
+      initial: exprField,
+      target: uriField,
+      committedValue: "${.source}",
+      expectedPlaceholder: "https://example.com/api/{id}",
+    },
+    {
+      direction: "URI→Expression",
+      initial: uriField,
+      target: exprField,
+      committedValue: "https://example.com",
+      expectedPlaceholder: "${...}",
+    },
+  ])(
+    "shows empty input when $direction: committed value from other variant is not shown",
+    async ({ initial, target, committedValue, expectedPlaceholder }) => {
+      const defaults = { emit: { event: { with: { source: committedValue } } } };
+      const triggerRef = React.createRef() as React.MutableRefObject<(() => void) | undefined>;
 
-    render(
-      <TwoPhaseWrapper
-        initialField={exprField}
-        targetField={uriField}
-        defaultValues={defaults}
-        triggerRef={triggerRef}
-        onSwitch={(form) => {
-          // Mirror handleVariantChange: clear the path at the kind boundary.
-          form.setValue(uriField.path as never, undefined as never, { shouldDirty: false });
-        }}
-      />,
-    );
-
-    await act(async () => {
-      triggerRef.current?.();
-    });
-
-    expect(getInput().value).toBe("");
-    expect(getInput().placeholder).toBe("https://example.com/api/{id}");
-  });
-
-  it("shows empty input when URI→Expression: committed value is a URI but Expression variant is mounted", async () => {
-    // defaultValues has a URI (committed variant was URI).
-    // handleVariantChange clears the path, then mounts Expression StringControl.
-    // It must show empty, not "https://example.com".
-    const defaults = { emit: { event: { with: { source: "https://example.com" } } } };
-    const triggerRef = React.createRef() as React.MutableRefObject<(() => void) | undefined>;
-
-    render(
-      <TwoPhaseWrapper
-        initialField={uriField}
-        targetField={exprField}
-        defaultValues={defaults}
-        triggerRef={triggerRef}
-        onSwitch={(form) => {
-          form.setValue(exprField.path as never, undefined as never, { shouldDirty: false });
-        }}
-      />,
-    );
-
-    await act(async () => {
-      triggerRef.current?.();
-    });
-
-    expect(getInput().value).toBe("");
-    expect(getInput().placeholder).toBe("${...}");
-  });
-
-  it("shows the committed URI on normal task open (no variant switch)", () => {
-    // Normal flow: task opens with a URI committed — no prior variant switch.
-    // StringControl must show the committed value.
-    const defaults = { emit: { event: { with: { source: "https://example.com/events" } } } };
-
-    function PlainWrapper() {
-      const form = useForm<Record<string, unknown>>({ defaultValues: defaults });
-      return (
-        <I18nProvider locale="en" dictionaries={{ en }}>
-          <TaskFormContext.Provider value={taskFormContextValue}>
-            <FormProvider {...form}>
-              <StringControl field={uriField} />
-            </FormProvider>
-          </TaskFormContext.Provider>
-        </I18nProvider>
+      render(
+        <TwoPhaseWrapper
+          initialField={initial}
+          targetField={target}
+          defaultValues={defaults}
+          triggerRef={triggerRef}
+          onSwitch={(form) => {
+            form.setValue(target.path as never, undefined as never, { shouldDirty: false });
+          }}
+        />,
       );
-    }
 
-    render(<PlainWrapper />);
-    expect(getInput().value).toBe("https://example.com/events");
+      await act(async () => {
+        triggerRef.current?.();
+      });
+
+      expect(getInput().value).toBe("");
+      expect(getInput().placeholder).toBe(expectedPlaceholder);
+    },
+  );
+
+  it.each([
+    {
+      label: "committed URI",
+      field: uriField,
+      committedValue: "https://example.com/events",
+    },
+    {
+      label: "committed expression",
+      field: exprField,
+      committedValue: "${.source}",
+    },
+  ])("shows the $label on normal task open (no variant switch)", ({ field, committedValue }) => {
+    const defaults = { emit: { event: { with: { source: committedValue } } } };
+    render(<PlainWrapper field={field} defaultValues={defaults} />);
+    expect(getInput().value).toBe(committedValue);
   });
 
-  it("shows the committed expression on normal task open (no variant switch)", () => {
-    const defaults = { emit: { event: { with: { source: "${.source}" } } } };
-
-    function PlainWrapper() {
-      const form = useForm<Record<string, unknown>>({ defaultValues: defaults });
-      return (
-        <I18nProvider locale="en" dictionaries={{ en }}>
-          <TaskFormContext.Provider value={taskFormContextValue}>
-            <FormProvider {...form}>
-              <StringControl field={exprField} />
-            </FormProvider>
-          </TaskFormContext.Provider>
-        </I18nProvider>
-      );
-    }
-
-    render(<PlainWrapper />);
-    expect(getInput().value).toBe("${.source}");
+  it("plain string field (isRuntimeExpression=false) shows expression-like value as-is", () => {
+    const plainField: StringField = {
+      kind: "string",
+      path: "with.authentication.bearer.token",
+      label: "token",
+      required: true,
+      multiline: false,
+      isRuntimeExpression: false,
+    };
+    const defaults = { with: { authentication: { bearer: { token: "${ .token }" } } } };
+    render(<PlainWrapper field={plainField} defaultValues={defaults} />);
+    expect(getInput().value).toBe("${ .token }");
   });
 
   it("shows restored URI snapshot when switching back to URI (snapshot restore via setValue)", async () => {
-    // User had typed a URI, switched away to Expression, then back to URI.
-    // handleVariantChange restores the saved snapshot via setValue(path, uri, { shouldDirty: true }).
-    // The URI StringControl must show the restored value, not be empty.
     const defaults = { emit: { event: { with: { source: "https://original.com" } } } };
     const triggerRef = React.createRef() as React.MutableRefObject<(() => void) | undefined>;
 
@@ -232,7 +212,6 @@ describe("StringControl — kind-boundary clear on variant switch", () => {
         defaultValues={defaults}
         triggerRef={triggerRef}
         onSwitch={(form) => {
-          // Simulate restore: savedVariantValues had the original URI.
           form.setValue(uriField.path as never, "https://original.com" as never, {
             shouldDirty: true,
           });
@@ -245,5 +224,38 @@ describe("StringControl — kind-boundary clear on variant switch", () => {
     });
 
     expect(getInput().value).toBe("https://original.com");
+  });
+});
+
+describe("StringControl — stale value after form.reset()", () => {
+  it("shows the new value after form.reset() with a different value", async () => {
+    const defaults = { emit: { event: { with: { source: "${.url}" } } } };
+    const formRef = { current: null } as React.MutableRefObject<UseFormReturn<
+      Record<string, unknown>
+    > | null>;
+
+    render(<PlainWrapper field={exprField} defaultValues={defaults} formRef={formRef} />);
+    expect(getInput().value).toBe("${.url}");
+
+    await act(async () => {
+      formRef.current!.reset({ emit: { event: { with: { source: "${.newUrl}" } } } });
+    });
+
+    expect(getInput().value).toBe("${.newUrl}");
+  });
+});
+
+describe("StringControl — user interaction", () => {
+  it("preserves user-typed value even when it does not match defaultValues", async () => {
+    const user = userEvent.setup();
+    const defaults = { emit: { event: { with: { source: "https://original.com" } } } };
+
+    render(<PlainWrapper field={uriField} defaultValues={defaults} />);
+    expect(getInput().value).toBe("https://original.com");
+
+    await user.clear(getInput());
+    await user.type(getInput(), "https://new.com");
+
+    expect(getInput().value).toBe("https://new.com");
   });
 });

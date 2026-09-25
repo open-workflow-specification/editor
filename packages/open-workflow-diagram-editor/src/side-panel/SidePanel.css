@@ -249,14 +249,6 @@
   .dec-root .dec-sidebar-form-footer-actions{
     @apply dec:flex dec:shrink-0 dec:items-center dec:gap-2;
   }
-
-  .dec-root .dec-sidebar-form-footer-count{
-    @apply dec:min-w-0 dec:truncate dec:text-xs dec:font-medium dec:text-blue-600;
-  }
-
-  .dec-root.dark .dec-sidebar-form-footer-count{
-    @apply dec:text-blue-400;
-  }
   /* End Sidebar Footer */
 
   .dec-root .dec-sidebar-edit-fields {
@@ -685,27 +677,97 @@
     @apply dec:border-gray-700/60;
   }
 
-  /* ── Child task list ─────────────────────────────────────────────────── */
+  /* ── Task list display (TaskListDisplay) ────────────────────────────── */
+  /* Used by ChildTaskListField and reusable anywhere a task array is shown */
 
-  .dec-root .dec-form-child-list {
-    @apply dec:flex dec:flex-col dec:gap-0.5 dec:pl-0 dec:list-none;
+  .dec-root .dec-task-list {
+    @apply dec:flex dec:flex-col dec:gap-1
+      dec:rounded-md
+      dec:border dec:border-dashed dec:border-gray-300
+      dec:bg-gray-50
+      dec:px-3 dec:py-2;
   }
 
-  .dec-root .dec-form-child-list-item {
-    @apply dec:text-xs dec:text-gray-700 dec:px-2 dec:py-1
-      dec:rounded-sm dec:bg-gray-100;
-    font-family: var(--dec-font-mono);
+  .dec-root.dark .dec-task-list {
+    @apply dec:border-gray-600 dec:bg-gray-800/40;
   }
 
-  .dec-root.dark .dec-form-child-list-item {
-    @apply dec:text-gray-300 dec:bg-gray-800;
+  /* Empty state: icon + text centred in one row */
+  .dec-root .dec-task-list--empty {
+    @apply dec:flex-row dec:items-center dec:gap-1.5;
   }
 
-  .dec-root .dec-form-child-list-empty {
+  .dec-root .dec-task-list-icon {
+    @apply dec:size-4 dec:shrink-0 dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-task-list-icon {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-task-list-empty-text {
     @apply dec:text-xs dec:text-gray-400 dec:italic;
   }
 
-  .dec-root.dark .dec-form-child-list-empty {
+  .dec-root.dark .dec-task-list-empty-text {
+    @apply dec:text-gray-500;
+  }
+
+  /* Chip list */
+  .dec-root .dec-task-list-chips {
+    @apply dec:flex dec:flex-col dec:gap-1 dec:pl-0 dec:list-none;
+  }
+
+  .dec-root .dec-task-list-chip {
+    @apply dec:flex dec:items-center dec:gap-1.5
+      dec:rounded-sm
+      dec:border dec:border-gray-200
+      dec:bg-white
+      dec:px-2 dec:py-1;
+  }
+
+  .dec-root.dark .dec-task-list-chip {
+    @apply dec:border-gray-700 dec:bg-gray-800;
+  }
+
+  .dec-root .dec-task-list-chip-dot {
+    @apply dec:size-1.5 dec:shrink-0 dec:rounded-full dec:bg-blue-500;
+  }
+
+  .dec-root .dec-task-list-chip-name {
+    @apply dec:text-xs dec:font-medium dec:text-gray-800 dec:truncate;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-task-list-chip-name {
+    @apply dec:text-gray-200;
+  }
+
+  .dec-root .dec-task-list-chip-type {
+    @apply dec:ml-auto dec:shrink-0 dec:text-xs dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-task-list-chip-type {
+    @apply dec:text-gray-500;
+  }
+
+  /* "Edit in diagram" hint below chips */
+  .dec-root .dec-task-list-hint {
+    @apply dec:flex dec:items-center dec:gap-1
+      dec:pt-1.5 dec:mt-0.5
+      dec:border-t dec:border-gray-200
+      dec:text-xs dec:text-gray-400 dec:italic;
+  }
+
+  .dec-root.dark .dec-task-list-hint {
+    @apply dec:border-gray-700 dec:text-gray-500;
+  }
+
+  .dec-root .dec-task-list-hint-icon {
+    @apply dec:size-3 dec:shrink-0 dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-task-list-hint-icon {
     @apply dec:text-gray-500;
   }
 
@@ -872,6 +934,71 @@
     @apply dec:h-2.5 dec:w-2.5 dec:shrink-0;
   }
 
+  /* ── String list field (.dec-list-*) ─────────────────────────────────── */
+  /* Reuses dec-map-group border/header/delete-btn styles; only defines the
+     list-specific row layout (single full-width input, no key column). */
+
+  .dec-root .dec-list-group {
+    @apply dec:flex dec:flex-col dec:rounded-md
+      dec:border dec:border-gray-200 dec:overflow-hidden;
+  }
+
+  .dec-root.dark .dec-list-group {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-list-rows {
+    @apply dec:flex dec:flex-col
+      dec:border-t dec:border-gray-200;
+  }
+
+  .dec-root.dark .dec-list-rows {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-list-row {
+    @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:py-1
+      dec:border-b dec:border-gray-100;
+  }
+
+  .dec-root .dec-list-row:last-child {
+    @apply dec:border-b-0;
+  }
+
+  .dec-root.dark .dec-list-row {
+    @apply dec:border-gray-700/50;
+  }
+
+  .dec-root.dark .dec-list-row:last-child {
+    @apply dec:border-b-0;
+  }
+
+  /* Value input fills the full row width */
+  .dec-root .dec-list-value-input {
+    @apply dec:h-6 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+    font-family: var(--dec-font-mono);
+  }
+
+  /* Read-only row */
+  .dec-root .dec-list-row-readonly {
+    @apply dec:px-2 dec:py-1
+      dec:text-xs dec:text-gray-600 dec:break-all
+      dec:border-b dec:border-gray-100;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root .dec-list-row-readonly:last-child {
+    @apply dec:border-b-0;
+  }
+
+  .dec-root.dark .dec-list-row-readonly {
+    @apply dec:text-gray-300 dec:border-gray-700/50;
+  }
+
+  .dec-root.dark .dec-list-row-readonly:last-child {
+    @apply dec:border-b-0;
+  }
+
   /* ── End task form ───────────────────────────────────────────────────── */
 
   /* ── Navigation discard guard ────────────────────────────────────────── */
@@ -945,6 +1072,6 @@
       animation: none;
     }
   }
- /* ── End navigattion guard ───────────────────────────────────── */
+ /* ── End navigation guard ───────────────────────────────────── */
 }
 

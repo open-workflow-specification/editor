@@ -18,27 +18,26 @@ import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
-import type { DurationField as DurationFieldDescriptor } from "../../../core/schemaToFormFields";
+import type { McpProtocolVersionField as McpProtocolVersionFieldDescriptor } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
-// ISO 8601 duration regex
+// ISO 8601 calendar-date pattern  (YYYY-MM-DD)
 // ---------------------------------------------------------------------------
 
-export const ISO_8601_DURATION_PATTERN =
-  "^P(?!$)(\\d+(?:\\.\\d+)?Y)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?W)?(\\d+(?:\\.\\d+)?D)?(T(?=\\d)(\\d+(?:\\.\\d+)?H)?(\\d+(?:\\.\\d+)?M)?(\\d+(?:\\.\\d+)?S)?)?$";
+export const MCP_PROTOCOL_VERSION_PATTERN = "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$";
 
 // ---------------------------------------------------------------------------
-// DurationField — ISO 8601 duration input backed by react-hook-form
+// McpProtocolVersionField — date-based MCP protocol version input
 // ---------------------------------------------------------------------------
 
-export type DurationFieldProps = {
-  field: DurationFieldDescriptor;
+export type McpProtocolVersionFieldProps = {
+  field: McpProtocolVersionFieldDescriptor;
   id?: string;
 };
 
-export function DurationField({ field, id }: DurationFieldProps) {
+export function McpProtocolVersionField({ field, id }: McpProtocolVersionFieldProps) {
   const { control } = useFormContext<Record<string, unknown>>();
   const { isReadOnly } = useTaskFormContext();
   const { t } = useI18n();
@@ -60,11 +59,11 @@ export function DurationField({ field, id }: DurationFieldProps) {
             onChange={rhfField.onChange}
             onBlur={rhfField.onBlur}
             name={rhfField.name}
-            pattern={ISO_8601_DURATION_PATTERN}
-            title={t("sidebar.duration.title")}
+            pattern={MCP_PROTOCOL_VERSION_PATTERN}
+            title={t("sidebar.mcpProtocolVersion.title")}
             disabled={isReadOnly}
             readOnly={isReadOnly}
-            placeholder={t("sidebar.duration.placeholder")}
+            placeholder={t("sidebar.mcpProtocolVersion.placeholder")}
             aria-invalid={errorMessage !== undefined || undefined}
           />
         </FieldWithError>
