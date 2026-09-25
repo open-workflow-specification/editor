@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
-import { ClipboardPen, Download, ClipboardCheck, FileImage } from "lucide-react";
+import { ClipboardPen, Download, ClipboardCheck, FileImage, Import } from "lucide-react";
 import { useReactFlow, useStore } from "@xyflow/react";
 import { Button } from "@/components/ui/button";
 import { exportToMermaid } from "@/core";
@@ -26,12 +26,13 @@ import { exportDiagramAsPng } from "@/lib/exportPng";
 import { sanitizeFilename } from "@/lib/utils";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import type { Specification } from "@openworkflowspec/sdk";
-import { toast } from "sonner";
 
 export function WorkflowActions({ model }: { model: Specification.Workflow }): React.JSX.Element {
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
+  const [downloadingType, setDownloadingType] = React.useState<"mermaid" | "png" | null>(null);
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const downloadTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const reactFlowInstance = useReactFlow();
   const diagramDomNode = useStore((s) => s.domNode);
   const { isExporting, setIsExporting } = useDiagramEditorContext();
@@ -40,6 +41,10 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
     return () => {
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
+      }
+
+      if (downloadTimeoutRef.current) {
+        clearTimeout(downloadTimeoutRef.current);
       }
     };
   }, []);
@@ -59,9 +64,10 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         copyTimeoutRef.current = null;
       }, 2000);
     } catch (error) {
-      toast.error(t("toast.clipboard.error"), {
-        description: error instanceof Error ? error.message : undefined,
-      });
+      console.error(
+        "Failed to copy Mermaid code:",
+        error instanceof Error ? error.message : undefined,
+      );
     }
   };
 
@@ -70,11 +76,21 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
       const mermaidCode = exportToMermaid(model);
       const filename = `${sanitizeFilename(model.document?.name)}.mmd`;
       downloadFile(mermaidCode, filename);
-      toast.success(t("toast.download.success"));
+      setDownloadingType("mermaid");
+
+      if (downloadTimeoutRef.current) {
+        clearTimeout(downloadTimeoutRef.current);
+      }
+
+      downloadTimeoutRef.current = setTimeout(() => {
+        setDownloadingType(null);
+        downloadTimeoutRef.current = null;
+      }, 2000);
     } catch (error) {
-      toast.error(t("toast.download.error"), {
-        description: error instanceof Error ? error.message : undefined,
-      });
+      console.error(
+        "Failed to download Mermaid file:",
+        error instanceof Error ? error.message : undefined,
+      );
     }
   };
 
@@ -86,11 +102,22 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         `${sanitizeFilename(model.document?.name)}.png`,
         diagramDomNode,
       );
-      toast.success(t("toast.download.success"));
+
+      setDownloadingType("png");
+
+      if (downloadTimeoutRef.current) {
+        clearTimeout(downloadTimeoutRef.current);
+      }
+
+      downloadTimeoutRef.current = setTimeout(() => {
+        setDownloadingType(null);
+        downloadTimeoutRef.current = null;
+      }, 2000);
     } catch (error) {
-      toast.error(t("toast.download.error"), {
-        description: error instanceof Error ? error.message : undefined,
-      });
+      console.error(
+        "Failed to export diagram as PNG:",
+        error instanceof Error ? error.message : undefined,
+      );
     } finally {
       setIsExporting(false);
     }
@@ -113,8 +140,10 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         size="sm"
         className="dec:cursor-pointer"
       >
-        <Download />
-        {t("sidebar.exportMermaid.download")}
+        {downloadingType === "mermaid" ? <Import /> : <Download />}
+        {downloadingType === "mermaid"
+          ? t("sidebar.export.downloading")
+          : t("sidebar.exportMermaid.download")}
       </Button>
       <Button
         onClick={handleExportPng}
@@ -123,8 +152,12 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         className="dec:cursor-pointer"
         disabled={isExporting}
       >
-        <FileImage />
-        {t("sidebar.exportPng.download")}
+        {downloadingType === "png" ? <Import /> : <FileImage />}
+        {isExporting
+          ? t("sidebar.export.downloading")
+          : downloadingType === "png"
+            ? t("sidebar.export.downloading")
+            : t("sidebar.exportPng.download")}
       </Button>
     </>
   );

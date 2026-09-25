@@ -44,6 +44,7 @@ export const en = {
   "sidebar.exportMermaid.download": "Download as Mermaid File",
   "sidebar.exportMermaid.copied": "Copied!",
   "sidebar.exportPng.download": "Download as PNG",
+  "sidebar.export.downloading": "Downloading",
   "aria.minimap.hide": "Hide minimap",
   "aria.minimap.show": "Show minimap",
   "aria.badge": "Badge:",
@@ -53,9 +54,6 @@ export const en = {
   "aria.panel.exportActions": "Export actions",
   "workflowError.autoLayout.title": "Layout Error",
   "workflowError.autoLayout.message": "Failed to apply auto-layout to the diagram.",
-  "toast.clipboard.error": "Failed to copy",
-  "toast.download.success": "Download started",
-  "toast.download.error": "Download failed",
 } as const;
 
 export type TranslationKeys = keyof typeof en;
