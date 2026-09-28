@@ -35,6 +35,8 @@ const FIT_VIEW_OPTIONS: RF.FitViewOptions = {
   duration: 400,
 };
 
+const INSTANT_FIT_VEW_OPTIONS: RF.FitViewOptions = { ...FIT_VIEW_OPTIONS, duration: 0 };
+
 const applyEdgeZIndex = <T extends RF.Edge>(edges: T[]): T[] =>
   edges.map((edge) => ({
     ...edge,
@@ -76,7 +78,6 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
   const pendingViewportRestoreRef = React.useRef(pendingViewportRestore);
 
-  const isReadOnlyRef = React.useRef(isReadOnly);
   const modelRef = React.useRef(model);
   // Function refs — callbacks change identity across renders but the post-layout
   // setTimeout must always invoke the latest version without re-running layout.
@@ -87,23 +88,15 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   React.useLayoutEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
     pendingViewportRestoreRef.current = pendingViewportRestore;
-    isReadOnlyRef.current = isReadOnly;
     modelRef.current = model;
     submitModelRef.current = submitModel;
     clearPendingViewportRestoreRef.current = clearPendingViewportRestore;
-  }, [
-    selectedNodeId,
-    pendingViewportRestore,
-    isReadOnly,
-    model,
-    submitModel,
-    clearPendingViewportRestore,
-  ]);
+  }, [selectedNodeId, pendingViewportRestore, model, submitModel, clearPendingViewportRestore]);
   // True once the first layout has been committed to context — gates rendering the canvas
-  // so React Flow mounts with nodes already positioned and fitView fires on real content.
+  // so React Flow mounts with nodes already positioned rather than showing a frame of empty canvas while ELK runs
   const [layoutReady, setLayoutReady] = React.useState(false);
-  // Whether the initial fitView (fired by the fitView prop on <RF.ReactFlow>) has run.
-  // Used by the post-layout callback to decide whether to re-fit on subsequent layouts.
+  // Whether a fitView has run yet.
+  // Owned by the useEffect below which uses it to keep edit mode to a single fit on first load.
   const hasRunInitialFitView = React.useRef(false);
 
   const onNodesChange = React.useCallback<RF.OnNodesChange>(
@@ -125,6 +118,17 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
     ({ nodes: selectedNodes }) => setSelectedNodeId(selectedNodes[0]?.id ?? null),
     [setSelectedNodeId],
   );
+
+  const nodesInitialised = RF.useNodesInitialized();
+  // the initial fit must wait until every node has been measured
+  React.useEffect(() => {
+    const shouldFit = nodesInitialised && (isReadOnly || !hasRunInitialFitView.current);
+    if (!shouldFit) {
+      return;
+    }
+    hasRunInitialFitView.current = true;
+    void reactFlowInstance.fitView(INSTANT_FIT_VEW_OPTIONS);
+  }, [nodesInitialised, isReadOnly, reactFlowInstance]);
 
   // Rebuild nodes and edges when model or errors change (with debouncing).
   // Post-layout work (viewport restore, re-fit, submitModel) runs directly inside the
@@ -154,7 +158,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
             setNodes(stampedNodes);
             setEdges(applyEdgeZIndex(edges));
             // On first load: reveal the canvas — React Flow will mount with nodes already
-            // positioned and the fitView prop will fit them correctly on first render.
+            // positioned. The initial fit is owned by the nodesInitialised effect.
             setLayoutReady(true);
 
             // Post-layout viewport work runs in a zero-delay timeout so React Flow has
@@ -174,13 +178,6 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
                   submitModelRef.current(currentModel, pendingRestore, selectedNodeIdRef.current);
                 }
               } else {
-                if (isReadOnlyRef.current && hasRunInitialFitView.current) {
-                  // Re-fit on subsequent read-only layout cycles (e.g. content prop change).
-                  // duration:0 — no animation; the user expects an instant re-render, not a pan.
-                  reactFlowInstance.fitView({ ...FIT_VIEW_OPTIONS, duration: 0 });
-                }
-                hasRunInitialFitView.current = true;
-
                 // Submit model with the real viewport captured after layout settles.
                 // Diagram.tsx is the sole caller of submitModel.
                 const currentModel = modelRef.current;
@@ -243,8 +240,6 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
           zoomOnScroll={false}
           preventScrolling={true}
           selectionOnDrag={true}
-          fitView
-          fitViewOptions={{ ...FIT_VIEW_OPTIONS, duration: 0 }}
           colorMode={colorMode}
           defaultEdgeOptions={{
             markerEnd: {
