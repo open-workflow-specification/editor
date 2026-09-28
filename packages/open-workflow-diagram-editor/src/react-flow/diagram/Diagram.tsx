@@ -35,6 +35,8 @@ const FIT_VIEW_OPTIONS: RF.FitViewOptions = {
   duration: 400,
 };
 
+const INSTANT_FIT_VIEW_OPTIONS: RF.FitViewOptions = { ...FIT_VIEW_OPTIONS, duration: 0 };
+
 const applyEdgeZIndex = <T extends RF.Edge>(edges: T[]): T[] =>
   edges.map((edge) => ({
     ...edge,
@@ -99,11 +101,11 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
     submitModel,
     clearPendingViewportRestore,
   ]);
-  // True once the first layout has been committed to context — gates rendering the canvas
-  // so React Flow mounts with nodes already positioned and fitView fires on real content.
+  // Controls visibility of the React Flow canvas. Set to true after first layout completes
+  // to prevent showing an empty canvas while ELK calculates node positions.
   const [layoutReady, setLayoutReady] = React.useState(false);
-  // Whether the initial fitView (fired by the fitView prop on <RF.ReactFlow>) has run.
-  // Used by the post-layout callback to decide whether to re-fit on subsequent layouts.
+  // Tracks whether the initial fitView has been called. Used to ensure fitView only runs
+  // once on first load
   const hasRunInitialFitView = React.useRef(false);
 
   const onNodesChange = React.useCallback<RF.OnNodesChange>(
@@ -153,14 +155,23 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
               : nodes;
             setNodes(stampedNodes);
             setEdges(applyEdgeZIndex(edges));
-            // On first load: reveal the canvas — React Flow will mount with nodes already
-            // positioned and the fitView prop will fit them correctly on first render.
+            // Reveal the canvas first so React Flow mounts with nodes already positioned
             setLayoutReady(true);
 
             // Post-layout viewport work runs in a zero-delay timeout so React Flow has
-            // processed the new nodes before we read or set the viewport.
-            setTimeout(() => {
+            // mounted and processed the new nodes before we fit the viewport.
+            setTimeout(async () => {
               if (!isActive) return;
+
+              if (!hasRunInitialFitView.current) {
+                // First load: fit the view after React Flow has mounted
+                hasRunInitialFitView.current = true;
+                await reactFlowInstance.fitView(INSTANT_FIT_VIEW_OPTIONS);
+              } else if (isReadOnlyRef.current) {
+                // Read-only mode: re-fit on subsequent layout cycles (e.g. content prop change)
+                // Use instant fit (duration: 0) for immediate re-render without animation
+                await reactFlowInstance.fitView(INSTANT_FIT_VIEW_OPTIONS);
+              }
 
               const pendingRestore = pendingViewportRestoreRef.current;
               if (pendingRestore) {
@@ -174,13 +185,6 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
                   submitModelRef.current(currentModel, pendingRestore, selectedNodeIdRef.current);
                 }
               } else {
-                if (isReadOnlyRef.current && hasRunInitialFitView.current) {
-                  // Re-fit on subsequent read-only layout cycles (e.g. content prop change).
-                  // duration:0 — no animation; the user expects an instant re-render, not a pan.
-                  reactFlowInstance.fitView({ ...FIT_VIEW_OPTIONS, duration: 0 });
-                }
-                hasRunInitialFitView.current = true;
-
                 // Submit model with the real viewport captured after layout settles.
                 // Diagram.tsx is the sole caller of submitModel.
                 const currentModel = modelRef.current;
@@ -243,8 +247,6 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
           zoomOnScroll={false}
           preventScrolling={true}
           selectionOnDrag={true}
-          fitView
-          fitViewOptions={{ ...FIT_VIEW_OPTIONS, duration: 0 }}
           colorMode={colorMode}
           defaultEdgeOptions={{
             markerEnd: {
