@@ -205,17 +205,18 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 
 function OneOfFieldRow({ field }: { field: OneOfField }) {
   const { isReadOnly, taskData } = useTaskFormContext();
-  const {control, getValues, setValue, register} = useFormContext<Record<string, unknown>>();
-  const sentinelPath = `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
-
+  const { control, getValues, setValue, register } = useFormContext<Record<string, unknown>>();
+  const sentinelPath = field.sentinelPath
+    ? `${SENTINEL_PREFIX}${field.sentinelPath}${SENTINEL_SUFFIX}`
+    : `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
   // Watched so the row follows a reset as well as switch
-  const sentinelLabel = useWatch({control, name: sentinelPath as never}) as unknown
+  const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
 
   const derivedIdx = React.useMemo(() => {
-    if(typeof sentinelLabel === "string" && sentinelLabel !==""){
-      const chosen = field.variants.findIndex((v)=> v.label === sentinelLabel)
-      if(chosen !== -1){
-        return chosen
+    if (typeof sentinelLabel === "string" && sentinelLabel !== "") {
+      const chosen = field.variants.findIndex((v) => v.label === sentinelLabel);
+      if (chosen !== -1) {
+        return chosen;
       }
     }
     // For the root one-of the relevant data is the whole task object;
@@ -424,7 +425,7 @@ function collectSentinelDefaults(
       const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
       const selectedIdx = idx >= 0 ? idx : 0;
       const selected = f.variants[selectedIdx];
-      setNestedSentinel(result, f.path, selected?.label ?? "");
+      setNestedSentinel(result, f.sentinelPath ?? f.path, selected?.label ?? "");
       // Only the selected variant's fields are mounted, so only its nested one-ofs
       // have a sentinel to match
       if (selected) {

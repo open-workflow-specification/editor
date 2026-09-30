@@ -98,7 +98,10 @@ describe("raise task error variant switch", () => {
     await act(async () => {});
 
     await choose(user, "Raise Error Definition");
-    await user.type(screen.getByLabelText("Literal Error Type"), "https://example.com/errors/nope");
+    await user.type(
+      screen.getByLabelText("Literal URI Template"),
+      "https://example.com/errors/nope",
+    );
     await user.type(screen.getByLabelText("Status"), "418");
     await user.click(apply());
 
@@ -139,7 +142,7 @@ describe("raise task error variant switch", () => {
     await choose(user, "Raise Error Reference");
     await choose(user, "Raise Error Definition");
 
-    expect(fieldValue("Literal Error Type")).toBe(
+    expect(fieldValue("Literal URI Template")).toBe(
       "https://open-workflow-specification.org/errors/validation",
     );
     expect(fieldValue("Status")).toBe("400");

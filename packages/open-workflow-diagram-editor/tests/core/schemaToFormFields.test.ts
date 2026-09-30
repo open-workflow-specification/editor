@@ -50,13 +50,22 @@ describe("schemaToFormFields endpoint and oneOf unwrapping", () => {
 
     // Endpoint should have collapsed variants: "URI" and "Endpoint Configuration"
     const variantLabels = endpointOneOf?.variants.map((v) => v.label);
-    expect(variantLabels).toEqual(["URI", "Endpoint Configuration"]);
+    expect(variantLabels).toEqual(["Runtime Expression", "URI Template", "Endpoint Configuration"]);
 
-    // The "URI" variant should be a string field with placeholder
-    const uriVariant = endpointOneOf?.variants.find((v) => v.label === "URI");
-    const uriLeafField = uriVariant?.fields[0] as StringField;
-    expect(uriLeafField.kind).toBe("string");
-    expect(uriLeafField.placeholder).toBe("https://example.com/api/{id}");
+    const uriTemplateVariant = endpointOneOf?.variants.find((v) => v.label === "URI Template");
+    expect(uriTemplateVariant).toBeDefined();
+    const uriTemplateField = uriTemplateVariant?.fields[0];
+    expect(uriTemplateField?.kind).toBe("one-of");
+    const uriTemplateOneOf = uriTemplateField as OneOfField;
+    const literalUriVariant = uriTemplateOneOf.variants.find((v) => v.label === "Literal URI");
+    const literalUriTemplateVariant = uriTemplateOneOf.variants.find(
+      (v) => v.label === "Literal URI Template",
+    );
+    expect(literalUriVariant).toBeDefined();
+    expect(literalUriTemplateVariant).toBeDefined();
+    const uriLeafField = literalUriVariant?.fields[0] as StringField;
+    expect(uriLeafField?.kind).toBe("string");
+    expect(uriLeafField?.placeholder).toBe("https://example.com/api/{id}");
 
     // The "Endpoint Configuration" variant should have a `uri` field as a oneOf (URI Template vs Expression)
     const configVariant = endpointOneOf?.variants.find((v) => v.label === "Endpoint Configuration");
@@ -65,8 +74,12 @@ describe("schemaToFormFields endpoint and oneOf unwrapping", () => {
     ) as OneOfField | undefined;
     expect(uriFieldInConfig?.kind).toBe("one-of");
     const uriVariantLabels = uriFieldInConfig?.variants.map((v) => v.label);
-    expect(uriVariantLabels).toContain("URI");
-    expect(uriVariantLabels).toContain("Expression");
+    expect(uriVariantLabels).toContain("Literal Endpoint URI");
+    expect(uriVariantLabels).toHaveLength(2);
+    const expressionVariant = uriFieldInConfig?.variants.find(
+      (v) => v.label !== "Literal Endpoint URI",
+    );
+    expect(expressionVariant).toBeDefined();
   });
 });
 
@@ -91,8 +104,8 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
       | undefined;
     expect(sourceField?.kind).toBe("one-of");
     const labels = sourceField?.variants.map((v) => v.label);
-    expect(labels).toContain("URI");
-    expect(labels).toContain("Expression");
+    expect(labels).toContain("Runtime Expression");
+    expect(labels).toContain("URI Template");
   });
 
   it("`source` URI variant is a non-expression string with URI placeholder", () => {
@@ -100,11 +113,15 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     const sourceField = withChildren.find((f) => f.path === "emit.event.with.source") as
       | OneOfField
       | undefined;
-    const uriVariant = sourceField?.variants.find((v) => v.label === "URI");
-    const leafField = uriVariant?.fields[0] as StringField | undefined;
-    expect(leafField?.kind).toBe("string");
-    expect(leafField?.isRuntimeExpression).toBe(false);
-    expect(leafField?.placeholder).toBe("https://example.com/api/{id}");
+    const uriTemplateVariant = sourceField?.variants.find((v) => v.label === "URI Template");
+    expect(uriTemplateVariant).toBeDefined();
+    const uriTemplateField = uriTemplateVariant?.fields[0];
+    expect(uriTemplateField?.kind).toBe("one-of");
+    const uriTemplateOneOf = uriTemplateField as OneOfField;
+    expect(uriTemplateOneOf.variants.map((v) => v.label)).toEqual([
+      "Literal URI Template",
+      "Literal URI",
+    ]);
   });
 
   it("`source` Expression variant is a runtime-expression string with ${...} placeholder", () => {
@@ -112,7 +129,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     const sourceField = withChildren.find((f) => f.path === "emit.event.with.source") as
       | OneOfField
       | undefined;
-    const exprVariant = sourceField?.variants.find((v) => v.label === "Expression");
+    const exprVariant = sourceField?.variants.find((v) => v.label === "Runtime Expression");
     const leafField = exprVariant?.fields[0] as StringField | undefined;
     expect(leafField?.kind).toBe("string");
     expect(leafField?.isRuntimeExpression).toBe(true);
@@ -124,8 +141,8 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     const sourceField = withChildren.find((f) => f.path === "emit.event.with.source") as
       | OneOfField
       | undefined;
-    const uriVariant = sourceField?.variants.find((v) => v.label === "URI");
-    const exprVariant = sourceField?.variants.find((v) => v.label === "Expression");
+    const uriVariant = sourceField?.variants.find((v) => v.label === "URI Template");
+    const exprVariant = sourceField?.variants.find((v) => v.label === "Runtime Expression");
     // URI wins for plain URIs
     expect(uriVariant?.matchesData("https://example.com/source")).toBe(true);
     expect(exprVariant?.matchesData("https://example.com/source")).toBe(false);
@@ -142,7 +159,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     expect(timeField?.kind).toBe("one-of");
     const labels = timeField?.variants.map((v) => v.label);
     expect(labels).toContain("Literal Time");
-    expect(labels).toContain("Expression");
+    expect(labels).toContain("Runtime Expression");
   });
 
   it("`time` Literal Time variant is a non-expression string field", () => {
@@ -161,7 +178,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     const timeField = withChildren.find((f) => f.path === "emit.event.with.time") as
       | OneOfField
       | undefined;
-    const exprVariant = timeField?.variants.find((v) => v.label === "Expression");
+    const exprVariant = timeField?.variants.find((v) => v.label === "Runtime Expression");
     const leafField = exprVariant?.fields[0] as StringField | undefined;
     expect(leafField?.kind).toBe("string");
     expect(leafField?.isRuntimeExpression).toBe(true);
@@ -178,7 +195,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
       | OneOfField
       | undefined;
     const literalVariant = timeField?.variants.find((v) => v.label === "Literal Time");
-    const exprVariant = timeField?.variants.find((v) => v.label === "Expression");
+    const exprVariant = timeField?.variants.find((v) => v.label === "Runtime Expression");
 
     // A runtime-expression value must be claimed exclusively by Expression
     expect(exprVariant?.matchesData("${$workflow.startedAt}")).toBe(true);
@@ -189,30 +206,45 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     expect(exprVariant?.matchesData("2024-01-15T10:30:00Z")).toBe(false);
   });
 
-  it("`dataschema` emits a one-of with URI and Expression variants", () => {
+  it("`dataschema` emits a one-of with literal and expression variants", () => {
     const withChildren = getWithChildren();
     const dataschemaField = withChildren.find((f) => f.path === "emit.event.with.dataschema") as
       | OneOfField
       | undefined;
     expect(dataschemaField?.kind).toBe("one-of");
     const labels = dataschemaField?.variants.map((v) => v.label);
-    expect(labels).toContain("URI");
-    expect(labels).toContain("Expression");
+    expect(labels).toContain("Literal Data Schema");
+    expect(labels).toHaveLength(2);
+    const otherVariant = dataschemaField?.variants.find((v) => v.label !== "Literal Data Schema");
+    expect(otherVariant).toBeDefined();
   });
 
-  it("`dataschema` URI variant matches a URI string; Expression variant matches a ${...} string", () => {
+  it("`dataschema` literal and runtime expression variants match the correct values", () => {
     const withChildren = getWithChildren();
     const dataschemaField = withChildren.find((f) => f.path === "emit.event.with.dataschema") as
       | OneOfField
       | undefined;
-    const uriVariant = dataschemaField?.variants.find((v) => v.label === "URI");
-    const exprVariant = dataschemaField?.variants.find((v) => v.label === "Expression");
-    // URI wins for plain URIs
-    expect(uriVariant?.matchesData("https://schema.example.com/v1")).toBe(true);
-    expect(exprVariant?.matchesData("https://schema.example.com/v1")).toBe(false);
-    // Expression wins for ${...} strings
-    expect(exprVariant?.matchesData("${.dataschema}")).toBe(true);
-    expect(uriVariant?.matchesData("${.dataschema}")).toBe(false);
+
+    expect(dataschemaField).toBeDefined();
+    expect(dataschemaField?.variants).toHaveLength(2);
+
+    const literalDataSchemaVariant = dataschemaField?.variants.find(
+      (v) => v.label === "Literal Data Schema",
+    );
+    const runtimeExpressionVariant = dataschemaField?.variants.find(
+      (v) => v.label !== "Literal Data Schema",
+    );
+
+    expect(literalDataSchemaVariant).toBeDefined();
+    expect(runtimeExpressionVariant).toBeDefined();
+
+    // Literal data schema matches plain URIs
+    expect(literalDataSchemaVariant?.matchesData("https://schema.example.com/v1")).toBe(true);
+    expect(runtimeExpressionVariant?.matchesData("https://schema.example.com/v1")).toBe(false);
+
+    // Runtime expression matches ${...} strings
+    expect(runtimeExpressionVariant?.matchesData("${.dataschema}")).toBe(true);
+    expect(literalDataSchemaVariant?.matchesData("${.dataschema}")).toBe(false);
   });
 
   it("`data` emits a one-of with Data and Expression variants", () => {
@@ -223,7 +255,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     expect(dataField?.kind).toBe("one-of");
     const labels = dataField?.variants.map((v) => v.label);
     expect(labels).toContain("Data");
-    expect(labels).toContain("Expression");
+    expect(labels).toContain("Runtime Expression");
     // No separate YAML / JSON picker — the textarea always uses YAML serialisation
     // and accepts JSON input because js-yaml's load() is a superset of JSON.
     expect(labels).not.toContain("YAML");
@@ -255,7 +287,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
     const dataField = withChildren.find((f) => f.path === "emit.event.with.data") as
       | OneOfField
       | undefined;
-    const exprVariant = dataField?.variants.find((v) => v.label === "Expression");
+    const exprVariant = dataField?.variants.find((v) => v.label === "Runtime Expression");
     const stringField = exprVariant?.fields.find((f) => f.kind === "string") as
       | StringField
       | undefined;
@@ -269,7 +301,7 @@ describe("schemaToFormFields emitTask event.with field variants", () => {
       | OneOfField
       | undefined;
     const dataVariant = dataField?.variants.find((v) => v.label === "Data");
-    const exprVariant = dataField?.variants.find((v) => v.label === "Expression");
+    const exprVariant = dataField?.variants.find((v) => v.label === "Runtime Expression");
     // Data matches any non-string value — including absent (undefined/null)
     expect(dataVariant?.matchesData({ key: "val" })).toBe(true);
     expect(dataVariant?.matchesData([])).toBe(true);
@@ -357,7 +389,11 @@ describe("schemaToFormFields labels", () => {
        "  variant "Raise Error Definition"",
        "    raise.error.type  one-of  "Type"",
        "      variant "Literal Error Type"",
-       "        raise.error.type  string  "Literal Error Type"",
+       "        raise.error.type  one-of  "Literal Error Type"",
+       "          variant "Literal URI Template"",
+       "            raise.error.type  string  "Literal URI Template"",
+       "          variant "Literal URI"",
+       "            raise.error.type  string  "Literal URI"",
        "      variant "Expression Error Type"",
        "        raise.error.type  string  "Expression Error Type"  ph=\${...}",
        "    raise.error.status  number  "Status"",
@@ -394,6 +430,8 @@ describe("schemaToFormFields labels", () => {
        "    wait.milliseconds  number  "Milliseconds"",
        "  variant "Duration Expression"",
        "    wait  string  "Duration Expression"  ph=\${...}",
+       "  variant "Duration Literal"",
+       "    wait  duration  "Duration Literal"",
      ]
    `);
   });
