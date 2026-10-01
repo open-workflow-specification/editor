@@ -5,7 +5,7 @@ catalog:
   "@base-ui/react": ^1.8.0
   "@volar/language-service": ^2.4.28
   "volar-service-json": "0.0.71"
-  "vscode-languageserver-textdocument": "^1.0.14"
+  "vscode-languageserver-textdocument": "^1.0.15"
   "@changesets/changelog-github": ^1.0.1
   "@changesets/cli": ^3.0.3
   "@chromatic-com/storybook": ^5.3.1
@@ -28,7 +28,7 @@ catalog:
   "@vitest/browser-playwright": ^5.0.1
   "@vitest/coverage-v8": ^5.0.1
   "@vitest/ui": ^5.0.1
-  "@xyflow/react": ^12.11.6
+  "@xyflow/react": ^12.12.0
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
   elkjs: ^0.12.0
@@ -37,10 +37,10 @@ catalog:
   husky: ^9.1.7
   "js-yaml": ^5.4.2
   jsdom: ^30.1.0
-  lint-staged: ^17.5.1
+  lint-staged: ^17.6.0
   lucide-react: ^1.47.0
-  "monaco-editor": "0.56.0"
-  oxfmt: ^0.68.0
+  "monaco-editor": "0.57.0"
+  oxfmt: ^0.70.0
   oxlint: ^1.83.0
   radix-ui: ^1.6.5
   react: ^19.3.0
@@ -51,7 +51,7 @@ catalog:
   tailwindcss: ^4.3.3
   typescript: ^7.0.2
   use-sync-external-store: ^1.7.0
-  vite: ^8.3.0
+  vite: ^8.3.1
   vitest: ^5.0.1
 cleanupUnusedCatalogs: true
 onlyBuiltDependencies:
