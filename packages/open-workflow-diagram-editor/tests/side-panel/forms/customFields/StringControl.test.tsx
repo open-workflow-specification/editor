@@ -266,3 +266,33 @@ describe("StringControl — user interaction", () => {
     expect(getInput().value).toBe("https://new.com");
   });
 });
+
+describe("StringControl — schema default", () => {
+  const eachField: StringField = {
+    kind: "string",
+    path: "for.each",
+    label: "each",
+    required: false,
+    multiline: false,
+    isRuntimeExpression: false,
+    defaultValue: "item",
+  };
+
+  it("shows the default of an absent key as a placeholder, not a value", () => {
+    render(<PlainWrapper field={eachField} defaultValues={{}} />);
+
+    expect(getInput().value).toBe("");
+    expect(getInput().placeholder).toBe("item");
+  });
+
+  it("prefers an explicit placeholder over the default", () => {
+    render(
+      <PlainWrapper
+        field={{ ...eachField, placeholder: "https://example.com/api/{id}" }}
+        defaultValues={{}}
+      />,
+    );
+
+    expect(getInput().placeholder).toBe("https://example.com/api/{id}");
+  });
+});

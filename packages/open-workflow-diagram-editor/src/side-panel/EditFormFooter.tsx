@@ -31,26 +31,45 @@ import {
   SENTINEL_SUFFIX,
 } from "@/side-panel/forms/FormField";
 import { getFormFieldsForNodeType } from "@/core";
-import type { FormFieldDescriptor, OneOfField } from "@/core/schemaToFormFields";
+import type { FormFieldDescriptor, OneOfField, OneOfVariant } from "@/core/schemaToFormFields";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { useEditSession } from "./EditSession";
 import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
-import { collectFormListPaths } from "./forms/taskFormContext";
+import { collectFormListPaths, collectWholeValuePaths } from "./forms/taskFormContext";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
 
-/** Recursively collects all `one-of` fields from a flat field list. */
-function collectOneOfFields(field: FormFieldDescriptor): OneOfField[] {
-  if (field.kind === "one-of") {
-    const nested = field.variants.flatMap((v) => v.fields.flatMap(collectOneOfFields));
-    return [field, ...nested];
+type SelectedVariant = { field: OneOfField; variant: OneOfVariant };
+
+/**
+ * The selected variant of each one-of on screen, keyed by path. One-ofs inside an
+ * unselected variant are skipped.
+ */
+function collectSelectedVariants(
+  fields: FormFieldDescriptor[],
+  values: Record<string, unknown>,
+  result: Map<string, SelectedVariant> = new Map(),
+): Map<string, SelectedVariant> {
+  for (const field of fields) {
+    if (field.kind === "object") {
+      collectSelectedVariants(field.children, values, result);
+    } else if (field.kind === "one-of") {
+      const label = values[`${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`];
+      const variant = field.variants.find((v) => v.label === label);
+      if (variant) {
+        result.set(field.path, { field, variant });
+        collectSelectedVariants(variant.fields, values, result);
+      } else {
+        const samePath = field.variants
+          .flatMap((v) => v.fields)
+          .filter((f) => f.kind === "one-of" && f.path === field.path);
+        collectSelectedVariants(samePath, values, result);
+      }
+    }
   }
-  if (field.kind === "object") {
-    return field.children.flatMap(collectOneOfFields);
-  }
-  return [];
+  return result;
 }
 
 /** Recursively collects all leaf/intermediate dot-notation paths from a field list. */
@@ -184,30 +203,30 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     // that are exclusive to the non-selected variants so they can be removed.
     const nodeType = node.type ?? "";
     const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
+    const selectedVariants = collectSelectedVariants(allFields, flatValues);
+    const liveSentinelPaths = new Set([...sentinelPaths].filter((p) => selectedVariants.has(p)));
     const sentinelConstWrites = new Map<string, Record<string, unknown>>();
     const sentinelStalePaths = new Map<string, string[]>();
-    for (const sentinelPath of sentinelPaths) {
-      const selectedLabel = flatValues[`${SENTINEL_PREFIX}${sentinelPath}${SENTINEL_SUFFIX}`] as
-        | string
-        | undefined;
-      if (!selectedLabel) continue;
-      const oneOfField = allFields.flatMap(collectOneOfFields).find((f) => f.path === sentinelPath);
-      if (!oneOfField) continue;
-      const variant = oneOfField.variants.find((v) => v.label === selectedLabel);
-      if (variant && Object.keys(variant.constWrites).length > 0) {
+    const sentinelPresenceKeys = new Map<string, string>();
+    for (const [oneOfPath, { variant }] of selectedVariants) {
+      if (variant.presenceKey !== undefined) {
+        sentinelPresenceKeys.set(oneOfPath, variant.presenceKey);
+      }
+    }
+    for (const sentinelPath of liveSentinelPaths) {
+      const { field: oneOfField, variant } = selectedVariants.get(sentinelPath)!;
+      if (Object.keys(variant.constWrites).length > 0) {
         sentinelConstWrites.set(sentinelPath, variant.constWrites);
       }
       // Compute paths exclusive to the non-selected variants (i.e. absent from
       // the selected variant's field tree). These need to be wiped from the model.
-      if (variant) {
-        const selectedPaths = new Set(collectVariantFieldPaths(variant.fields));
-        const stalePaths = oneOfField.variants
-          .filter((v) => v !== variant)
-          .flatMap((v) => collectVariantFieldPaths(v.fields))
-          .filter((p) => !selectedPaths.has(p));
-        if (stalePaths.length > 0) {
-          sentinelStalePaths.set(sentinelPath, stalePaths);
-        }
+      const selectedPaths = new Set(collectVariantFieldPaths(variant.fields));
+      const stalePaths = oneOfField.variants
+        .filter((v) => v !== variant)
+        .flatMap((v) => collectVariantFieldPaths(v.fields))
+        .filter((p) => !selectedPaths.has(p));
+      if (stalePaths.length > 0) {
+        sentinelStalePaths.set(sentinelPath, stalePaths);
       }
     }
 
@@ -215,10 +234,11 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       task as unknown as Record<string, unknown>,
       flatValues,
       flatDirty,
-      sentinelPaths,
+      liveSentinelPaths,
       sentinelConstWrites,
       sentinelStalePaths,
-      collectFormListPaths(getFormFieldsForNodeType(node.type ?? "")),
+      collectFormListPaths(allFields),
+      sentinelPresenceKeys,
     ) as Specification.Task;
     const updatedModel = updateTask(model, node.id, updated);
     commitWorkflow(updatedModel);
@@ -243,7 +263,12 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       ...(updated as Record<string, unknown>),
       ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
     };
-    padRemovedPaths(resetVals, task as Record<string, unknown>, updated as Record<string, unknown>);
+    padRemovedPaths(
+      resetVals,
+      task as Record<string, unknown>,
+      updated as Record<string, unknown>,
+      collectWholeValuePaths(allFields, updated as Record<string, unknown>),
+    );
     form.reset(resetVals);
     setAppliedNodeId(node.id);
 

@@ -41,7 +41,7 @@ export function BooleanControl({ field }: BooleanControlProps) {
       control={control}
       render={({ field: rhfField }) => (
         <Switch
-          checked={!!rhfField.value}
+          checked={(rhfField.value as boolean | undefined) ?? field.defaultValue ?? false}
           {...(!isReadOnly ? { onCheckedChange: rhfField.onChange } : {})}
           disabled={isReadOnly}
           aria-label={field.label}

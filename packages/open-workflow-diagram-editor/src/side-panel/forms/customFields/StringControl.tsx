@@ -42,7 +42,8 @@ export function StringControl({ field, id }: StringControlProps) {
 function SingleLineStringControl({ field, id }: StringControlProps) {
   const { isReadOnly } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
-  const placeholder = field.placeholder ?? (field.isRuntimeExpression ? "${...}" : undefined);
+  const placeholder =
+    field.placeholder ?? field.defaultValue ?? (field.isRuntimeExpression ? "${...}" : undefined);
 
   return (
     <Controller

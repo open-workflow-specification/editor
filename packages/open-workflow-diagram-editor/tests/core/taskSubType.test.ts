@@ -49,10 +49,23 @@ describe("getRunSubType", () => {
     expect(getRunSubType(task)).toBe(expectedSubType);
   });
 
+  // `await`/`return` are shared by every process type, so their position must
+  // not decide the badge — a process-type switch in the editor puts them first.
+  // They are read from the bundled schema, so these also fail if its shape changes.
+  it.each([
+    ["await is written first", { await: false, shell: { command: "ls" } }, "shell"],
+    ["return is written first", { return: "all", container: { image: "nginx" } }, "container"],
+    ["both are written first", { await: true, return: "code", workflow: {} }, "workflow"],
+  ])("should skip the shared keys when %s", (_label, run, expectedSubType) => {
+    const task = { run } as unknown as Specification.RunTask;
+    expect(getRunSubType(task)).toBe(expectedSubType);
+  });
+
   it.each([
     ["run is missing", {}],
     ["run is not an object", { run: "invalidRunValue" }],
     ["run is an array", { run: [] }],
+    ["run holds only shared keys", { await: false }],
   ])("should return undefined when %s", (_label, task) => {
     expect(getRunSubType(task as unknown as Specification.RunTask)).toBeUndefined();
   });

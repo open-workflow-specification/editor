@@ -15,6 +15,7 @@
  */
 
 import type { DereferencedSchema } from "./schemaFilter";
+import { isPlainObject } from "./utils";
 import type { ContentFormat } from "./workflowSdk";
 
 /**
@@ -68,6 +69,8 @@ export interface StringField extends FieldBase {
   hasExpressionSibling?: boolean;
   /** Optional placeholder hint, e.g. "https://example.com/api/{id}" */
   placeholder?: string | undefined;
+  /** Schema default = what the runtime assumes when the key is absent */
+  defaultValue?: string;
 }
 
 export interface NumberField extends FieldBase {
@@ -76,11 +79,15 @@ export interface NumberField extends FieldBase {
 
 export interface BooleanField extends FieldBase {
   kind: "boolean";
+  /** Schema default = what the runtime assumes when the key is absent */
+  defaultValue?: boolean;
 }
 
 export interface EnumField extends FieldBase {
   kind: "enum";
   options: string[];
+  /** Schema default = what the runtime assumes when the key is absent */
+  defaultValue?: string;
 }
 
 /**
@@ -187,6 +194,8 @@ export interface OneOfVariant {
    * e.g. `{ call: "http" }`.
    */
   constWrites: Record<string, unknown>;
+  /** Key whose presence selects this variant (e.g., run.container). */
+  presenceKey?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +225,24 @@ const STRUCTURED_PAYLOAD_KEYS = new Set([
   "as",
 ]);
 
+/**
+ * Structured payloads matched by full path. The schema cannot tell these apart from a
+ * flat map: `run.workflow.input` is `{ type: object, additionalProperties: true }`, the
+ * same shape as the `environment` maps beside it.
+ *
+ * Safe to hardcode: moving or renaming the field would be a breaking change to
+ * the DSL, so it is unlikely within 1.x, and if an SDK bump does move it the
+ * "edits run.workflow.input as json" test in schemaToFormFields.test.ts fails.
+ *
+ * TODO: re-evaluate once node editing is complete
+ */
+
+const STRUCTURED_PAYLOAD_PATHS = new Set(["run.workflow.input"]);
+
+function isStructuredPayload(key: string, fieldPath: string): boolean {
+  return STRUCTURED_PAYLOAD_KEYS.has(key) || STRUCTURED_PAYLOAD_PATHS.has(fieldPath);
+}
+
 /* Returns true when a oneOf/anyOf candidate is the runtime expression schema */
 function isRuntimeExpressionSchema(
   candidate: Record<string, unknown>,
@@ -226,10 +253,6 @@ function isRuntimeExpressionSchema(
     resolved.title === "RuntimeExpression" ||
     RUNTIME_EXPRESSION_PATTERN.test(String(resolved.pattern ?? ""))
   );
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /** Resolve a `$ref` string like `"#/$defs/taskList"` against the local `$defs` block. */
@@ -408,6 +431,20 @@ function isApiEndpointPath(path: string): boolean {
 /** Only include the `description` key when it has a value (exactOptionalPropertyTypes). */
 function withDesc(description: string | undefined): { description?: string } {
   return description !== undefined ? { description } : {};
+}
+
+/**
+ * The schema `default` of an optional field, when it has the expected type.
+ * Display only: controls show it for an absent key, and it is never written
+ * into the task
+ */
+function withDefault<T extends "string" | "boolean">(
+  resolved: Record<string, unknown>,
+  type: T,
+  isRequired: boolean,
+): { defaultValue?: T extends "string" ? string : boolean } {
+  const value = resolved.default;
+  return !isRequired && typeof value === type ? { defaultValue: value as never } : {};
 }
 
 // ---------------------------------------------------------------------------
@@ -765,7 +802,7 @@ export function schemaToFormFields(
     // ── Open-ended key-value map (additionalProperties, no fixed properties) ─
     // Structured-payload keys use a JSON/YAML textarea instead of a key-value editor.
     if (isMapSchema(resolved)) {
-      if (STRUCTURED_PAYLOAD_KEYS.has(key)) {
+      if (isStructuredPayload(key, fieldPath)) {
         fields.push({
           kind: "json",
           format,
@@ -842,6 +879,7 @@ export function schemaToFormFields(
         label: deriveLabel(prop, key),
         ...withDesc(description),
         required: isRequired,
+        ...withDefault(resolved, "boolean", isRequired),
       });
       continue;
     }
@@ -855,6 +893,7 @@ export function schemaToFormFields(
         ...withDesc(description),
         required: isRequired,
         options: resolved.enum as string[],
+        ...withDefault(resolved, "string", isRequired),
       });
       continue;
     }
@@ -917,6 +956,7 @@ export function schemaToFormFields(
         required: isRequired,
         multiline,
         isRuntimeExpression: isRe,
+        ...withDefault(resolved, "string", isRequired),
       });
       continue;
     }
@@ -936,7 +976,7 @@ export function schemaToFormFields(
     }
 
     // ── Fallback: unconstrained structured-payload key → JSON/YAML textarea ─
-    if (STRUCTURED_PAYLOAD_KEYS.has(key)) {
+    if (isStructuredPayload(key, fieldPath)) {
       fields.push({
         kind: "json",
         format,
@@ -995,6 +1035,26 @@ function buildConstWrites(resolved: Record<string, unknown>): Record<string, unk
     }
   }
   return writes;
+}
+
+/**
+ * Returns presence key for variants identified by a single required object property
+ */
+function withPresenceKey(
+  resolved: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): { presenceKey?: string } {
+  if (Object.keys(buildConstWrites(resolved)).length > 0) return {};
+  const properties = resolved.properties as Record<string, unknown> | undefined;
+  const keys = properties ? Object.keys(properties) : [];
+  const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
+  const key = keys.length === 1 && required.includes(keys[0]!) ? keys[0]! : undefined;
+  if (key === undefined) return {};
+
+  const prop = properties![key];
+  if (!isPlainObject(prop)) return {};
+  const target = typeof prop.$ref === "string" ? { ...resolveRef(prop.$ref, defs), ...prop } : prop;
+  return target.type === "object" ? { presenceKey: key } : {};
 }
 
 function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) => boolean {
@@ -1150,7 +1210,7 @@ function buildOneOfVariants(
         // is an unconstrained object — a flat key-value editor cannot represent
         // nested structures or arrays.
         const lastSegment = parentPath.split(".").pop() ?? parentPath;
-        if (STRUCTURED_PAYLOAD_KEYS.has(lastSegment)) {
+        if (isStructuredPayload(lastSegment, parentPath)) {
           const jsonField: JsonField = {
             kind: "json",
             format,
@@ -1409,6 +1469,7 @@ function buildOneOfVariants(
         fields: item.fields,
         matchesData: item.matchesData,
         constWrites: buildConstWrites(item.resolved),
+        ...withPresenceKey(item.resolved, defs),
       });
     }
   }

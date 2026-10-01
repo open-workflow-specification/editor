@@ -69,6 +69,26 @@ do:
                   args = parser.parse_args()
                   data = json.loads(sys.stdin.read())
                   print(json.dumps({"processed": data, "format": args.output_format}))
+        - cleanUp:
+            run:
+              shell:
+                command: rm -rf ${ .outputDir }
+                arguments:
+                  - --verbose
+        - buildImage:
+            run:
+              await: false
+              container:
+                image: nginx:latest
+                command: nginx -g 'daemon off;'
+                ports:
+                  8080: 80
+                environment:
+                  NGINX_HOST: example.com
+                pullPolicy: ifNotPresent
+                lifetime:
+                  cleanup: eventually
+                  after: PT10M
   - reportResults:
       run:
         script:
@@ -82,3 +102,15 @@ do:
           code: |
             const [,, , , dir] = process.argv;
             console.log(JSON.stringify({ summary: true, dir }));
+  - notifyOwners:
+      run:
+        workflow:
+          namespace: examples
+          name: notify-owners
+          version: "1.0.0"
+          input:
+            report:
+              dir: ${ .outputDir }
+              recipients:
+                - ops@example.com
+                - data@example.com

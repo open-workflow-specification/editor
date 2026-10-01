@@ -985,3 +985,166 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
     expect(listField?.format).toBe("yaml");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Run task
+// ---------------------------------------------------------------------------
+
+// Every field by path, variants flattened in — the first descriptor wins.
+function fieldsByPath(
+  fields: FormFieldDescriptor[],
+  out = new Map<string, FormFieldDescriptor>(),
+): Map<string, FormFieldDescriptor> {
+  for (const f of fields) {
+    if (!out.has(f.path)) out.set(f.path, f);
+    if (f.kind === "object") fieldsByPath(f.children, out);
+    if (f.kind === "one-of") for (const v of f.variants) fieldsByPath(v.fields, out);
+  }
+  return out;
+}
+
+describe("schemaToFormFields run task", () => {
+  const run = getFormFieldsForNodeType("run")[0] as OneOfField;
+  const variant = (label: string) => run.variants.find((v) => v.label === label)!;
+
+  it("offers one variant per process type", () => {
+    expect(run.path).toBe("run");
+    expect(run.variants.map((v) => v.label)).toEqual([
+      "Run Container",
+      "Run Script",
+      "Run Shell",
+      "Run Workflow",
+    ]);
+  });
+
+  // `await` and `return` sit beside the process key in `properties` while the
+  // process types are a `oneOf`, so every variant must carry both.
+  it.each(["Run Container", "Run Script", "Run Shell", "Run Workflow"])(
+    "leads %s with the keys every process type shares",
+    (label) => {
+      expect(
+        variant(label)
+          .fields.slice(0, 2)
+          .map((f) => f.path),
+      ).toEqual(["run.await", "run.return"]);
+    },
+  );
+
+  // `run.script` is the same shape one level down: `language`, `stdin`,
+  // `arguments` and `environment` beside an Inline/External `oneOf`.
+  it.each(["Inline Script", "External Script"])("carries the shared script keys on %s", (label) => {
+    const script = variant("Run Script").fields.find((f) => f.path === "run.script") as OneOfField;
+    const paths = script.variants.find((v) => v.label === label)!.fields.map((f) => f.path);
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "run.script.language",
+        "run.script.stdin",
+        "run.script.arguments",
+        "run.script.environment",
+      ]),
+    );
+  });
+
+  // The subflow's input is arbitrary data, nested freely; the environment
+  // variables beside it are a flat map.
+  it.each([
+    ["run.workflow.input", "json"],
+    ["run.container.environment", "map"],
+    ["run.shell.environment", "map"],
+    ["run.script.environment", "map"],
+  ])("edits %s as %s", (path, kind) => {
+    expect(fieldsByPath([run]).get(path)?.kind).toBe(kind);
+  });
+
+  it("leaves the task-level input as a group of its own fields", () => {
+    expect(fieldsByPath(getFormFieldsForNodeType("run")).get("input")?.kind).toBe("object");
+  });
+});
+
+describe("schemaToFormFields schema defaults", () => {
+  it.each([
+    ["run", "run.await", true],
+    ["run", "run.return", "stdout"],
+    ["fork", "fork.compete", false],
+    ["for", "for.each", "item"],
+    ["for", "for.at", "index"],
+    ["listen", "listen.read", "data"],
+    ["set", "input.schema.format", "json"],
+  ])("carries the %s default of %s", (nodeType, path, expected) => {
+    const field = fieldsByPath(getFormFieldsForNodeType(nodeType)).get(path);
+
+    expect(field && "defaultValue" in field ? field.defaultValue : undefined).toBe(expected);
+  });
+
+  // Both declare a default yet are required, so validation rejects their absence.
+  it.each(["run.workflow.version", "run.container.lifetime.cleanup"])(
+    "carries no default for the required %s",
+    (path) => {
+      const field = fieldsByPath(getFormFieldsForNodeType("run")).get(path);
+
+      expect(field?.required).toBe(true);
+      expect(field).not.toHaveProperty("defaultValue");
+    },
+  );
+
+  it("carries no default for a field whose schema declares none", () => {
+    const image = fieldsByPath(getFormFieldsForNodeType("run")).get("run.container.image");
+
+    expect(image).toBeDefined();
+    expect(image).not.toHaveProperty("defaultValue");
+  });
+});
+
+describe("schemaToFormFields presence keys", () => {
+  // Every one-of's options as `label→presenceKey`, keyed by the one-of's path.
+  function presenceKeysAt(nodeType: string, path: string): string[] {
+    const oneOfs: OneOfField[] = [];
+    const walk = (fields: FormFieldDescriptor[]) =>
+      fields.forEach((f) => {
+        if (f.kind === "object") walk(f.children);
+        if (f.kind === "one-of") {
+          if (f.path === path) oneOfs.push(f);
+          f.variants.forEach((v) => walk(v.fields));
+        }
+      });
+    walk(getFormFieldsForNodeType(nodeType));
+    return oneOfs.flatMap((f) => f.variants.map((v) => `${v.label}→${v.presenceKey ?? "-"}`));
+  }
+
+  // An option told apart by a single required object key carries that key, so an
+  // empty switch to it can be committed as `{ key: {} }`. Options told apart by a
+  // value's shape, or by a `const` (call's `call: "http"`), carry none.
+  it.each([
+    [
+      "run",
+      "run",
+      ["Run Container→container", "Run Script→script", "Run Shell→shell", "Run Workflow→workflow"],
+    ],
+    ["run", "run.script", ["Inline Script→-", "External Script→source"]],
+    [
+      "try",
+      "catch.retry.backoff",
+      ["Constant Backoff→constant", "Exponential Back Off→exponential", "Linear Backoff→linear"],
+    ],
+    [
+      "listen",
+      "listen.to",
+      [
+        "All Event Consumption Strategy→-",
+        "Any Event Consumption Strategy→-",
+        "One Event Consumption Strategy→one",
+      ],
+    ],
+    ["set", "input.schema", ["Schema Inline→-", "Schema External→resource"]],
+  ])("on %s %s", (nodeType, path, expected) => {
+    expect(presenceKeysAt(nodeType, path)).toEqual(expected);
+  });
+
+  it("carries none on a const-discriminated option", () => {
+    const entries = presenceKeysAt("call", "__root__");
+
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.every((entry) => entry.endsWith("→-"))).toBe(true);
+  });
+});

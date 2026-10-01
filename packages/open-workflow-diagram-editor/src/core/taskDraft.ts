@@ -97,6 +97,8 @@ export function applyDirtyValues(
   // Paths holding a list the user edits through an `ordered-map`
   // Only these get their empty leaves pruned, because clearing a control is how you remove a key there.
   formListPaths: Set<string> = new Set(),
+  // Presence key of each selected variant on screen (e.g. run -> container)
+  sentinelPresenceKeys: Map<string, string> = new Map(),
 ): Record<string, unknown> {
   // Deep clone the original so we never mutate the store value.
   const result = deepClone(original);
@@ -154,8 +156,22 @@ export function applyDirtyValues(
     const suppliedByEdit = [...dirtyPaths].some(
       (p) => p === sentinelPath || p.startsWith(prefix) || sentinelPath.startsWith(p + "."),
     );
-    if (!suppliedByEdit) {
+    // Presence-keyed variants sit beside siblings; write key as {} to preserve selection
+    const presenceKey = sentinelPresenceKeys.get(sentinelPath);
+    if (presenceKey !== undefined) {
+      const keyParts = [...baseParts, presenceKey];
+      if (getPath(result, keyParts) === undefined) setPath(result, keyParts, {});
+    } else if (!suppliedByEdit) {
       deletePath(result, sentinelPath.split("."), { prune: false });
+    }
+  }
+
+  // Restore a selected variant's key that an edit emptied, so the selection survives
+  for (const [oneOfPath, presenceKey] of sentinelPresenceKeys) {
+    if (sentinelPaths.has(oneOfPath)) continue;
+    const keyParts = [...(oneOfPath === "__root__" ? [] : oneOfPath.split(".")), presenceKey];
+    if (getPath(original, keyParts) !== undefined && getPath(result, keyParts) === undefined) {
+      setPath(result, keyParts, {});
     }
   }
 
@@ -197,6 +213,16 @@ function isDirtyPath(dotPath: string, dirtyPaths: Set<string>): boolean {
  */
 function isSafeKey(key: string): boolean {
   return key !== "__proto__" && key !== "prototype" && key !== "constructor";
+}
+
+// The value at a path within `obj`, or `undefined` when any step is not an object.
+function getPath(obj: Record<string, unknown>, parts: string[]): unknown {
+  let node: unknown = obj;
+  for (const part of parts) {
+    if (node === null || typeof node !== "object" || Array.isArray(node)) return undefined;
+    node = (node as Record<string, unknown>)[part];
+  }
+  return node;
 }
 
 /** Sets a value at a dot-notation path within `obj`, creating intermediates as needed. */

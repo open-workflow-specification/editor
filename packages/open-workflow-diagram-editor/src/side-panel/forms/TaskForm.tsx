@@ -22,7 +22,7 @@ import { getFormFieldsForNodeType, structuralEqual } from "@/core";
 import { FormField, SENTINEL_KEY, SENTINEL_PREFIX, computeSentinelDefaults } from "./FormField";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { TaskFormContext, filterReadOnlyFields } from "./taskFormContext";
+import { TaskFormContext, collectWholeValuePaths, filterReadOnlyFields } from "./taskFormContext";
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
 
@@ -35,7 +35,11 @@ import { useEditSession } from "@/side-panel/EditSession";
  * react-hook-form `defaultValues`. Arrays are kept as-is (they are rendered
  * as child-task-list fields, which are always read-only).
  */
-export function flattenTask(value: unknown, prefix = ""): Record<string, unknown> {
+export function flattenTask(
+  value: unknown,
+  prefix = "",
+  wholeValuePaths: ReadonlySet<string> = new Set(),
+): Record<string, unknown> {
   if (value === null || value === undefined) return {};
   if (Array.isArray(value)) {
     return prefix ? { [prefix]: value } : {};
@@ -45,10 +49,10 @@ export function flattenTask(value: unknown, prefix = ""): Record<string, unknown
     let result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
       const fullKey = prefix ? `${prefix}.${k}` : k;
-      if (Array.isArray(v)) {
+      if (Array.isArray(v) || wholeValuePaths.has(fullKey)) {
         result[fullKey] = v;
       } else if (typeof v === "object" && v !== null) {
-        result = { ...result, ...flattenTask(v, fullKey) };
+        result = { ...result, ...flattenTask(v, fullKey, wholeValuePaths) };
       } else {
         result[fullKey] = v;
       }
@@ -68,14 +72,11 @@ function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unk
   let current = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i]!;
-    if (
-      !Object.prototype.hasOwnProperty.call(current, part) ||
-      current[part] === null ||
-      typeof current[part] !== "object" ||
-      Array.isArray(current[part])
-    ) {
-      current[part] = Object.create(null) as Record<string, unknown>;
-    }
+    const next = Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
+    current[part] =
+      next && typeof next === "object" && !Array.isArray(next)
+        ? { ...(next as Record<string, unknown>) }
+        : (Object.create(null) as Record<string, unknown>);
     current = current[part] as Record<string, unknown>;
   }
   current[parts[parts.length - 1]!] = value;
@@ -86,9 +87,10 @@ export function padRemovedPaths(
   resetVals: Record<string, unknown>,
   oldTask: Record<string, unknown>,
   newTask: Record<string, unknown>,
+  wholeValuePaths: ReadonlySet<string> = new Set(),
 ): void {
-  const oldFlat = flattenTask(oldTask);
-  const newFlat = flattenTask(newTask);
+  const oldFlat = flattenTask(oldTask, "", wholeValuePaths);
+  const newFlat = flattenTask(newTask, "", wholeValuePaths);
   const newPaths = Object.keys(newFlat);
   for (const path of Object.keys(oldFlat)) {
     if (path in newFlat || path.startsWith(SENTINEL_PREFIX)) continue;
@@ -156,10 +158,15 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // Structural equality guards against spurious resets when the nodes array is
   // rebuilt with identical content.
   const prevTaskRef = React.useRef<Specification.Task>(task);
+  const prevNodeIdRef = React.useRef(nodeId);
   React.useEffect(() => {
+    const nodeChanged = prevNodeIdRef.current !== nodeId;
+    prevNodeIdRef.current = nodeId;
     if (structuralEqual(task, prevTaskRef.current)) return;
     const prevTask = prevTaskRef.current;
     prevTaskRef.current = task;
+
+    if (nodeChanged) return;
     // Preserve the current sentinel selections (e.g. from a just-completed Apply)
     // so that variant combos stay on the user's chosen variant when the task has
     // no value for a field (cleared/empty). Extract from the live form values.
@@ -184,9 +191,14 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
       ...taskClone,
       ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
     };
-    padRemovedPaths(resetVals, prevTask as Record<string, unknown>, taskClone);
+    padRemovedPaths(
+      resetVals,
+      prevTask as Record<string, unknown>,
+      taskClone,
+      collectWholeValuePaths(allFields, taskClone),
+    );
     form.reset(resetVals);
-  }, [task, form, allFields]);
+  }, [task, nodeId, form, allFields]);
 
   // ── Seed SDK errors into form field slots ─────────────────────────────────
   useWorkflowErrorsForForm(

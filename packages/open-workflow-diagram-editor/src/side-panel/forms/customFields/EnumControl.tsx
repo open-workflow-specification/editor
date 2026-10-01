@@ -47,36 +47,45 @@ export function EnumControl({ field, id }: EnumControlProps) {
     <Controller
       name={field.path}
       control={control}
-      render={({ field: rhfField }) => (
-        <FieldWithError errorMessage={errorMessage}>
-          <Combobox
-            value={(rhfField.value as string) ?? ""}
-            onValueChange={!isReadOnly ? rhfField.onChange : undefined}
-            disabled={isReadOnly}
-          >
-            <ComboboxInput
-              id={id}
-              readOnly
-              value={(rhfField.value as string) ?? t("sidebar.form.selectOption")}
-              onBlur={rhfField.onBlur}
-              name={rhfField.name}
-              aria-label={field.label}
-              aria-invalid={errorMessage !== undefined || undefined}
-              showClear={false}
-              className="dec:h-7 dec:text-xs"
-            />
-            <ComboboxContent>
-              <ComboboxList>
-                {field.options.map((opt) => (
-                  <ComboboxItem key={opt} value={opt}>
-                    {opt}
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </FieldWithError>
-      )}
+      render={({ field: rhfField }) => {
+        const value = rhfField.value as string | undefined;
+
+        const displayValue =
+          value ??
+          (field.defaultValue !== undefined
+            ? `${field.defaultValue} ${t("sidebar.form.default")}`
+            : t("sidebar.form.selectOption"));
+        return (
+          <FieldWithError errorMessage={errorMessage}>
+            <Combobox
+              value={value ?? ""}
+              onValueChange={!isReadOnly ? rhfField.onChange : undefined}
+              disabled={isReadOnly}
+            >
+              <ComboboxInput
+                id={id}
+                readOnly
+                value={displayValue}
+                onBlur={rhfField.onBlur}
+                name={rhfField.name}
+                aria-label={field.label}
+                aria-invalid={errorMessage !== undefined || undefined}
+                showClear={false}
+                className="dec:h-7 dec:text-xs"
+              />
+              <ComboboxContent>
+                <ComboboxList>
+                  {field.options.map((opt) => (
+                    <ComboboxItem key={opt} value={opt}>
+                      {opt}
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </FieldWithError>
+        );
+      }}
     />
   );
 }

@@ -176,6 +176,106 @@ describe("applyDirtyValues", () => {
     expect(result).toEqual({ raise: { error: {} } });
   });
 
+  // `run` tells its process types apart by which key is present, so a switch that
+  // commits nothing must still write that key or the selection is lost on Apply.
+  it.each([
+    [
+      "the sentinel's own value was deleted",
+      { run: { await: false, shell: { command: "ls" } } },
+      { "run.shell.command": undefined, "run.container.image": undefined },
+      new Set<string>(),
+      { run: { await: false, container: {} } },
+    ],
+    [
+      "a cleared field kept the switch supplied",
+      { run: { shell: { command: "ls" } } },
+      { "run.shell.command": "" },
+      new Set(["run.shell.command"]),
+      { run: { container: {} } },
+    ],
+  ])(
+    "writes the presence key of a switched variant when %s",
+    (_l, original, values, dirty, expected) => {
+      const result = applyDirtyValues(
+        original,
+        values,
+        dirty,
+        new Set(["run"]),
+        new Map(),
+        new Map([["run", ["run.shell.command"]]]),
+        new Set(),
+        new Map([["run", "container"]]),
+      );
+      expect(result).toEqual(expected);
+    },
+  );
+
+  it("never overwrites a presence key the edit supplied", () => {
+    const result = applyDirtyValues(
+      { run: { shell: { command: "ls" } } },
+      { "run.container.image": "nginx" },
+      new Set(["run.container.image"]),
+      new Set(["run"]),
+      new Map(),
+      new Map([["run", ["run.shell.command"]]]),
+      new Set(),
+      new Map([["run", "container"]]),
+    );
+    expect(result).toEqual({ run: { container: { image: "nginx" } } });
+  });
+
+  it.each([
+    {
+      name: "restores the presence key of a selected variant whose last value was cleared",
+      original: { run: { shell: { command: "ls" } } },
+      cleared: "run.shell.command",
+      presenceKey: ["run", "shell"],
+      expected: { run: { shell: {} } },
+    },
+    {
+      name: "restores a nested presence key that pruning took its parents with",
+      original: {
+        call: "http",
+        with: { endpoint: { uri: "https://a", authentication: { bearer: { token: "t" } } } },
+      },
+      cleared: "with.endpoint.authentication.bearer.token",
+      presenceKey: ["with.endpoint.authentication", "bearer"],
+      expected: {
+        call: "http",
+        with: { endpoint: { uri: "https://a", authentication: { bearer: {} } } },
+      },
+    },
+  ] as const)("$name", ({ original, cleared, presenceKey, expected }) => {
+    const result = applyDirtyValues(
+      structuredClone(original),
+      { [cleared]: "" },
+      new Set([cleared]),
+      new Set(),
+      new Map(),
+      new Map(),
+      new Set(),
+      new Map([presenceKey]),
+    );
+    expect(result).toEqual(expected);
+  });
+
+  it("never writes the presence key of a selected variant the task did not have", () => {
+    const result = applyDirtyValues(
+      { run: { shell: { command: "ls" } } },
+      { "run.shell.command": "pwd" },
+      new Set(["run.shell.command"]),
+      new Set(),
+      new Map(),
+      new Map(),
+      new Set(),
+      new Map([
+        ["run", "shell"],
+        ["input.schema", "document"],
+      ]),
+    );
+    expect(result).toEqual({ run: { shell: { command: "pwd" } } });
+  });
+
   it("never removes the key that gives the task its type", () => {
     const original = { raise: { error: { type: "https://example.com/errors/boom" } } };
     const result = applyDirtyValues(

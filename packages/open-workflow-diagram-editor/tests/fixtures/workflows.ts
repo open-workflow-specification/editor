@@ -622,3 +622,94 @@ export const RAISE_BOTH_ERROR_SHAPES_WORKFLOW = {
     },
   ],
 };
+
+/**
+ * Run task fixture: one task per process type.
+ *
+ * - `buildImage` (container) sets `await: false` **before** the process key, the order
+ *   that decides the canvas badge if the subtype is read as the first key.
+ * - `transform` (inline script) carries every key `run.script` shares across its
+ *   Inline/External variants (`language`, `stdin`, `arguments`, `environment`).
+ * - `summarise` is a second inline script with a different `environment` and no `return`,
+ *   so switching to it from `transform` shows whether anything of `transform` leaks.
+ * - `cleanUp` (shell) sets neither `await` nor `return`, so both show their defaults.
+ * - `runSubflow` (workflow) passes a nested `input`, which is any JSON value.
+ */
+export const RUN_PROCESS_TYPES_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "run-process-types", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      buildImage: {
+        run: {
+          await: false,
+          container: {
+            image: "nginx:latest",
+            command: "nginx -g 'daemon off;'",
+            lifetime: { cleanup: "eventually", after: "PT10M" },
+          },
+        },
+      },
+    },
+    {
+      transform: {
+        run: {
+          return: "all",
+          script: {
+            language: "python",
+            stdin: "${ .payload }",
+            arguments: ["--mode", "strict"],
+            environment: { LOG_LEVEL: "info" },
+            code: "print('hello')",
+          },
+        },
+      },
+    },
+    {
+      summarise: {
+        run: { script: { language: "python", environment: { MODE: "fast" }, code: "print(1)" } },
+      },
+    },
+    { cleanUp: { run: { shell: { command: "rm -rf /tmp/build" } } } },
+    {
+      runSubflow: {
+        run: {
+          workflow: {
+            namespace: "examples",
+            name: "child",
+            version: "1.0.0",
+            input: { order: { id: 42, lines: ["a", "b"] } },
+          },
+        },
+      },
+    },
+  ],
+};
+
+/**
+ * One task per selector family whose options are told apart by which key is present
+ * (beyond `run`, which has its own fixture): an event-consumption strategy, an input
+ * schema and an authentication policy. Each starts on one option so a test can switch
+ * it to another and apply with nothing filled in.
+ */
+export const PRESENCE_KEY_SELECTORS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "presence-keys", version: "1.0.0", namespace: "default" },
+  do: [
+    { listenAny: { listen: { to: { any: [{ with: { type: "com.example.ping" } }] } } } },
+    {
+      validateInput: {
+        set: { checked: true },
+        input: { schema: { document: { type: "object" } } },
+      },
+    },
+    {
+      getPet: {
+        call: "openapi",
+        with: {
+          document: { endpoint: "https://example.com/petstore.json" },
+          operationId: "getPetById",
+          authentication: { basic: { username: "admin", password: "secret" } },
+        },
+      },
+    },
+  ],
+};

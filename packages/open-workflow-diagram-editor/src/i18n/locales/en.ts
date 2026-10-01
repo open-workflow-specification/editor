@@ -68,6 +68,7 @@ export const en = {
   "sidebar.form.noChanges": "No changes",
   "sidebar.form.applied": "Applied",
   "sidebar.form.selectOption": "Select an option…",
+  "sidebar.form.default": "(default)",
   "aria.form.taskProperties": "Task properties",
   "sidebar.map.addProperty": "+ Add property",
   "sidebar.map.keyPlaceholder": "key",

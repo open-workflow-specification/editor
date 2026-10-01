@@ -78,3 +78,59 @@ describe("padRemovedPaths", () => {
     expect(resetVals).toEqual(expected);
   });
 });
+
+// A map or a JSON value rebuilds itself from the reset values, so padding the
+// keys inside it would show each removed key again as an empty entry.
+describe("padRemovedPaths for fields that own their whole value", () => {
+  const wholeValuePaths = new Set(["run.script.environment", "run.workflow.input"]);
+
+  it.each([
+    {
+      name: "does not pad a key removed from a map that still has others",
+      old: { run: { script: { environment: { LOG_LEVEL: "info", NEW: "x" } } } },
+      new_: { run: { script: { environment: { LOG_LEVEL: "info" } } } },
+      expected: { run: { script: { environment: { LOG_LEVEL: "info" } } } },
+    },
+    {
+      name: "empties a map whose last key was removed",
+      old: { run: { script: { language: "python", environment: { LOG_LEVEL: "info" } } } },
+      new_: { run: { script: { language: "python" } } },
+      expected: { run: { script: { language: "python", environment: "" } } },
+    },
+    {
+      name: "does not pad the keys inside a JSON value",
+      old: { run: { workflow: { name: "a", input: { order: { id: 1, note: "x" } } } } },
+      new_: { run: { workflow: { name: "a", input: { order: { id: 1 } } } } },
+      expected: { run: { workflow: { name: "a", input: { order: { id: 1 } } } } },
+    },
+    {
+      name: "still pads an ordinary field beside them",
+      old: { run: { script: { stdin: "${ .x }", environment: { A: "1" } } } },
+      new_: { run: { script: { environment: { A: "1" } } } },
+      expected: { run: { script: { stdin: "", environment: { A: "1" } } } },
+    },
+  ])("$name", ({ old, new_, expected }) => {
+    const resetVals = structuredClone(new_) as Record<string, unknown>;
+    padRemovedPaths(resetVals, old, new_, wholeValuePaths);
+    expect(resetVals).toEqual(expected);
+  });
+});
+
+// Both callers build the reset values as `{ ...task }` — a shallow copy whose nested
+// objects are still the task's own, and that task is a canvas node's `data.task`.
+// Padding into them wrote the removed paths back into the node, so the panel reopened
+// on the variant the user had switched away from.
+describe("padRemovedPaths leaves the task it pads from untouched", () => {
+  it("does not write into a nested object the reset values share with the task", () => {
+    const old = { run: { script: { language: "python", code: "print(1)" } } };
+    const task = { run: { shell: { command: "echo hi" } } };
+    const resetVals: Record<string, unknown> = { ...task };
+
+    padRemovedPaths(resetVals, old, task);
+
+    expect(task).toEqual({ run: { shell: { command: "echo hi" } } });
+    expect(resetVals).toEqual({
+      run: { shell: { command: "echo hi" }, script: { language: "", code: "" } },
+    });
+  });
+});

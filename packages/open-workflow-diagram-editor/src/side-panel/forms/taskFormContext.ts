@@ -100,6 +100,33 @@ export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string>
 }
 
 /*
+ * Finds paths of fields that own their whole value and rebuild it from the form's
+ * reset values: key/value maps and JSON/YAML values. Their keys are user data rather
+ * than form fields, so a reset must not pad them key by key (see `padRemovedPaths`).
+ */
+export function collectWholeValuePaths(
+  fields: FormFieldDescriptor[],
+  taskData: Record<string, unknown>,
+): Set<string> {
+  const paths = new Set<string>();
+
+  const walk = (list: FormFieldDescriptor[]): void => {
+    for (const field of list) {
+      if (field.kind === "map" || field.kind === "json") paths.add(field.path);
+      else if (field.kind === "object") walk(field.children);
+      else if (field.kind === "one-of") {
+        const data = field.path === "__root__" ? taskData : getNestedValue(taskData, field.path);
+        const selected = field.variants.find((v) => v.matchesData(data));
+        for (const v of selected ? [selected] : field.variants) walk(v.fields);
+      }
+    }
+  };
+  walk(fields);
+
+  return paths;
+}
+
+/*
  * Re-roots field descriptors under a new path prefix.
  * Used to render ordered map entries with their full paths.
  * Example: prefixFields([{path: "when"}], "switch.0.electronicOrder")  -> [{path: "switch.0.electronicOrder.when"}]
