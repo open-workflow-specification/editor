@@ -21,7 +21,6 @@ import type {
   OneOfField,
   StringField,
   ObjectField,
-  ObjectListField,
   EventFilterListField,
   EnumField,
   JsonField,
@@ -726,8 +725,8 @@ describe("schemaToFormFields arrays", () => {
   it.each([
     ["run", "run.container.arguments", "string-list"],
     ["run", "run.shell.arguments", "string-list"],
-    ["listen", "listen.to.all", "json"],
-    ["listen", "listen.to.any", "json"],
+    ["listen", "listen.to.all", "event-filter-list"],
+    ["listen", "listen.to.any", "event-filter-list"],
   ])("edits the array at %s %s as a structured value", (nodeType, path, kind) => {
     expect(kindsByPath(getFormFieldsForNodeType(nodeType)).get(path)).toBe(kind);
   });
@@ -742,23 +741,47 @@ describe("schemaToFormFields arrays", () => {
   });
 });
 
-describe("schemaToFormFields listenTask — ObjectListField and event filter structure", () => {
-  /**
-   * Helper: get the fields for listenTask and navigate into the `listen.to`
-   * one-of. Returns the OneOfField at `listen.to` and a helper to pick a variant.
-   */
-  function getListenToOneOf() {
-    const fields = getFormFieldsForNodeType("listen");
-    const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
-    expect(listenGroup?.kind).toBe("object");
+/**
+ * Helper: get the fields for listenTask and navigate into the `listen.to`
+ * one-of. Returns the OneOfField at `listen.to` and a helper to pick a variant.
+ */
+function getListenToOneOf() {
+  const fields = getFormFieldsForNodeType("listen");
+  const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
+  expect(listenGroup?.kind).toBe("object");
 
-    const toField = listenGroup?.children.find((f) => f.path === "listen.to") as
-      | OneOfField
-      | undefined;
-    expect(toField?.kind).toBe("one-of");
-    return toField!;
-  }
+  const toField = listenGroup?.children.find((f) => f.path === "listen.to") as
+    | OneOfField
+    | undefined;
+  expect(toField?.kind).toBe("one-of");
+  return toField!;
+}
 
+/**
+ * Recursively collects all field paths from a descriptor tree.
+ */
+function collectPaths(fields: FormFieldDescriptor[]): string[] {
+  return fields.flatMap((f) => {
+    if (f.kind === "object") return [f.path, ...collectPaths(f.children)];
+    if (f.kind === "one-of") return [f.path, ...f.variants.flatMap((v) => collectPaths(v.fields))];
+    return [f.path];
+  });
+}
+
+/**
+ * Recursively collects all EventFilterListField nodes from a descriptor tree.
+ */
+function collectEventFilterListFields(fields: FormFieldDescriptor[]): EventFilterListField[] {
+  return fields.flatMap((f) => {
+    if (f.kind === "event-filter-list") return [f as EventFilterListField];
+    if (f.kind === "object") return collectEventFilterListFields(f.children);
+    if (f.kind === "one-of")
+      return f.variants.flatMap((v) => collectEventFilterListFields(v.fields));
+    return [];
+  });
+}
+
+describe("schemaToFormFields listenTask — event filter list structure", () => {
   it("listenTask generates an object group for `listen` with `listen.to` and `listen.read`", () => {
     const fields = getFormFieldsForNodeType("listen");
     const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
@@ -808,14 +831,6 @@ describe("schemaToFormFields listenTask — ObjectListField and event filter str
     // AnyEventConsumptionStrategy has `any` (required array) + optional `until`.
     // The schema walker may represent these as a structural one-of or as direct fields.
     // Verify that a field touching the "any" path is present somewhere in the variant's fields.
-    function collectPaths(fields: FormFieldDescriptor[]): string[] {
-      return fields.flatMap((f) => {
-        if (f.kind === "object") return [f.path, ...collectPaths(f.children)];
-        if (f.kind === "one-of")
-          return [f.path, ...f.variants.flatMap((v) => collectPaths(v.fields))];
-        return [f.path];
-      });
-    }
     const paths = collectPaths(anyVariant?.fields ?? []);
     expect(paths.some((p) => p.includes("any"))).toBe(true);
   });
@@ -876,16 +891,6 @@ describe("schemaToFormFields listenTask — ObjectListField and event filter str
 });
 
 describe("schemaToFormFields listenTask — One variant and Any+until fields", () => {
-  function getListenToOneOf() {
-    const fields = getFormFieldsForNodeType("listen");
-    const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
-    const toField = listenGroup?.children.find((f) => f.path === "listen.to") as
-      | OneOfField
-      | undefined;
-    expect(toField?.kind).toBe("one-of");
-    return toField!;
-  }
-
   it("One variant contains a field touching the `listen.to.one` path", () => {
     const toField = getListenToOneOf();
     const oneVariant = toField.variants.find((v) => v.label === "One Event Consumption Strategy");
@@ -894,14 +899,6 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
     // produce at least one field within this variant.
     expect(oneVariant?.fields.length).toBeGreaterThan(0);
 
-    function collectPaths(fields: FormFieldDescriptor[]): string[] {
-      return fields.flatMap((f) => {
-        if (f.kind === "object") return [f.path, ...collectPaths(f.children)];
-        if (f.kind === "one-of")
-          return [f.path, ...f.variants.flatMap((v) => collectPaths(v.fields))];
-        return [f.path];
-      });
-    }
     const paths = collectPaths(oneVariant?.fields ?? []);
     expect(paths.some((p) => p.includes("one"))).toBe(true);
   });
@@ -930,15 +927,6 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
     const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
     expect(anyVariant).toBeDefined();
 
-    function collectEventFilterListFields(fields: FormFieldDescriptor[]): EventFilterListField[] {
-      return fields.flatMap((f) => {
-        if (f.kind === "event-filter-list") return [f as EventFilterListField];
-        if (f.kind === "object") return collectEventFilterListFields(f.children);
-        if (f.kind === "one-of")
-          return f.variants.flatMap((v) => collectEventFilterListFields(v.fields));
-        return [];
-      });
-    }
     const listFields = collectEventFilterListFields(anyVariant?.fields ?? []);
     const anyListField = listFields.find((f) => f.path.includes("any"));
     expect(anyListField).toBeDefined();
@@ -963,7 +951,7 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
     expect(oneVariant?.matchesData({ any: [] })).toBe(false);
   });
 
-  it("handles items with $ref when resolving object-list schema", () => {
+  it("handles items with $ref when resolving non-event-filter object array as json field", () => {
     const rawSchema = {
       type: "object",
       properties: {
@@ -992,9 +980,8 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
       "yaml",
     );
 
-    const listField = fields.find((f) => f.path === "filters") as ObjectListField | undefined;
-    expect(listField?.kind).toBe("object-list");
-    expect(listField?.itemFields.length).toBeGreaterThan(0);
-    expect(listField?.itemFields[0]?.path).toBe("name");
+    const listField = fields.find((f) => f.path === "filters") as JsonField | undefined;
+    expect(listField?.kind).toBe("json");
+    expect(listField?.format).toBe("yaml");
   });
 });

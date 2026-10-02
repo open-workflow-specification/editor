@@ -526,7 +526,7 @@ function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
       for (const v of f.variants) {
         for (const [p, k] of collectLeafKinds(v.fields)) result.set(p, k);
       }
-    } else if (f.kind === "event-filter-list" || f.kind === "object-list") {
+    } else if (f.kind === "event-filter-list") {
       // Treat the whole array as a single leaf — its internal structure is managed
       // outside of RHF Controllers.
       result.set(f.path, f.kind);

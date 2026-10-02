@@ -81,8 +81,6 @@ export const en = {
   "sidebar.stringList.itemPlaceholder": "value",
   "sidebar.stringList.itemLabel": "List item",
   "sidebar.stringList.deleteItem": "Delete item",
-  "sidebar.objectList.addItem": "+ Add item",
-  "sidebar.objectList.deleteItem": "Remove item",
   "sidebar.eventFilter.filter": "filter",
   "sidebar.eventFilter.filters": "filters",
   "sidebar.eventFilter.addFilter": "+ Add filter",

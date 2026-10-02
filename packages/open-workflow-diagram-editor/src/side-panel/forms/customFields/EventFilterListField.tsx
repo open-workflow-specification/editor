@@ -46,11 +46,6 @@ interface FilterItem {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Reads a nested value at a dot-notation path. */
-function getAt(obj: Record<string, unknown>, path: string): unknown {
-  return getNestedValue(obj, path);
-}
-
 /** Extracts the array of eventFilter items from task data or RHF values. */
 function extractFilters(source: unknown): FilterItem[] {
   if (!Array.isArray(source)) return [];
@@ -204,6 +199,16 @@ function EventPropertiesPanel({
   onChange: (updated: Record<string, unknown>) => void;
   idPrefix: string;
 }) {
+  const [dataText, setDataText] = React.useState(() => valueToText(eventProps["data"], "yaml"));
+
+  const prevDataRef = React.useRef(eventProps["data"]);
+  React.useEffect(() => {
+    if (prevDataRef.current !== eventProps["data"]) {
+      prevDataRef.current = eventProps["data"];
+      setDataText(valueToText(eventProps["data"], "yaml"));
+    }
+  }, [eventProps]);
+
   const set = (key: string, value: string) => {
     onChange({ ...eventProps, [key]: value || undefined });
   };
@@ -248,17 +253,22 @@ function EventPropertiesPanel({
         <Textarea
           id={fieldId("data")}
           className="dec-event-props-input dec-form-scrollable-textarea dec-form-structured-value-textarea"
-          value={valueToText(eventProps["data"], "yaml")}
+          value={dataText}
           placeholder="${ .expression } or structured value"
           onChange={(e) => {
             const raw = e.target.value;
+            setDataText(raw);
             if (raw.trim() === "") {
+              prevDataRef.current = undefined;
               onChange({ ...eventProps, data: undefined });
               return;
             }
             try {
-              onChange({ ...eventProps, data: parseText(raw.trim(), "yaml") });
+              const parsed = parseText(raw.trim(), "yaml");
+              prevDataRef.current = parsed;
+              onChange({ ...eventProps, data: parsed });
             } catch {
+              prevDataRef.current = raw;
               onChange({ ...eventProps, data: raw });
             }
           }}
@@ -574,7 +584,7 @@ export function EventFilterListField({ field }: EventFilterListFieldProps) {
   const [items, setItems] = React.useState<FilterItem[]>(() => {
     const rhfValue = (getValues as (path: string) => unknown)(field.path);
     if (Array.isArray(rhfValue)) return extractFilters(rhfValue);
-    return extractFilters(getAt(taskData, field.path));
+    return extractFilters(getNestedValue(taskData, field.path));
   });
 
   // Re-sync on form.reset (node switch, undo/redo, cancel)

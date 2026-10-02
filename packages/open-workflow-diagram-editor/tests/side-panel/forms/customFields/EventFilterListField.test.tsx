@@ -40,6 +40,8 @@ import { EventFilterListField } from "../../../../src/side-panel/forms/customFie
 import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
 import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 
+type ObjectListField = EventFilterListFieldDescriptor;
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -424,6 +426,40 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
       with: { type: string; source: string; data: unknown; subject: string; id: string };
     }>;
     expect(filters[0]?.with?.data).toBe("foo: bar: baz");
+  });
+
+  it("does not auto-fill parsed YAML in the data textarea (e.g. 'test:' stays as typed)", async () => {
+    const user = userEvent.setup();
+    const flatField: ObjectListField = { ...allField, path: "all" };
+
+    function DataTextTester() {
+      const form = useForm<Record<string, unknown>>({
+        defaultValues: { all: [{ with: { type: "test.type" } }] },
+      });
+      return (
+        <I18nProvider locale="en" dictionaries={{ en }}>
+          <TaskFormContext.Provider
+            value={{
+              isReadOnly: false,
+              siblingTaskNames: [],
+              taskData: { all: [{ with: { type: "test.type" } }] },
+            }}
+          >
+            <FormProvider {...form}>
+              <EventFilterListField field={flatField} />
+            </FormProvider>
+          </TaskFormContext.Provider>
+        </I18nProvider>
+      );
+    }
+
+    render(<DataTextTester />);
+    await user.click(screen.getByRole("button", { name: /event properties/i }));
+
+    const dataTextarea = screen.getByPlaceholderText("${ .expression } or structured value");
+    fireEvent.change(dataTextarea, { target: { value: "test:" } });
+
+    expect(dataTextarea).toHaveValue("test:");
   });
 });
 

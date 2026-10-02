@@ -38,7 +38,6 @@ export type FormFieldDescriptor =
   | StringListField
   | ObjectField
   | EventFilterListField
-  | ObjectListField
   | MapField
   | JsonField
   | OrderedMapField
@@ -130,7 +129,6 @@ export interface EventFilterListField extends FieldBase {
   /** Schema-derived fields for a single item in the array. */
   itemFields: FormFieldDescriptor[];
 }
-
 
 /* A map where order is significant, written as array of single key objects with a user defined name e.g switch
  * In schema terms: an array whose `items` is an object with `minProperties: 1`,
@@ -265,6 +263,18 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
 }
 
 /**
+ * Returns the items schema for an array, following one $ref if present.
+ * Used by both task lists and ordered maps to get the array's item structure.
+ */
+function arrayItemsSchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const node = typeof schema.$ref === "string" ? resolveRef(schema.$ref, defs) : schema;
+  return node?.type === "array" && isPlainObject(node.items) ? node.items : undefined;
+}
+
+/**
  * Returns true if the schema node (or any `$ref` it resolves to) represents
  * a task-list — an array whose `items.additionalProperties.$ref` points to
  * the task union.
@@ -273,23 +283,43 @@ function isTaskListSchema(
   schema: Record<string, unknown>,
   defs: Record<string, unknown> | undefined,
 ): boolean {
-  let node: Record<string, unknown> = schema;
+  const entry = arrayItemsSchema(schema, defs)?.additionalProperties;
+  const ref = isPlainObject(entry) ? entry.$ref : undefined;
+  return typeof ref === "string" && (ref === "#/$defs/task" || ref.endsWith("/task"));
+}
 
-  // Follow one level of $ref
-  if (typeof node.$ref === "string") {
-    const resolved = resolveRef(node.$ref, defs);
-    if (!resolved) return false;
-    node = resolved;
+/*
+ * Checks if this is an ordered map (e.g. switch cases).
+ * An ordered map is an array where each item is a single-key object
+ * with user-defined names (e.g. { "electronicOrder": {...} }).
+ * Returns the schema for one entry, or undefined if not an ordered map.
+ */
+function orderedMapEntrySchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const items = arrayItemsSchema(schema, defs);
+  if (items?.minProperties !== 1 || items?.maxProperties !== 1) {
+    return undefined;
   }
+  const entry = items.additionalProperties;
+  return isPlainObject(entry) && isPlainObject(entry.properties) ? entry : undefined;
+}
 
-  if (node.type !== "array") return false;
-  const items = node.items;
-  if (!isPlainObject(items)) return false;
-  const ap = (items as Record<string, unknown>).additionalProperties;
-  if (!isPlainObject(ap)) return false;
-  const apRef = ap.$ref;
-  // Matches any ref whose last path segment is "task" (e.g. "#/$defs/task")
-  return typeof apRef === "string" && (apRef === "#/$defs/task" || apRef.endsWith("/task"));
+/**
+ * Returns true if the items schema matches the EventFilter shape:
+ * `with` is required AND both `with` and `correlate` are in properties.
+ */
+function isEventFilterItemSchema(items: Record<string, unknown>): boolean {
+  const required = items.required;
+  const props = items.properties;
+  return (
+    isPlainObject(props) &&
+    Array.isArray(required) &&
+    (required as string[]).includes("with") &&
+    "with" in (props as Record<string, unknown>) &&
+    "correlate" in (props as Record<string, unknown>)
+  );
 }
 
 /**
@@ -478,6 +508,75 @@ export function schemaToFormFields(
         required: isRequired,
       });
       continue;
+    }
+
+    // ── Ordered map list ────────────────────────────────────────────────────
+    const orderedMapSchema = orderedMapEntrySchema(resolved, localDefs);
+    if (orderedMapSchema) {
+      const itemRequired = new Set<string>(
+        Array.isArray(orderedMapSchema.required) ? (orderedMapSchema.required as string[]) : [],
+      );
+      fields.push({
+        kind: "ordered-map",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+        itemFields: schemaToFormFields(
+          orderedMapSchema as DereferencedSchema,
+          localDefs,
+          itemRequired,
+          "",
+          format,
+        ),
+      });
+      continue;
+    }
+
+    // ── Event-filter list / Generic object-list ─────────────────────────────
+    // Resolve the items schema (following one $ref) for both specialised and
+    // generic array field kinds.
+    const rawItems = arrayItemsSchema(resolved, localDefs);
+    if (rawItems) {
+      // Follow one level of $ref so that both checks work on the concrete schema.
+      let itemsResolved: Record<string, unknown> = rawItems;
+      if (typeof rawItems.$ref === "string") {
+        const r = resolveRef(rawItems.$ref, localDefs);
+        if (r) itemsResolved = r;
+      }
+
+      if (itemsResolved.type === "object" && itemsResolved.properties) {
+        if (isEventFilterItemSchema(itemsResolved)) {
+          const itemRequired = new Set<string>(
+            Array.isArray(itemsResolved.required) ? (itemsResolved.required as string[]) : [],
+          );
+          const itemFields = schemaToFormFields(
+            itemsResolved as DereferencedSchema,
+            localDefs,
+            itemRequired,
+            "",
+            format,
+          );
+          fields.push({
+            kind: "event-filter-list",
+            path: fieldPath,
+            label: deriveLabel(prop, key),
+            ...withDesc(description),
+            required: isRequired,
+            itemFields,
+          });
+        } else {
+          fields.push({
+            kind: "json",
+            path: fieldPath,
+            label: deriveLabel(prop, key),
+            ...withDesc(description),
+            required: isRequired,
+            format,
+          });
+        }
+        continue;
+      }
     }
 
     // ── oneOf / anyOf at property level ────────────────────────────────────
@@ -822,6 +921,20 @@ export function schemaToFormFields(
       continue;
     }
 
+    // ── Any other array ───────────────────────────────────────────────────
+    // Fallback for other arrays — rendered as a JSON/YAML textarea.
+    if (resolved.type === "array") {
+      fields.push({
+        kind: "json",
+        format,
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+      });
+      continue;
+    }
+
     // ── Fallback: unconstrained structured-payload key → JSON/YAML textarea ─
     if (STRUCTURED_PAYLOAD_KEYS.has(key)) {
       fields.push({
@@ -900,12 +1013,12 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
     }
   }
 
-  // Strategy 2: single unique required property key
+  // Strategy 2: single required property key (variant may have optional properties too).
+  // Picks the discriminating key when exactly one property is required.
   if (properties) {
-    const ownKeys = Object.keys(properties);
     const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
-    if (ownKeys.length === 1 && required.includes(ownKeys[0]!)) {
-      const uniqueKey = ownKeys[0]!;
+    if (required.length === 1 && required[0] !== undefined && required[0] in properties) {
+      const uniqueKey = required[0];
       return (data: unknown) =>
         isPlainObject(data) && (data as Record<string, unknown>)[uniqueKey] !== undefined;
     }
