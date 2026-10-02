@@ -37,6 +37,7 @@ export type FormFieldDescriptor =
   | ChildTaskListField
   | StringListField
   | ObjectField
+  | EventFilterListField
   | ObjectListField
   | MapField
   | JsonField
@@ -115,6 +116,21 @@ export interface ThenField extends FieldBase {
 export interface ChildTaskListField extends FieldBase {
   kind: "child-task-list";
 }
+
+/**
+ * An array of schema-defined objects whose items match the `EventFilter` shape
+ * (`with` required, `correlate` optional). Rendered by the specialised
+ * `EventFilterListField` editor that understands `{ with, correlate }` items.
+ *
+ * Identified structurally: item schema has `"with"` in its `required` array
+ * AND has both `"with"` and `"correlate"` in its `properties`.
+ */
+export interface EventFilterListField extends FieldBase {
+  kind: "event-filter-list";
+  /** Schema-derived fields for a single item in the array. */
+  itemFields: FormFieldDescriptor[];
+}
+
 
 /* A map where order is significant, written as array of single key objects with a user defined name e.g switch
  * In schema terms: an array whose `items` is an object with `minProperties: 1`,

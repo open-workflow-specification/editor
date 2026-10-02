@@ -20,7 +20,7 @@ import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import type { ObjectListField as ObjectListFieldDescriptor } from "../../../core/schemaToFormFields";
+import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../core/schemaToFormFields";
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { MapRow, newId } from "./KeyValueMapField";
@@ -69,16 +69,22 @@ function extractFilters(source: unknown): FilterItem[] {
 
 /**
  * Converts the schema `correlate` object (key → `{ from, expect? }`) into
- * MapEntry rows. The `from` expression is stored as the entry value.
+ * MapEntry rows. The full correlation object is stored as the entry value so
+ * that optional fields such as `expect` are not discarded.
  */
 function deserializeCorrelate(correlate: unknown): MapEntry[] {
   if (correlate == null || typeof correlate !== "object" || Array.isArray(correlate)) return [];
   return Object.entries(correlate as Record<string, unknown>).map(([key, val]) => {
-    const v = val as Record<string, unknown> | null | undefined;
+    const v = (val != null && typeof val === "object" && !Array.isArray(val) ? val : {}) as Record<
+      string,
+      unknown
+    >;
     return {
       id: newId(),
       key,
-      value: typeof v?.["from"] === "string" ? v["from"] : "",
+      // Preserve the full correlation object so `expect` (and any future
+      // optional fields) survive round-trips through the editor.
+      value: v,
     };
   });
 }
@@ -86,13 +92,37 @@ function deserializeCorrelate(correlate: unknown): MapEntry[] {
 /**
  * Converts MapEntry rows back into the schema `correlate` object.
  * Rows with empty keys are skipped.
+ * Each entry's value is the full correlation object; `from` is updated in-place.
  */
 function serializeCorrelate(rows: MapEntry[]): Record<string, unknown> | undefined {
   const result: Record<string, unknown> = {};
   for (const r of rows) {
-    if (r.key) result[r.key] = { from: r.value };
+    if (!r.key) continue;
+    const existing =
+      r.value != null && typeof r.value === "object" && !Array.isArray(r.value)
+        ? (r.value as Record<string, unknown>)
+        : {};
+    result[r.key] = { ...existing };
   }
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+/** Extracts the editable `from` string from a correlation object stored as a MapEntry value. */
+function correlateFrom(value: unknown): string {
+  if (value != null && typeof value === "object" && !Array.isArray(value)) {
+    const v = value as Record<string, unknown>;
+    return typeof v["from"] === "string" ? v["from"] : "";
+  }
+  return typeof value === "string" ? value : "";
+}
+
+/** Returns a new correlation object with `from` updated, preserving all other fields. */
+function withUpdatedFrom(existing: unknown, from: string): Record<string, unknown> {
+  const base =
+    existing != null && typeof existing === "object" && !Array.isArray(existing)
+      ? (existing as Record<string, unknown>)
+      : {};
+  return { ...base, from };
 }
 
 // ---------------------------------------------------------------------------
@@ -114,10 +144,14 @@ function CorrelateEditor({
     onCommit(next);
   };
 
-  const addRow = () => mutate([...rows, { id: newId(), key: "", value: "" }]);
+  const addRow = () => mutate([...rows, { id: newId(), key: "", value: { from: "" } }]);
 
-  const updateRow = (id: string, newKey: string, newValue: string) => {
-    mutate(rows.map((r) => (r.id === id ? { ...r, key: newKey, value: newValue } : r)));
+  const updateRow = (id: string, newKey: string, newFrom: string) => {
+    mutate(
+      rows.map((r) =>
+        r.id === id ? { ...r, key: newKey, value: withUpdatedFrom(r.value, newFrom) } : r,
+      ),
+    );
   };
 
   const deleteRow = (id: string) => mutate(rows.filter((r) => r.id !== id));
@@ -126,17 +160,20 @@ function CorrelateEditor({
     <div className="dec-correlate-editor">
       {rows.length > 0 && (
         <div className="dec-map-rows">
-          {rows.map((row) => (
-            <MapRow
-              key={row.id}
-              row={row}
-              onUpdate={(newKey, newValue) => updateRow(row.id, newKey, newValue)}
-              onDelete={() => deleteRow(row.id)}
-              {...(RUNTIME_EXPRESSION_PATTERN.test(String(row.value))
-                ? { valueClassName: "dec-form-expression-input" }
-                : {})}
-            />
-          ))}
+          {rows.map((row) => {
+            const fromStr = correlateFrom(row.value);
+            return (
+              <MapRow
+                key={row.id}
+                row={{ ...row, value: fromStr }}
+                onUpdate={(newKey, newValue) => updateRow(row.id, newKey, newValue)}
+                onDelete={() => deleteRow(row.id)}
+                {...(RUNTIME_EXPRESSION_PATTERN.test(fromStr)
+                  ? { valueClassName: "dec-form-expression-input" }
+                  : {})}
+              />
+            );
+          })}
         </div>
       )}
       <div className="dec-map-add-btn-wrap">
@@ -161,9 +198,11 @@ function CorrelateEditor({
 function EventPropertiesPanel({
   eventProps,
   onChange,
+  idPrefix,
 }: {
   eventProps: Record<string, unknown>;
   onChange: (updated: Record<string, unknown>) => void;
+  idPrefix: string;
 }) {
   const set = (key: string, value: string) => {
     onChange({ ...eventProps, [key]: value || undefined });
@@ -174,11 +213,16 @@ function EventPropertiesPanel({
     return typeof v === "string" ? v : "";
   };
 
+  const fieldId = (key: string) => `${idPrefix}-evtprop-${key}`;
+
   return (
     <div className="dec-event-props-panel">
       <div className="dec-event-props-row">
-        <span className="dec-event-props-label">type</span>
+        <label htmlFor={fieldId("type")} className="dec-event-props-label">
+          type
+        </label>
         <Input
+          id={fieldId("type")}
           className="dec-event-props-input"
           value={str("type")}
           placeholder="e.g. com.example.event.created"
@@ -186,8 +230,11 @@ function EventPropertiesPanel({
         />
       </div>
       <div className="dec-event-props-row">
-        <span className="dec-event-props-label">source</span>
+        <label htmlFor={fieldId("source")} className="dec-event-props-label">
+          source
+        </label>
         <Input
+          id={fieldId("source")}
           className="dec-event-props-input"
           value={str("source")}
           placeholder="https://… or ${...}"
@@ -195,8 +242,11 @@ function EventPropertiesPanel({
         />
       </div>
       <div className="dec-event-props-row">
-        <span className="dec-event-props-label">data</span>
+        <label htmlFor={fieldId("data")} className="dec-event-props-label">
+          data
+        </label>
         <Textarea
+          id={fieldId("data")}
           className="dec-event-props-input dec-form-scrollable-textarea dec-form-structured-value-textarea"
           value={valueToText(eventProps["data"], "yaml")}
           placeholder="${ .expression } or structured value"
@@ -215,16 +265,22 @@ function EventPropertiesPanel({
         />
       </div>
       <div className="dec-event-props-row">
-        <span className="dec-event-props-label">subject</span>
+        <label htmlFor={fieldId("subject")} className="dec-event-props-label">
+          subject
+        </label>
         <Input
+          id={fieldId("subject")}
           className="dec-event-props-input"
           value={str("subject")}
           onChange={(e) => set("subject", e.target.value)}
         />
       </div>
       <div className="dec-event-props-row">
-        <span className="dec-event-props-label">id</span>
+        <label htmlFor={fieldId("id")} className="dec-event-props-label">
+          id
+        </label>
         <Input
+          id={fieldId("id")}
           className="dec-event-props-input"
           value={str("id")}
           onChange={(e) => set("id", e.target.value)}
@@ -369,6 +425,7 @@ function EditableFilterList({
                   <EventPropertiesPanel
                     eventProps={eventProps}
                     onChange={(updated) => updateWith(item.id, updated)}
+                    idPrefix={item.id}
                   />
                 )}
 
@@ -488,7 +545,7 @@ function ReadOnlyFilterList({ items }: { items: FilterItem[] }) {
                   {correlateRows.map((row) => (
                     <div key={row.id} className="dec-map-row">
                       <span className="dec-map-key-readonly">{row.key}</span>
-                      <span className="dec-map-value-readonly">{String(row.value)}</span>
+                      <span className="dec-map-value-readonly">{correlateFrom(row.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -506,7 +563,7 @@ function ReadOnlyFilterList({ items }: { items: FilterItem[] }) {
 // ---------------------------------------------------------------------------
 
 export type EventFilterListFieldProps = {
-  field: ObjectListFieldDescriptor;
+  field: EventFilterListFieldDescriptor;
 };
 
 export function EventFilterListField({ field }: EventFilterListFieldProps) {

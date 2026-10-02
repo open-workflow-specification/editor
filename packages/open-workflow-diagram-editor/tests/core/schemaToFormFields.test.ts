@@ -22,6 +22,7 @@ import type {
   StringField,
   ObjectField,
   ObjectListField,
+  EventFilterListField,
   EnumField,
   JsonField,
   FormFieldDescriptor,
@@ -788,15 +789,15 @@ describe("schemaToFormFields listenTask — ObjectListField and event filter str
     expect(labels).toContain("One Event Consumption Strategy");
   });
 
-  it("All variant contains an `object-list` field for `listen.to.all`", () => {
+  it("All variant contains an `event-filter-list` field for `listen.to.all`", () => {
     const toField = getListenToOneOf();
     const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
     expect(allVariant).toBeDefined();
 
     const allListField = allVariant?.fields.find((f) => f.path === "listen.to.all") as
-      | ObjectListField
+      | EventFilterListField
       | undefined;
-    expect(allListField?.kind).toBe("object-list");
+    expect(allListField?.kind).toBe("event-filter-list");
     expect(allListField?.required).toBe(true);
   });
 
@@ -819,12 +820,12 @@ describe("schemaToFormFields listenTask — ObjectListField and event filter str
     expect(paths.some((p) => p.includes("any"))).toBe(true);
   });
 
-  it("`object-list` itemFields for eventFilter (All variant) contain a `with` field and a `correlate` field", () => {
+  it("`event-filter-list` itemFields for eventFilter (All variant) contain a `with` field and a `correlate` field", () => {
     const toField = getListenToOneOf();
     const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
     const allListField = allVariant?.fields.find(
-      (f) => f.kind === "object-list" && f.path === "listen.to.all",
-    ) as ObjectListField | undefined;
+      (f) => f.kind === "event-filter-list" && f.path === "listen.to.all",
+    ) as EventFilterListField | undefined;
     expect(allListField).toBeDefined();
 
     const withField = allListField?.itemFields.find((f) => f.path === "with");
@@ -839,8 +840,8 @@ describe("schemaToFormFields listenTask — ObjectListField and event filter str
     const toField = getListenToOneOf();
     const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
     const allListField = allVariant?.fields.find(
-      (f) => f.kind === "object-list" && f.path === "listen.to.all",
-    ) as ObjectListField | undefined;
+      (f) => f.kind === "event-filter-list" && f.path === "listen.to.all",
+    ) as EventFilterListField | undefined;
     expect(allListField).toBeDefined();
 
     const withField = allListField?.itemFields.find((f) => f.path === "with") as
@@ -920,26 +921,28 @@ describe("schemaToFormFields listenTask — One variant and Any+until fields", (
     const toField = getListenToOneOf();
     const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
     expect(anyVariant?.matchesData({ any: [] })).toBe(true);
+    expect(anyVariant?.matchesData({ all: [] })).toBe(false);
+    expect(anyVariant?.matchesData({ one: {} })).toBe(false);
   });
 
-  it("Any variant exposes an object-list field for the `any` array", () => {
+  it("Any variant exposes an event-filter-list field for the `any` array", () => {
     const toField = getListenToOneOf();
     const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
     expect(anyVariant).toBeDefined();
 
-    function collectObjectListFields(fields: FormFieldDescriptor[]): ObjectListField[] {
+    function collectEventFilterListFields(fields: FormFieldDescriptor[]): EventFilterListField[] {
       return fields.flatMap((f) => {
-        if (f.kind === "object-list") return [f as ObjectListField];
-        if (f.kind === "object") return collectObjectListFields(f.children);
+        if (f.kind === "event-filter-list") return [f as EventFilterListField];
+        if (f.kind === "object") return collectEventFilterListFields(f.children);
         if (f.kind === "one-of")
-          return f.variants.flatMap((v) => collectObjectListFields(v.fields));
+          return f.variants.flatMap((v) => collectEventFilterListFields(v.fields));
         return [];
       });
     }
-    const listFields = collectObjectListFields(anyVariant?.fields ?? []);
+    const listFields = collectEventFilterListFields(anyVariant?.fields ?? []);
     const anyListField = listFields.find((f) => f.path.includes("any"));
     expect(anyListField).toBeDefined();
-    expect(anyListField?.kind).toBe("object-list");
+    expect(anyListField?.kind).toBe("event-filter-list");
   });
 
   it("All and One variants have exclusive matchesData discriminators", () => {

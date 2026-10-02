@@ -164,7 +164,7 @@ export function filterReadOnlyFields(
       return hasObjectAtPath(task, field.path) ? [field] : [];
     }
 
-    if (field.kind === "ordered-map") {
+    if (field.kind === "event-filter-list" || "ordered-map") {
       const v = getNestedValue(task, field.path);
       return Array.isArray(v) && v.length > 0 ? [field] : [];
     }

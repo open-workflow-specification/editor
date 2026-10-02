@@ -38,15 +38,15 @@ import { I18nProvider } from "@openworkflowspec/i18n";
 import { en } from "../../../../src/i18n/locales/en";
 import { EventFilterListField } from "../../../../src/side-panel/forms/customFields/EventFilterListField";
 import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
-import type { ObjectListField } from "../../../../src/core/schemaToFormFields";
+import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Minimal ObjectListField descriptor mimicking listen.to.all */
-const allField: ObjectListField = {
-  kind: "object-list",
+/** Minimal EventFilterListField descriptor mimicking listen.to.all */
+const allField: EventFilterListFieldDescriptor = {
+  kind: "event-filter-list",
   path: "listen.to.all",
   label: "all",
   required: true,

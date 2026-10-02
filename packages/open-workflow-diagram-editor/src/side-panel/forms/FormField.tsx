@@ -526,10 +526,10 @@ function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
       for (const v of f.variants) {
         for (const [p, k] of collectLeafKinds(v.fields)) result.set(p, k);
       }
-    } else if (f.kind === "object-list") {
+    } else if (f.kind === "event-filter-list" || f.kind === "object-list") {
       // Treat the whole array as a single leaf — its internal structure is managed
-      // by EventFilterListField outside of RHF Controllers.
-      result.set(f.path, "object-list");
+      // outside of RHF Controllers.
+      result.set(f.path, f.kind);
     } else if (f.kind === "string") {
       result.set(f.path, f.isRuntimeExpression ? "string:re" : "string:plain");
     } else if (f.kind === "enum") {
