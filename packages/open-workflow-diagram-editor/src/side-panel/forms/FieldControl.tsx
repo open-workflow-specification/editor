@@ -26,6 +26,7 @@ import {
   StringListField,
   ThenField,
   ChildTaskListField,
+  EventFilterListField,
   StructuredValueField,
 } from "./customFields";
 
@@ -65,6 +66,8 @@ export function FieldControl({ field, id }: FieldControlProps) {
       return <ChildTaskListField field={field} />;
     case "string-list":
       return <StringListField field={field} />;
+    case "object-list":
+      return <EventFilterListField field={field} />;
     case "json":
       return <StructuredValueField field={field} {...idProp} />;
   }

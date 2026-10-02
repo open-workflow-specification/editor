@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-export { KeyValueMapField } from "./KeyValueMapField";
+export { KeyValueMapField, MapRow, newId } from "./KeyValueMapField";
+export type { MapEntry } from "./KeyValueMapField";
 export { StructuredValueField } from "./StructuredValueField";
 export { DurationField } from "./DurationField";
 export { McpProtocolVersionField } from "./McpProtocolVersionField";
 export { StringListField } from "./StringListField";
 export { ThenField } from "./ThenField";
 export { ChildTaskListField } from "./ChildTaskListField";
+export { EventFilterListField } from "./EventFilterListField";
 export { TaskListDisplay } from "./TaskListDisplay";
 export { ScrollableTextField } from "./ScrollableTextField";
 export { useFieldError, FieldWithError } from "./fieldHelpers";

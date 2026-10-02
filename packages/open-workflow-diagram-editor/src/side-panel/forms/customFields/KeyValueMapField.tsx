@@ -26,7 +26,7 @@ import { useTaskFormContext } from "../taskFormContext";
 // Types
 // ---------------------------------------------------------------------------
 
-interface MapEntry {
+export interface MapEntry {
   /** Stable row identity — never changes after creation (survives key renames). */
   id: string;
   key: string;
@@ -38,7 +38,7 @@ interface MapEntry {
 // ---------------------------------------------------------------------------
 
 /** Generate a stable row id that does not collide across adds/deletes. */
-function newId(): string {
+export function newId(): string {
   return Math.random().toString(36).slice(2);
 }
 
@@ -304,17 +304,20 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
 }
 
 // ---------------------------------------------------------------------------
-// MapRow — single editable key/value entry
+// MapRow — single editable key/value entry (exported for reuse)
 // ---------------------------------------------------------------------------
 
-function MapRow({
+export function MapRow({
   row,
   onUpdate,
   onDelete,
+  valueClassName,
 }: {
   row: MapEntry;
   onUpdate: (key: string, value: string) => void;
   onDelete: () => void;
+  /** Extra CSS class(es) appended to the value input, e.g. for expression styling. */
+  valueClassName?: string;
 }) {
   const { t } = useI18n();
   const serializedValue = serializeValue(row.value);
@@ -329,7 +332,7 @@ function MapRow({
         aria-label={t("sidebar.map.keyLabel")}
       />
       <Input
-        className="dec-map-value-input"
+        className={`dec-map-value-input${valueClassName ? ` ${valueClassName}` : ""}`}
         value={serializedValue}
         placeholder={t("sidebar.map.valuePlaceholder")}
         onChange={(e) => onUpdate(row.key, e.target.value)}
