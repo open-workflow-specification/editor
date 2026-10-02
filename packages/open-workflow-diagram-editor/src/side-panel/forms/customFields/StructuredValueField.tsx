@@ -32,7 +32,7 @@ export type StructuredValueFieldProps = {
   id?: string | undefined;
 };
 
-function valueToText(value: unknown, format: ContentFormat): string {
+export function valueToText(value: unknown, format: ContentFormat): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
   try {
@@ -44,7 +44,7 @@ function valueToText(value: unknown, format: ContentFormat): string {
   }
 }
 
-function parseText(text: string, format: ContentFormat): unknown {
+export function parseText(text: string, format: ContentFormat): unknown {
   if (format === "json") {
     return JSON.parse(text);
   }

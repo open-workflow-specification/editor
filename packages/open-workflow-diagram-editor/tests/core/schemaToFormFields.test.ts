@@ -15,11 +15,14 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { schemaToFormFields } from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
 import type {
   OneOfField,
   StringField,
   ObjectField,
+  EventFilterListField,
+  EnumField,
   JsonField,
   FormFieldDescriptor,
   OrderedMapField,
@@ -722,8 +725,8 @@ describe("schemaToFormFields arrays", () => {
   it.each([
     ["run", "run.container.arguments", "string-list"],
     ["run", "run.shell.arguments", "string-list"],
-    ["listen", "listen.to.all", "json"],
-    ["listen", "listen.to.any", "json"],
+    ["listen", "listen.to.all", "event-filter-list"],
+    ["listen", "listen.to.any", "event-filter-list"],
   ])("edits the array at %s %s as a structured value", (nodeType, path, kind) => {
     expect(kindsByPath(getFormFieldsForNodeType(nodeType)).get(path)).toBe(kind);
   });
@@ -735,5 +738,250 @@ describe("schemaToFormFields arrays", () => {
     ["try", "try"],
   ])("still describes the task list at %s %s as a child task list", (nodeType, path) => {
     expect(kindsByPath(getFormFieldsForNodeType(nodeType)).get(path)).toBe("child-task-list");
+  });
+});
+
+/**
+ * Helper: get the fields for listenTask and navigate into the `listen.to`
+ * one-of. Returns the OneOfField at `listen.to` and a helper to pick a variant.
+ */
+function getListenToOneOf() {
+  const fields = getFormFieldsForNodeType("listen");
+  const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
+  expect(listenGroup?.kind).toBe("object");
+
+  const toField = listenGroup?.children.find((f) => f.path === "listen.to") as
+    | OneOfField
+    | undefined;
+  expect(toField?.kind).toBe("one-of");
+  return toField!;
+}
+
+/**
+ * Recursively collects all field paths from a descriptor tree.
+ */
+function collectPaths(fields: FormFieldDescriptor[]): string[] {
+  return fields.flatMap((f) => {
+    if (f.kind === "object") return [f.path, ...collectPaths(f.children)];
+    if (f.kind === "one-of") return [f.path, ...f.variants.flatMap((v) => collectPaths(v.fields))];
+    return [f.path];
+  });
+}
+
+/**
+ * Recursively collects all EventFilterListField nodes from a descriptor tree.
+ */
+function collectEventFilterListFields(fields: FormFieldDescriptor[]): EventFilterListField[] {
+  return fields.flatMap((f) => {
+    if (f.kind === "event-filter-list") return [f as EventFilterListField];
+    if (f.kind === "object") return collectEventFilterListFields(f.children);
+    if (f.kind === "one-of")
+      return f.variants.flatMap((v) => collectEventFilterListFields(v.fields));
+    return [];
+  });
+}
+
+describe("schemaToFormFields listenTask — event filter list structure", () => {
+  it("listenTask generates an object group for `listen` with `listen.to` and `listen.read`", () => {
+    const fields = getFormFieldsForNodeType("listen");
+    const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
+    expect(listenGroup?.kind).toBe("object");
+
+    const toField = listenGroup?.children.find((f) => f.path === "listen.to");
+    expect(toField).toBeDefined();
+
+    const readField = listenGroup?.children.find((f) => f.path === "listen.read");
+    expect(readField?.kind).toBe("enum");
+  });
+
+  it("`listen.read` is an enum field with options data/envelope/raw", () => {
+    const fields = getFormFieldsForNodeType("listen");
+    const listenGroup = fields.find((f) => f.path === "listen") as ObjectField | undefined;
+    const readField = listenGroup?.children.find((f) => f.path === "listen.read") as
+      | EnumField
+      | undefined;
+    expect(readField?.kind).toBe("enum");
+    expect(readField?.options).toEqual(["data", "envelope", "raw"]);
+  });
+
+  it("`listen.to` is a one-of with All/Any/One variants", () => {
+    const toField = getListenToOneOf();
+    const labels = toField.variants.map((v) => v.label);
+    expect(labels).toContain("All Event Consumption Strategy");
+    expect(labels).toContain("Any Event Consumption Strategy");
+    expect(labels).toContain("One Event Consumption Strategy");
+  });
+
+  it("All variant contains an `event-filter-list` field for `listen.to.all`", () => {
+    const toField = getListenToOneOf();
+    const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
+    expect(allVariant).toBeDefined();
+
+    const allListField = allVariant?.fields.find((f) => f.path === "listen.to.all") as
+      | EventFilterListField
+      | undefined;
+    expect(allListField?.kind).toBe("event-filter-list");
+    expect(allListField?.required).toBe(true);
+  });
+
+  it("Any variant exposes fields that include `listen.to.any` path (array of event filters)", () => {
+    const toField = getListenToOneOf();
+    const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
+    expect(anyVariant).toBeDefined();
+    // AnyEventConsumptionStrategy has `any` (required array) + optional `until`.
+    // The schema walker may represent these as a structural one-of or as direct fields.
+    // Verify that a field touching the "any" path is present somewhere in the variant's fields.
+    const paths = collectPaths(anyVariant?.fields ?? []);
+    expect(paths.some((p) => p.includes("any"))).toBe(true);
+  });
+
+  it("`event-filter-list` itemFields for eventFilter (All variant) contain a `with` field and a `correlate` field", () => {
+    const toField = getListenToOneOf();
+    const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
+    const allListField = allVariant?.fields.find(
+      (f) => f.kind === "event-filter-list" && f.path === "listen.to.all",
+    ) as EventFilterListField | undefined;
+    expect(allListField).toBeDefined();
+
+    const withField = allListField?.itemFields.find((f) => f.path === "with");
+    expect(withField).toBeDefined();
+    expect(withField?.required).toBe(true);
+
+    const correlateField = allListField?.itemFields.find((f) => f.path === "correlate");
+    expect(correlateField).toBeDefined();
+  });
+
+  it("`with` itemField in the All variant is an object with eventProperties children", () => {
+    const toField = getListenToOneOf();
+    const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
+    const allListField = allVariant?.fields.find(
+      (f) => f.kind === "event-filter-list" && f.path === "listen.to.all",
+    ) as EventFilterListField | undefined;
+    expect(allListField).toBeDefined();
+
+    const withField = allListField?.itemFields.find((f) => f.path === "with") as
+      | ObjectField
+      | undefined;
+    expect(withField?.kind).toBe("object");
+
+    const childPaths = withField?.children.map((c) => c.path) ?? [];
+    expect(childPaths).toContain("with.type");
+    expect(childPaths).toContain("with.source");
+    expect(childPaths).toContain("with.data");
+  });
+
+  it("All variant matchesData returns true when data has `all` key", () => {
+    const toField = getListenToOneOf();
+    const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
+    expect(allVariant?.matchesData({ all: [] })).toBe(true);
+    expect(allVariant?.matchesData({ any: [] })).toBe(false);
+    expect(allVariant?.matchesData({ one: {} })).toBe(false);
+  });
+
+  it("listenTask `foreach` generates an object group with item/at/do fields", () => {
+    const fields = getFormFieldsForNodeType("listen");
+    const foreachField = fields.find((f) => f.path === "foreach") as ObjectField | undefined;
+    expect(foreachField?.kind).toBe("object");
+
+    const childPaths = foreachField?.children.map((c) => c.path) ?? [];
+    expect(childPaths).toContain("foreach.item");
+    expect(childPaths).toContain("foreach.at");
+    expect(childPaths).toContain("foreach.do");
+  });
+});
+
+describe("schemaToFormFields listenTask — One variant and Any+until fields", () => {
+  it("One variant contains a field touching the `listen.to.one` path", () => {
+    const toField = getListenToOneOf();
+    const oneVariant = toField.variants.find((v) => v.label === "One Event Consumption Strategy");
+    expect(oneVariant).toBeDefined();
+    // The `one` property is a single eventFilter object — the schema walker should
+    // produce at least one field within this variant.
+    expect(oneVariant?.fields.length).toBeGreaterThan(0);
+
+    const paths = collectPaths(oneVariant?.fields ?? []);
+    expect(paths.some((p) => p.includes("one"))).toBe(true);
+  });
+
+  it("One variant matchesData returns true when data has `one` key", () => {
+    const toField = getListenToOneOf();
+    const oneVariant = toField.variants.find((v) => v.label === "One Event Consumption Strategy");
+    expect(oneVariant?.matchesData({ one: {} })).toBe(true);
+    expect(oneVariant?.matchesData({ all: [] })).toBe(false);
+    expect(oneVariant?.matchesData({ any: [] })).toBe(false);
+  });
+
+  it("Any variant matchesData returns true when data has `any` key", () => {
+    // NOTE: AnyEventConsumptionStrategy has structural oneOf (`any` + `until`), so its
+    // matchesData discriminator may be broader than ideal. The test checks that `{ any: [] }`
+    // matches but does NOT assert exclusivity (see PLAN.md: known limitation).
+    const toField = getListenToOneOf();
+    const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
+    expect(anyVariant?.matchesData({ any: [] })).toBe(true);
+    expect(anyVariant?.matchesData({ all: [] })).toBe(false);
+    expect(anyVariant?.matchesData({ one: {} })).toBe(false);
+  });
+
+  it("Any variant exposes an event-filter-list field for the `any` array", () => {
+    const toField = getListenToOneOf();
+    const anyVariant = toField.variants.find((v) => v.label === "Any Event Consumption Strategy");
+    expect(anyVariant).toBeDefined();
+
+    const listFields = collectEventFilterListFields(anyVariant?.fields ?? []);
+    const anyListField = listFields.find((f) => f.path.includes("any"));
+    expect(anyListField).toBeDefined();
+    expect(anyListField?.kind).toBe("event-filter-list");
+  });
+
+  it("All and One variants have exclusive matchesData discriminators", () => {
+    // All and One variants have clean `required` discriminators — matchesData is exclusive.
+    // Any variant is known to have a broader discriminator (structural oneOf limitation).
+    const toField = getListenToOneOf();
+    const allVariant = toField.variants.find((v) => v.label === "All Event Consumption Strategy");
+    const oneVariant = toField.variants.find((v) => v.label === "One Event Consumption Strategy");
+
+    // All matches { all } but not { one } or { any }
+    expect(allVariant?.matchesData({ all: [] })).toBe(true);
+    expect(allVariant?.matchesData({ one: {} })).toBe(false);
+    expect(allVariant?.matchesData({ any: [] })).toBe(false);
+
+    // One matches { one } but not { all } or { any }
+    expect(oneVariant?.matchesData({ one: {} })).toBe(true);
+    expect(oneVariant?.matchesData({ all: [] })).toBe(false);
+    expect(oneVariant?.matchesData({ any: [] })).toBe(false);
+  });
+
+  it("handles items with $ref when resolving non-event-filter object array as json field", () => {
+    const rawSchema = {
+      type: "object",
+      properties: {
+        filters: {
+          type: "array",
+          items: {
+            $ref: "#/$defs/customFilter",
+          },
+        },
+      },
+    };
+    const localDefs = {
+      customFilter: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+        },
+      },
+    };
+
+    const fields = schemaToFormFields(
+      rawSchema as unknown as import("../../src/core/schemaFilter").DereferencedSchema,
+      localDefs,
+      new Set(["filters"]),
+      "",
+      "yaml",
+    );
+
+    const listField = fields.find((f) => f.path === "filters") as JsonField | undefined;
+    expect(listField?.kind).toBe("json");
+    expect(listField?.format).toBe("yaml");
   });
 });

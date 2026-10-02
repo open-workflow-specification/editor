@@ -81,7 +81,7 @@ function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
 }
 
 /*
- * Finds paths of arrays edited through form controls (i.e ordered maps).
+ * Finds paths of arrays edited through form controls (ordered maps and event-filter lists).
  * These arrays get empty values pruned before saving, since clearing a control means "delete this key".
  */
 export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string> {
@@ -89,7 +89,7 @@ export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string>
 
   const walk = (list: FormFieldDescriptor[]): void => {
     for (const field of list) {
-      if (field.kind === "ordered-map") paths.add(field.path);
+      if (field.kind === "ordered-map" || field.kind === "event-filter-list") paths.add(field.path);
       else if (field.kind === "object") walk(field.children);
       else if (field.kind === "one-of") for (const v of field.variants) walk(v.fields);
     }
@@ -164,7 +164,7 @@ export function filterReadOnlyFields(
       return hasObjectAtPath(task, field.path) ? [field] : [];
     }
 
-    if (field.kind === "ordered-map") {
+    if (field.kind === "event-filter-list" || field.kind === "ordered-map") {
       const v = getNestedValue(task, field.path);
       return Array.isArray(v) && v.length > 0 ? [field] : [];
     }

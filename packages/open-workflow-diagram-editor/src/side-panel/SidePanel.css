@@ -1052,6 +1052,306 @@
     @apply dec:border-b-0;
   }
 
+  /* ── Event filter list (.dec-filter-*) ──────────────────────────────── */
+
+  /* Single filter item wrapper */
+  .dec-root .dec-filter-item {
+    @apply dec:flex dec:flex-col
+      dec:border-b dec:border-gray-100;
+  }
+
+  .dec-root.dark .dec-filter-item {
+    @apply dec:border-gray-700/50;
+  }
+
+  .dec-root .dec-filter-item:last-child {
+    @apply dec:border-b-0;
+  }
+
+  /* Item header: index badge + spacer + delete button */
+  .dec-root .dec-filter-item-header {
+    @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:pt-1.5 dec:pb-1;
+  }
+
+  .dec-root .dec-filter-item-index {
+    @apply dec:inline-flex dec:items-center dec:justify-center
+      dec:h-4 dec:w-4 dec:shrink-0
+      dec:rounded dec:border dec:border-gray-200
+      dec:bg-gray-50
+      dec:text-[10px] dec:font-semibold dec:tabular-nums dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-filter-item-index {
+    @apply dec:border-gray-700 dec:bg-gray-800 dec:text-gray-400;
+  }
+
+  .dec-root .dec-filter-item-spacer {
+    @apply dec:flex-1;
+  }
+
+  /* "with *" trigger row */
+  .dec-root .dec-filter-with-row {
+    @apply dec:flex dec:items-center dec:justify-between dec:gap-2
+      dec:px-2 dec:pb-1.5;
+  }
+
+  .dec-root .dec-filter-with-label {
+    @apply dec:text-[11px] dec:font-medium dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-filter-with-label {
+    @apply dec:text-gray-400;
+  }
+
+  /* Disclosure trigger: "Event properties ›" */
+  .dec-root .dec-filter-with-disclosure {
+    @apply dec:inline-flex dec:items-center dec:gap-0.5
+      dec:text-[10px] dec:font-medium
+      dec:bg-transparent dec:border-0 dec:cursor-pointer dec:transition-colors;
+    color: #0d9488;
+  }
+
+  .dec-root .dec-filter-with-disclosure:hover {
+    color: #047857;
+  }
+
+  .dec-root.dark .dec-filter-with-disclosure {
+    color: #2dd4bf;
+  }
+
+  .dec-root.dark .dec-filter-with-disclosure:hover {
+    color: #5eead4;
+  }
+
+  .dec-root .dec-filter-with-disclosure:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: 1px;
+  }
+
+  .dec-root .dec-filter-disclosure-icon {
+    @apply dec:h-3 dec:w-3 dec:shrink-0;
+  }
+
+  /* Event properties sub-panel (expanded inline beneath "with" row) */
+  .dec-root .dec-event-props-panel {
+    @apply dec:flex dec:flex-col dec:gap-2
+      dec:border-t dec:border-b dec:border-gray-100
+      dec:bg-gray-50/60
+      dec:px-3 dec:py-2;
+  }
+
+  .dec-root.dark .dec-event-props-panel {
+    @apply dec:border-gray-700/50 dec:bg-gray-900/40;
+  }
+
+  .dec-root .dec-event-props-row {
+    @apply dec:flex dec:flex-col dec:gap-0.5;
+  }
+
+  .dec-root .dec-event-props-label {
+    @apply dec:text-[10px] dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-event-props-label {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root .dec-event-props-label-hint {
+    @apply dec:text-gray-400 dec:italic;
+  }
+
+  .dec-root.dark .dec-event-props-label-hint {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-event-props-input {
+    @apply dec:h-6 dec:text-[11px] dec:px-1.5;
+  }
+
+  /* Correlate collapsible group */
+  .dec-root .dec-correlate-group {
+    @apply dec:mx-2 dec:mb-1.5
+      dec:rounded dec:border dec:border-gray-200 dec:overflow-hidden;
+  }
+
+  .dec-root.dark .dec-correlate-group {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-correlate-header {
+    @apply dec:flex dec:items-center dec:gap-1.5
+      dec:w-full dec:text-left
+      dec:px-2 dec:py-1
+      dec:bg-gray-50 dec:border-0 dec:cursor-pointer dec:transition-colors;
+  }
+
+  .dec-root .dec-correlate-header:hover {
+    @apply dec:bg-gray-100;
+  }
+
+  .dec-root.dark .dec-correlate-header {
+    @apply dec:bg-gray-800/60;
+  }
+
+  .dec-root.dark .dec-correlate-header:hover {
+    @apply dec:bg-gray-800;
+  }
+
+  .dec-root .dec-correlate-header:focus-visible {
+    outline: 1px solid rgb(var(--dec-selected-rgb));
+    outline-offset: -1px;
+  }
+
+  .dec-root .dec-correlate-chevron {
+    @apply dec:h-3 dec:w-3 dec:shrink-0 dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-correlate-chevron {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-correlate-label {
+    @apply dec:flex-1 dec:text-[11px] dec:font-medium dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-correlate-label {
+    @apply dec:text-gray-400;
+  }
+
+  /* Correlate editor rows container — shares dec-map-rows border/background */
+  .dec-root .dec-correlate-editor {
+    @apply dec:flex dec:flex-col
+      dec:border-t dec:border-gray-100;
+  }
+
+  .dec-root.dark .dec-correlate-editor {
+    @apply dec:border-gray-700;
+  }
+
+
+  /* Read-only filter item */
+  .dec-root .dec-filter-item-readonly {
+    @apply dec:flex dec:flex-col dec:gap-1
+      dec:px-2 dec:py-2
+      dec:border-b dec:border-gray-100;
+  }
+
+  .dec-root .dec-filter-item-readonly:last-child {
+    @apply dec:border-b-0;
+  }
+
+  .dec-root.dark .dec-filter-item-readonly {
+    @apply dec:border-gray-700/50;
+  }
+
+  .dec-root .dec-filter-readonly-header {
+    @apply dec:flex dec:items-center dec:gap-1.5;
+  }
+
+  .dec-root .dec-filter-readonly-props {
+    @apply dec:flex dec:flex-col dec:gap-0.5 dec:pl-5;
+  }
+
+  .dec-root .dec-filter-readonly-prop {
+    @apply dec:flex dec:items-baseline dec:gap-2;
+  }
+
+  .dec-root .dec-filter-readonly-key {
+    @apply dec:text-[10px] dec:text-gray-400 dec:w-16 dec:shrink-0;
+  }
+
+  .dec-root.dark .dec-filter-readonly-key {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-filter-readonly-value {
+    @apply dec:text-[11px] dec:text-gray-600 dec:break-all;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-filter-readonly-value {
+    @apply dec:text-gray-300;
+  }
+
+  /* Highlight runtime expression values in teal */
+  .dec-root .dec-filter-readonly-value--expression {
+    color: #0d9488;
+  }
+
+  .dec-root.dark .dec-filter-readonly-value--expression {
+    color: #2dd4bf;
+  }
+
+  /* Correlate read-only block */
+  .dec-root .dec-correlate-readonly {
+    @apply dec:ml-5 dec:mt-1
+      dec:rounded dec:border dec:border-gray-200 dec:overflow-hidden;
+  }
+
+  .dec-root.dark .dec-correlate-readonly {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root .dec-correlate-readonly-header {
+    @apply dec:flex dec:items-center dec:justify-between
+      dec:px-2 dec:py-0.5
+      dec:bg-gray-50;
+  }
+
+  .dec-root.dark .dec-correlate-readonly-header {
+    @apply dec:bg-gray-800/60;
+  }
+
+  .dec-root .dec-correlate-readonly-row {
+    @apply dec:flex dec:items-baseline dec:gap-1.5
+      dec:px-2 dec:py-1
+      dec:border-t dec:border-gray-100
+      dec:text-[10px];
+  }
+
+  .dec-root.dark .dec-correlate-readonly-row {
+    @apply dec:border-gray-700/50;
+  }
+
+  .dec-root .dec-correlate-readonly-key {
+    @apply dec:text-gray-500 dec:shrink-0;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-correlate-readonly-key {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root .dec-correlate-readonly-arrow {
+    @apply dec:text-gray-400 dec:shrink-0;
+  }
+
+  .dec-root .dec-correlate-readonly-from {
+    @apply dec:flex-1 dec:break-all;
+    font-family: var(--dec-font-mono);
+    color: #0d9488;
+  }
+
+  .dec-root.dark .dec-correlate-readonly-from {
+    color: #2dd4bf;
+  }
+
+  .dec-root .dec-correlate-readonly-expect {
+    @apply dec:text-gray-500 dec:shrink-0;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-correlate-readonly-expect {
+    @apply dec:text-gray-400;
+  }
+
+  /* Count-only header variant: right-align the badge when there is no label */
+  .dec-root .dec-filter-list-count-header {
+    @apply dec:justify-end;
+  }
+
+  /* ── End event filter list ───────────────────────────────────────────── */
+
   /* ── End task form ───────────────────────────────────────────────────── */
 
   /* ── Navigation discard guard ────────────────────────────────────────── */
