@@ -40,8 +40,6 @@ import { EventFilterListField } from "../../../../src/side-panel/forms/customFie
 import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
 import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 
-type ObjectListField = EventFilterListFieldDescriptor;
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -79,7 +77,7 @@ function Wrapper({
   defaultValues?: Record<string, unknown>;
   taskData?: Record<string, unknown>;
   isReadOnly?: boolean;
-  field?: ObjectListField;
+  field?: EventFilterListFieldDescriptor;
 }) {
   const form = useForm<Record<string, unknown>>({ defaultValues });
   return (
@@ -295,7 +293,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
   it("updates the type field and commits to the form", async () => {
     const user = userEvent.setup();
     // Use a flat path "all" so getValues() returns a top-level "all" key.
-    const flatField: ObjectListField = { ...allField, path: "all" };
+    const flatField: EventFilterListFieldDescriptor = { ...allField, path: "all" };
     function TesterWithDump() {
       const form = useForm<Record<string, unknown>>({
         defaultValues: { all: [{ with: { type: "original.type" } }] },
@@ -345,7 +343,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
 
   it("updates source, data, subject, and id fields in event properties panel", async () => {
     const user = userEvent.setup();
-    const flatField: ObjectListField = {
+    const flatField: EventFilterListFieldDescriptor = {
       ...allField,
       path: "all",
     };
@@ -430,7 +428,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
 
   it("does not auto-fill parsed YAML in the data textarea (e.g. 'test:' stays as typed)", async () => {
     const user = userEvent.setup();
-    const flatField: ObjectListField = { ...allField, path: "all" };
+    const flatField: EventFilterListFieldDescriptor = { ...allField, path: "all" };
 
     function DataTextTester() {
       const form = useForm<Record<string, unknown>>({
@@ -542,7 +540,7 @@ describe("EventFilterListField — edit mode: correlate section", () => {
 
   it("updates an existing correlate key and value", async () => {
     const user = userEvent.setup();
-    const flatField: ObjectListField = {
+    const flatField: EventFilterListFieldDescriptor = {
       ...allField,
       path: "all",
     };
@@ -615,7 +613,7 @@ describe("EventFilterListField — RHF synchronisation", () => {
     // form.reset() replaces defaultValues in its store, which causes useFormState
     // to return a new reference, triggering the sync effect.
     // We use a nested object shape (not dot-notation) so form.reset works correctly.
-    const nestedField: ObjectListField = {
+    const nestedField: EventFilterListFieldDescriptor = {
       ...allField,
       path: "all", // flat path so getValues("all") works with nested defaultValues
     };
