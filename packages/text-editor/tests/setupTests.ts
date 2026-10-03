@@ -18,13 +18,28 @@ import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, vi } from "vitest";
 
+// jsdom does not implement Worker. Stub it so stories that call
+// createLanguageServiceWorker at mount do not throw in unit tests.
+vi.stubGlobal(
+  "Worker",
+  class {
+    terminate = vi.fn();
+  },
+);
+
 vi.mock("monaco-editor/editor", async () => {
   const { default: monacoMock } = await import("./__mocks__/monaco-editor");
   return monacoMock;
 });
 
 vi.mock("monaco-editor/features/register.all", () => ({}));
-vi.mock("monaco-editor/languages/features/json/register", () => ({}));
+vi.mock("monaco-editor/languages/features/json/register", () => ({
+  jsonDefaults: { setModeConfiguration: vi.fn() },
+}));
 vi.mock("monaco-editor/languages/definitions/yaml/register", () => ({}));
+vi.mock("@volar/monaco", async () => {
+  const { mockRegisterProviders, mockActivateMarkers } = await import("./__mocks__/volar-monaco");
+  return { registerProviders: mockRegisterProviders, activateMarkers: mockActivateMarkers };
+});
 
 afterEach(cleanup);

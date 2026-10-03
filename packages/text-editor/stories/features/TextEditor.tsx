@@ -14,18 +14,44 @@
  * limitations under the License.
  */
 
-import { TextEditor as Component, TextEditorProps } from "../../src/TextEditor";
+import * as React from "react";
+import { TextEditor as Component, type TextEditorProps } from "../../src/TextEditor";
+
+declare global {
+  interface Window {
+    textEditorSetLanguage?: React.Dispatch<
+      React.SetStateAction<TextEditorProps["language"] | undefined>
+    >;
+    textEditorSetIsReadOnly?: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  }
+}
+
+const createLanguageServiceWorker = () =>
+  new Worker(new URL("../../src/worker/language.worker.ts", import.meta.url), { type: "module" });
 
 /** Primary UI component for user interaction */
 export const TextEditor = ({ ...props }: TextEditorProps) => {
+  const [languageOverride, setLanguageOverride] = React.useState<TextEditorProps["language"]>();
+  const [isReadOnlyOverride, setIsReadOnlyOverride] = React.useState<boolean>();
+
+  React.useEffect(() => {
+    // Expose React setters for E2E tests interactions.
+    window.textEditorSetLanguage = setLanguageOverride;
+    window.textEditorSetIsReadOnly = setIsReadOnlyOverride;
+
+    return () => {
+      delete window.textEditorSetLanguage;
+      delete window.textEditorSetIsReadOnly;
+    };
+  }, []);
+
   return (
     <div style={{ height: "100vh" }}>
       <Component
-        content={props.content}
-        language={props.language}
-        onContentChange={props.onContentChange}
-        isReadOnly={props.isReadOnly}
-        colorMode={props.colorMode}
+        createLanguageServiceWorker={createLanguageServiceWorker}
+        {...props}
+        language={languageOverride ?? props.language}
+        isReadOnly={isReadOnlyOverride ?? props.isReadOnly}
       />
     </div>
   );

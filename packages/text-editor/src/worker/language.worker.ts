@@ -13,27 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite";
+import { createJsonLanguageServicePlugins } from "@openworkflowspec/language-service";
+import { createSimpleWorkerLanguageService } from "@volar/monaco/worker";
+import { initialize } from "monaco-editor/editor/editor.worker.js";
+import { URI } from "vscode-uri";
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
-  build: {
-    emptyOutDir: false,
-    sourcemap: true,
-    lib: {
-      entry: {
-        index: "src/index.ts",
-        worker: "src/worker/language.worker.ts",
-      },
-      formats: ["es"],
+initialize((ctx) =>
+  createSimpleWorkerLanguageService({
+    workerContext: ctx,
+    env: {
+      workspaceFolders: [URI.parse("file:///")],
     },
-    rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      output: {
-        entryFileNames: "[name].js",
+    languagePlugins: [
+      {
+        getLanguageId: () => "json",
       },
-    },
-  },
-});
+    ],
+    languageServicePlugins: createJsonLanguageServicePlugins(),
+  }),
+);

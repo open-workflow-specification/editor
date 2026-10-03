@@ -25,17 +25,18 @@ React text editor component for Open Workflow documents, based on [Monaco Editor
 - JSON and YAML syntax highlighting;
 - read-only mode;
 - controlled content updates;
-- language-service features, such as completions and diagnostics, provided by `@openworkflowspec/language-service`.
+- Open Workflow language features (completions, diagnostics, code lenses) via `@openworkflowspec/language-service`.
 
 ## Props
 
-| Prop              | Type                        | Required | Default     | Description                                 |
-| ----------------- | --------------------------- | -------- | ----------- | ------------------------------------------- |
-| `content`         | `string`                    | ✅       | —           | Current document content.                   |
-| `language`        | `TextEditorLanguage`        | ✅       | —           | Document language: `json` or `yaml`.        |
-| `isReadOnly`      | `boolean`                   | —        | `false`     | Prevents editing when enabled.              |
-| `onContentChange` | `(content: string) => void` | —        | `undefined` | Called when the user modifies the document. |
-| `colorMode`       | `light, dark, system`       | —        | `system`    | Controls the editor theme.                  |
+| Prop                          | Type                        | Required | Default     | Description                                      |
+| ----------------------------- | --------------------------- | -------- | ----------- | ------------------------------------------------ |
+| `content`                     | `string`                    | ✅       | —           | Current document content.                        |
+| `language`                    | `TextEditorLanguage`        | ✅       | —           | Document language: `json` or `yaml`.             |
+| `createLanguageServiceWorker` | `() => Worker`              | ✅       | —           | Creates the Worker used by the language service. |
+| `isReadOnly`                  | `boolean`                   | —        | `false`     | Prevents editing when enabled.                   |
+| `onContentChange`             | `(content: string) => void` | —        | `undefined` | Called when the user modifies the document.      |
+| `colorMode`                   | `light, dark, system`       | —        | `system`    | Controls the editor theme.                       |
 
 ## Sizing
 
@@ -45,6 +46,7 @@ The editor fills `100%` of its container's width and height. The host must provi
 
 ```tsx
 import { TextEditor } from "@openworkflowspec/text-editor";
+import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
 import { useState } from "react";
 
 function App() {
@@ -52,8 +54,34 @@ function App() {
 
   return (
     <div style={{ height: "400px" }}>
-      <TextEditor content={content} language="json" onContentChange={setContent} />
+      <TextEditor
+        content={content}
+        language="json"
+        createLanguageServiceWorker={() => new LanguageServiceWorker()}
+        onContentChange={setContent}
+      />
     </div>
   );
 }
 ```
+
+## Language service
+
+### Lifecycle and ownership
+
+Each mounted `TextEditor` creates and owns its language-service Worker and Monaco language-service integration.
+
+When the component is unmounted, the Text Editor disposes its language-service providers and Worker together with the Monaco editor and model.
+
+The host application only provides `createLanguageServiceWorker`; it does not need to create, share, or dispose a separate language-service object.
+
+Multiple concurrently mounted Text Editor instances and shared-worker reuse are not currently supported.
+
+### Supported languages
+
+| Language | Syntax highlighting | OWS completions | OWS diagnostics | OWS code lenses |
+| -------- | ------------------- | --------------- | --------------- | --------------- |
+| JSON     | ✅                  | ✅              | ✅              | ✅              |
+| YAML     | ✅                  | 🚧 planned      | 🚧 planned      | 🚧 planned      |
+
+YAML language-service support is not yet available. Until then, YAML documents use Monaco's built-in syntax highlighting and language configuration only.

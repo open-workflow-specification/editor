@@ -13,27 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite";
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
-  build: {
-    emptyOutDir: false,
-    sourcemap: true,
-    lib: {
-      entry: {
-        index: "src/index.ts",
-        worker: "src/worker/language.worker.ts",
-      },
-      formats: ["es"],
-    },
-    rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      output: {
-        entryFileNames: "[name].js",
-      },
-    },
-  },
-});
+import { vi } from "vitest";
+
+export const mockEditorCommandsDispose = vi.fn();
+export const mockRegisterEditorCommands = vi.fn(() => ({
+  dispose: mockEditorCommandsDispose,
+}));

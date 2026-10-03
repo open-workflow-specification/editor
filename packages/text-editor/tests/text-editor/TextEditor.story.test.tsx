@@ -29,17 +29,17 @@ describe("Story - TextEditor component", () => {
   });
 
   it.each([
-    { name: "JSON", Story: JsonEditor, language: "json", readOnly: false },
-    { name: "YAML", Story: YamlEditor, language: "yaml", readOnly: false },
-    { name: "read-only", Story: ReadOnly, language: "yaml", readOnly: true },
-  ])("configures the $name story", ({ Story, language, readOnly }) => {
+    { name: "JSON", Story: JsonEditor, readOnly: false },
+    { name: "YAML", Story: YamlEditor, readOnly: false },
+    { name: "read-only", Story: ReadOnly, readOnly: true },
+  ])("configures the $name story", ({ Story, readOnly }) => {
     render(<Story />);
 
     const editorContainer = screen.getByTestId("text-editor-container");
 
     expect(mockEditorCreate).toHaveBeenCalledWith(
       editorContainer,
-      expect.objectContaining({ language, readOnly }),
+      expect.objectContaining({ readOnly }),
     );
   });
 });

@@ -15,8 +15,9 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Controls, Primary, Title } from "@storybook/addon-docs/blocks";
 import { createTextEditorStory } from "../helpers";
-import { helloWorldJson, helloWorldYaml } from "../samples";
+import { helloWorldJson, helloWorldYaml, invalidWorkflowJson } from "../samples";
 import { TextEditor } from "./TextEditor";
 
 const meta = {
@@ -26,6 +27,15 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
+    docs: {
+      page: () => (
+        <>
+          <Title />
+          <Primary />
+          <Controls />
+        </>
+      ),
+    },
   },
   render: (args) => {
     return <TextEditor {...args} />;
@@ -35,13 +45,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** JSON document with syntax highlighting. */
+/** JSON document. */
 export const JsonEditor: Story = createTextEditorStory({
   content: helloWorldJson,
   language: "json",
 });
 
-/** YAML document with syntax highlighting. */
+/** YAML document. */
 export const YamlEditor: Story = createTextEditorStory({
   content: helloWorldYaml,
   language: "yaml",
@@ -52,4 +62,16 @@ export const ReadOnly: Story = createTextEditorStory({
   content: helloWorldYaml,
   language: "yaml",
   isReadOnly: true,
+});
+
+/** Empty JSON document. */
+export const EmptyJson: Story = createTextEditorStory({
+  content: "",
+  language: "json",
+});
+
+/** JSON document that is syntactically valid but does not conform to the OWS schema. */
+export const InvalidWorkflow: Story = createTextEditorStory({
+  content: invalidWorkflowJson,
+  language: "json",
 });

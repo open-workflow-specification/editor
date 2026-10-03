@@ -13,27 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite";
+// Monaco exposes this worker module at runtime but does not provide typeScript declarations for it.
+// See https://github.com/volarjs/volar.js/issues/321.
+declare module "monaco-editor/editor/editor.worker.js" {
+  type WorkerContext = Parameters<
+    typeof import("@volar/monaco/worker").createSimpleWorkerLanguageService
+  >[0]["workerContext"];
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
-  build: {
-    emptyOutDir: false,
-    sourcemap: true,
-    lib: {
-      entry: {
-        index: "src/index.ts",
-        worker: "src/worker/language.worker.ts",
-      },
-      formats: ["es"],
-    },
-    rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      output: {
-        entryFileNames: "[name].js",
-      },
-    },
-  },
-});
+  export function initialize(callback: (ctx: WorkerContext, createData: unknown) => unknown): void;
+}

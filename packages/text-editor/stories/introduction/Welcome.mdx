@@ -36,8 +36,16 @@ Explore the stories in the **Features** section to see the editor in action.
 The editor fills its parent container, which must have a non-zero height:
 
 ```tsx
+import { TextEditor } from "@openworkflowspec/text-editor";
+import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
+
 <div style={{ height: "400px" }}>
-  <TextEditor content={content} language="yaml" onContentChange={setContent} />
+  <TextEditor
+    content={content}
+    language="yaml"
+    createLanguageServiceWorker={() => new LanguageServiceWorker()}
+    onContentChange={setContent}
+  />
 </div>
 ```
 

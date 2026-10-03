@@ -8,6 +8,19 @@
   },
   "versionGroups": [
     {
+      "label": "Allow @volar/monaco in text-editor.",
+      "dependencies": ["@volar/monaco"],
+      "packages": ["@openworkflowspec/text-editor"],
+      "dependencyTypes": ["prod", "dev", "peer"],
+      "isIgnored": true
+    },
+    {
+      "label": "Only text-editor may depend on @volar/monaco.",
+      "dependencies": ["@volar/monaco"],
+      "dependencyTypes": ["prod", "dev", "peer"],
+      "isBanned": true
+    },
+    {
       "label": "Only language-service may depend on Volar. See the Architecture section in packages/language-service/README.md.",
       "dependencies": ["@volar/**", "volar-service-*"],
       "packages": ["!@openworkflowspec/language-service"],

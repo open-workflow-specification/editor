@@ -13,27 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite";
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
-  build: {
-    emptyOutDir: false,
-    sourcemap: true,
-    lib: {
-      entry: {
-        index: "src/index.ts",
-        worker: "src/worker/language.worker.ts",
-      },
-      formats: ["es"],
+import * as monaco from "monaco-editor/editor";
+
+export function registerEditorCommands(model: monaco.editor.ITextModel): monaco.IDisposable {
+  const insertHelloWorld = monaco.editor.registerCommand(
+    "openworkflow.insertHelloWorld",
+    (_accessor: unknown, content: string) => {
+      model.pushEditOperations(
+        null,
+        [{ range: model.getFullModelRange(), text: content }],
+        () => null,
+      );
     },
-    rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      output: {
-        entryFileNames: "[name].js",
-      },
+  );
+
+  return {
+    dispose() {
+      insertHelloWorld.dispose();
     },
-  },
-});
+  };
+}

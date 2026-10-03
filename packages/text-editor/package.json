@@ -1,7 +1,7 @@
 {
   "name": "@openworkflowspec/text-editor",
   "version": "1.1.0",
-  "private": false,
+  "private": true,
   "description": "React Open Workflow text editor component backed by Monaco",
   "keywords": [],
   "homepage": "https://github.com/open-workflow-specification/editor",
@@ -23,6 +23,9 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./worker": {
+      "import": "./dist/worker.js"
     }
   },
   "scripts": {
@@ -41,7 +44,10 @@
     "test-e2e:ui": "playwright test --ui"
   },
   "dependencies": {
-    "monaco-editor": "catalog:"
+    "@openworkflowspec/language-service": "workspace:*",
+    "@volar/monaco": "catalog:",
+    "monaco-editor": "catalog:",
+    "vscode-uri": "catalog:"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "catalog:",

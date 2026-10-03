@@ -16,3 +16,4 @@
 
 export { default as helloWorldJson } from "./hello-world.json?raw";
 export { default as helloWorldYaml } from "./hello-world.yaml?raw";
+export { default as invalidWorkflowJson } from "./invalid-workflow.json?raw";

@@ -17,16 +17,31 @@
 import * as React from "react";
 import * as monaco from "monaco-editor/editor";
 import "monaco-editor/features/register.all";
-import "monaco-editor/languages/features/json/register";
+import { jsonDefaults } from "monaco-editor/languages/features/json/register";
 import "monaco-editor/languages/definitions/yaml/register";
-import { ColorMode } from "./types/colorMode";
 import { useResolvedColorMode } from "./hooks/useResolvedColorMode";
+import { createTextEditorLanguageService } from "./language-service";
+import { ColorMode } from "./types/colorMode";
+
+jsonDefaults.setModeConfiguration({
+  tokens: true,
+  colors: false,
+  completionItems: false,
+  hovers: false,
+  documentSymbols: false,
+  documentFormattingEdits: false,
+  documentRangeFormattingEdits: false,
+  diagnostics: false,
+  foldingRanges: false,
+  selectionRanges: false,
+});
 
 export type TextEditorLanguage = "json" | "yaml";
 
 export type TextEditorProps = {
   content: string;
   language: TextEditorLanguage;
+  createLanguageServiceWorker: () => Worker;
   onContentChange?: (content: string) => void;
   isReadOnly?: boolean;
   colorMode?: ColorMode;
@@ -35,6 +50,7 @@ export type TextEditorProps = {
 export const TextEditor = ({
   content,
   language,
+  createLanguageServiceWorker,
   onContentChange,
   isReadOnly = false,
   colorMode = "system",
@@ -49,10 +65,16 @@ export const TextEditor = ({
       return;
     }
 
-    const editor = monaco.editor.create(containerRef.current, {
-      value: content,
+    const model = monaco.editor.createModel(
+      content,
       language,
+      monaco.Uri.parse("inmemory://openworkflow/workflow.json"),
+    );
+
+    const editor = monaco.editor.create(containerRef.current, {
+      model,
       readOnly: isReadOnly,
+      codeLens: language === "json" && !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
       ...(resolvedColorMode && {
@@ -60,14 +82,18 @@ export const TextEditor = ({
       }),
     });
 
+    const languageService = createTextEditorLanguageService(model, createLanguageServiceWorker);
+
     editorRef.current = editor;
 
     return () => {
+      languageService.dispose();
       editor.dispose();
+      model.dispose();
       editorRef.current = null;
     };
 
-    // Monaco must be created only once.
+    // Monaco and its language-service worker must be created only once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,21 +126,25 @@ export const TextEditor = ({
   }, [content]);
 
   React.useEffect(() => {
-    const model = editorRef.current?.getModel();
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
 
+    // updateOptions must run before setModelLanguage so that codeLens is applied
+    editor.updateOptions({ readOnly: isReadOnly, codeLens: language === "json" && !isReadOnly });
+
+    const model = editor.getModel();
     if (model && model.getLanguageId() !== language) {
       monaco.editor.setModelLanguage(model, language);
     }
-  }, [language]);
-
-  React.useEffect(() => {
-    editorRef.current?.updateOptions({ readOnly: isReadOnly });
-  }, [isReadOnly]);
+  }, [isReadOnly, language]);
 
   React.useEffect(() => {
     if (!editorRef.current) {
       return;
     }
+
     monaco.editor.setTheme(resolvedColorMode === "dark" ? "vs-dark" : "vs");
   }, [resolvedColorMode]);
 

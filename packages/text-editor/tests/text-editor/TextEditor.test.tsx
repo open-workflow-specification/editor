@@ -20,20 +20,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
 
 import {
+  mockCreateModel,
+  mockCreateWebWorker,
   mockEditorCreate,
   mockEditorDispose,
   mockEditorSetValue,
   mockEditorUpdateOptions,
   mockModel,
+  mockModelDispose,
   mockSetModelLanguage,
   simulateEditorContentChange,
   mockSetTheme,
+  mockMonacoWorkerDispose,
 } from "../__mocks__/monaco-editor";
 import { TextEditor, type TextEditorProps } from "../../src/TextEditor";
+
+const makeWorker = () => ({ terminate: vi.fn() }) as unknown as Worker;
+const createLanguageServiceWorker = vi.fn(makeWorker);
 
 const defaultProps: TextEditorProps = {
   content: "initial content",
   language: "json",
+  createLanguageServiceWorker,
 };
 
 const renderEditor = (props: Partial<TextEditorProps> = {}) => {
@@ -70,22 +78,31 @@ describe("TextEditor", () => {
       expect(host).toHaveStyle({ width: "100%", height: "100%" });
     });
 
-    it("creates Monaco once with the initial props", () => {
+    it("creates the model then the editor with it", () => {
       const { container } = renderEditor({
         content: "hello yaml",
         language: "yaml",
         isReadOnly: true,
       });
 
+      expect(mockCreateModel).toHaveBeenCalledOnce();
+      expect(mockCreateModel).toHaveBeenCalledWith(
+        "hello yaml",
+        "yaml",
+        expect.objectContaining({ toString: expect.any(Function) }),
+      );
+
       expect(mockEditorCreate).toHaveBeenCalledOnce();
       expect(mockEditorCreate).toHaveBeenCalledWith(
         container.firstElementChild,
-        expect.objectContaining({
-          value: "hello yaml",
-          language: "yaml",
-          readOnly: true,
-        }),
+        expect.objectContaining({ model: mockModel, readOnly: true }),
       );
+    });
+
+    it("calls createLanguageServiceWorker once on mount", () => {
+      renderEditor();
+
+      expect(createLanguageServiceWorker).toHaveBeenCalledOnce();
     });
   });
 
@@ -96,7 +113,7 @@ describe("TextEditor", () => {
 
       rerenderEditor({ content: "updated content" });
 
-      expect(mockEditorSetValue).toHaveBeenCalledTimes(1);
+      expect(mockEditorSetValue).toHaveBeenCalledOnce();
       expect(mockEditorSetValue).toHaveBeenCalledWith("updated content");
       expect(onContentChange).not.toHaveBeenCalled();
     });
@@ -115,47 +132,84 @@ describe("TextEditor", () => {
 
       simulateEditorContentChange("edited content");
 
-      expect(onContentChange).toHaveBeenCalledTimes(1);
+      expect(onContentChange).toHaveBeenCalledOnce();
       expect(onContentChange).toHaveBeenCalledWith("edited content");
     });
   });
 
   describe("language", () => {
-    it("updates the model language without recreating Monaco", () => {
-      const { rerenderEditor } = renderEditor({ language: "json" });
+    it.each([
+      { fromLang: "json", toLang: "yaml", expectedCodeLens: false },
+      { fromLang: "yaml", toLang: "json", expectedCodeLens: true },
+    ] as const)(
+      "$fromLang → $toLang: updates codeLens before changing model language",
+      ({ fromLang, toLang, expectedCodeLens }) => {
+        const { rerenderEditor } = renderEditor({ language: fromLang });
+        mockEditorUpdateOptions.mockClear();
+        mockSetModelLanguage.mockClear();
 
-      rerenderEditor({ language: "yaml" });
+        rerenderEditor({ language: toLang });
 
-      expect(mockEditorCreate).toHaveBeenCalledTimes(1);
-      expect(mockSetModelLanguage).toHaveBeenCalledTimes(1);
-      expect(mockSetModelLanguage).toHaveBeenCalledWith(mockModel, "yaml");
+        expect(mockEditorUpdateOptions).toHaveBeenCalledOnce();
+        expect(mockEditorUpdateOptions).toHaveBeenCalledWith(
+          expect.objectContaining({ codeLens: expectedCodeLens }),
+        );
+
+        expect(mockSetModelLanguage).toHaveBeenCalledOnce();
+        expect(mockSetModelLanguage).toHaveBeenCalledWith(mockModel, toLang);
+
+        expect(mockEditorUpdateOptions.mock.invocationCallOrder[0]).toBeLessThan(
+          mockSetModelLanguage.mock.invocationCallOrder[0],
+        );
+      },
+    );
+
+    it("YAML + isReadOnly true → false: codeLens stays false", () => {
+      const { rerenderEditor } = renderEditor({ language: "yaml", isReadOnly: true });
+      mockEditorUpdateOptions.mockClear();
+
+      rerenderEditor({ isReadOnly: false });
+
+      expect(mockEditorCreate).toHaveBeenCalledOnce();
+      expect(mockEditorUpdateOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ codeLens: false }),
+      );
     });
   });
 
   describe("read-only", () => {
-    it("passes readOnly to Monaco at creation time", () => {
+    it("passes readOnly and codeLens to Monaco at creation time", () => {
       const { container } = renderEditor({ isReadOnly: true });
 
       expect(mockEditorCreate).toHaveBeenCalledWith(
         container.firstElementChild,
-        expect.objectContaining({ readOnly: true }),
+        expect.objectContaining({ readOnly: true, codeLens: false }),
       );
     });
 
-    it("updates readOnly without recreating Monaco", () => {
-      const { rerenderEditor } = renderEditor({ isReadOnly: false });
-      mockEditorUpdateOptions.mockClear();
+    it.each([
+      { isReadOnly: true, expectedCodeLens: false },
+      { isReadOnly: false, expectedCodeLens: true },
+    ] as const)(
+      "updates readOnly=$isReadOnly and codeLens=$expectedCodeLens without recreating Monaco",
+      ({ isReadOnly, expectedCodeLens }) => {
+        const { rerenderEditor } = renderEditor({ isReadOnly: !isReadOnly });
+        mockEditorUpdateOptions.mockClear();
 
-      rerenderEditor({ isReadOnly: true });
+        rerenderEditor({ isReadOnly });
 
-      expect(mockEditorCreate).toHaveBeenCalledTimes(1);
-      expect(mockEditorUpdateOptions).toHaveBeenCalledTimes(1);
-      expect(mockEditorUpdateOptions).toHaveBeenCalledWith({ readOnly: true });
-    });
+        expect(mockEditorCreate).toHaveBeenCalledOnce();
+        expect(mockEditorUpdateOptions).toHaveBeenCalledOnce();
+        expect(mockEditorUpdateOptions).toHaveBeenCalledWith({
+          readOnly: isReadOnly,
+          codeLens: expectedCodeLens,
+        });
+      },
+    );
   });
 
   describe("lifecycle", () => {
-    it("does not recreate Monaco when props change", () => {
+    it("does not recreate Monaco or the language service when props change", () => {
       const { rerenderEditor } = renderEditor({ content: "v1" });
 
       rerenderEditor({ content: "v2" });
@@ -163,28 +217,20 @@ describe("TextEditor", () => {
       rerenderEditor({ isReadOnly: true });
       rerenderEditor({ onContentChange: vi.fn() });
 
-      expect(mockEditorCreate).toHaveBeenCalledTimes(1);
+      expect(mockEditorCreate).toHaveBeenCalledOnce();
+      expect(mockCreateModel).toHaveBeenCalledOnce();
+      expect(createLanguageServiceWorker).toHaveBeenCalledOnce();
+      expect(mockCreateWebWorker).toHaveBeenCalledOnce();
     });
 
-    it("disposes Monaco on unmount", () => {
+    it("disposes language service, editor and model on unmount", () => {
       const { unmount } = renderEditor();
 
       unmount();
 
-      expect(mockEditorDispose).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe("multiple instances", () => {
-    it("creates one Monaco editor per component instance", () => {
-      render(
-        <>
-          <TextEditor content="a" language="json" />
-          <TextEditor content="b" language="yaml" />
-        </>,
-      );
-
-      expect(mockEditorCreate).toHaveBeenCalledTimes(2);
+      expect(mockMonacoWorkerDispose).toHaveBeenCalledOnce();
+      expect(mockEditorDispose).toHaveBeenCalledOnce();
+      expect(mockModelDispose).toHaveBeenCalledOnce();
     });
   });
 
@@ -192,40 +238,35 @@ describe("TextEditor", () => {
     it("uses the light Monaco theme for light color mode", () => {
       renderEditor({ colorMode: "light" });
 
-      expect(mockSetTheme).toHaveBeenCalledTimes(1);
+      expect(mockSetTheme).toHaveBeenCalledOnce();
       expect(mockSetTheme).toHaveBeenCalledWith("vs");
     });
 
     it("uses the dark Monaco theme for dark color mode", () => {
       renderEditor({ colorMode: "dark" });
 
-      expect(mockSetTheme).toHaveBeenCalledTimes(1);
+      expect(mockSetTheme).toHaveBeenCalledOnce();
       expect(mockSetTheme).toHaveBeenCalledWith("vs-dark");
     });
 
     it("updates the Monaco theme when color mode changes", () => {
-      const { rerenderEditor } = renderEditor({
-        colorMode: "light",
-      });
+      const { rerenderEditor } = renderEditor({ colorMode: "light" });
 
       expect(mockSetTheme).toHaveBeenCalledWith("vs");
-
       mockSetTheme.mockClear();
 
       rerenderEditor({ colorMode: "dark" });
 
-      expect(mockSetTheme).toHaveBeenCalledTimes(1);
+      expect(mockSetTheme).toHaveBeenCalledOnce();
       expect(mockSetTheme).toHaveBeenCalledWith("vs-dark");
     });
 
     it("does not recreate Monaco when color mode changes", () => {
-      const { rerenderEditor } = renderEditor({
-        colorMode: "light",
-      });
+      const { rerenderEditor } = renderEditor({ colorMode: "light" });
 
       rerenderEditor({ colorMode: "dark" });
 
-      expect(mockEditorCreate).toHaveBeenCalledTimes(1);
+      expect(mockEditorCreate).toHaveBeenCalledOnce();
     });
   });
 

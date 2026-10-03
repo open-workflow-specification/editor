@@ -33,7 +33,12 @@ describe("createJsonCodeLensesPlugin", () => {
       const { doc } = treat("🎯");
       const result = instance.provideCodeLenses!(doc, {});
       expect(result).toHaveLength(1);
-      expect(result![0].command?.title).toBe("Create an Open Workflow");
+      const command = result![0].command;
+      expect(command?.title).toBe("Create an Open Workflow");
+      expect(command?.command).toBe("openworkflow.insertHelloWorld");
+      expect(command?.arguments).toHaveLength(1);
+      expect(command?.arguments?.[0]).toBeTypeOf("string");
+      expect(command?.arguments?.[0]).toContain("hello-world");
     });
 
     it("does not provide a code lens on bare {}", () => {

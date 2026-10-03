@@ -13,27 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { defineConfig } from "vite";
 
-export default defineConfig({
-  resolve: {
-    tsconfigPaths: true,
-  },
-  build: {
-    emptyOutDir: false,
-    sourcemap: true,
-    lib: {
-      entry: {
-        index: "src/index.ts",
-        worker: "src/worker/language.worker.ts",
-      },
-      formats: ["es"],
-    },
-    rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      output: {
-        entryFileNames: "[name].js",
-      },
-    },
-  },
-});
+import { Locator, Page } from "@playwright/test";
+
+export function getCompletion(page: Page, label: string): Locator {
+  return page.locator(".suggest-widget .monaco-list-row").getByText(label, { exact: true });
+}
+
+export function getCodeLens(page: Page, title: string): Locator {
+  return page.locator(".codelens-decoration").getByText(title, { exact: true });
+}

@@ -15,6 +15,7 @@
  */
 
 import type { LanguageServicePlugin } from "@volar/language-service";
+import { HELLO_WORLD_SAMPLE } from "../../samples/hello-world";
 import { isEmptyWorkflow } from "../../utils";
 
 export function createJsonCodeLensesPlugin(): LanguageServicePlugin {
@@ -38,6 +39,7 @@ export function createJsonCodeLensesPlugin(): LanguageServicePlugin {
               command: {
                 title: "Create an Open Workflow",
                 command: "openworkflow.insertHelloWorld",
+                arguments: [HELLO_WORLD_SAMPLE],
               },
             },
           ];
