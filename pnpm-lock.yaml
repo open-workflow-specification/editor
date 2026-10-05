@@ -160,8 +160,8 @@ catalogs:
       specifier: 0.0.71
       version: 0.0.71
     vscode-languageserver-textdocument:
-      specifier: ^1.0.14
-      version: 1.0.14
+      specifier: ^1.0.15
+      version: 1.0.15
     vscode-uri:
       specifier: ^3.2.0
       version: 3.2.0

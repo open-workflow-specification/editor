@@ -33,7 +33,7 @@ describe("createJsonCodeLensesPlugin", () => {
       const { doc } = treat("🎯");
       const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toHaveLength(1);
-      const command = result![0].command;
+      const command = result?.[0]?.command;
       expect(result?.[0]?.command?.title).toBe("Create an Open Workflow");
       expect(command?.command).toBe("openworkflow.insertHelloWorld");
       expect(command?.arguments).toHaveLength(1);
