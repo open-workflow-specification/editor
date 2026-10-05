@@ -31,6 +31,10 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
+      checks: {
+        // Suppress Rolldown warnings for "use client" directives coming from generated UI components. See more: https://github.com/open-workflow-specification/editor/issues/465
+        moduleLevelDirective: false,
+      },
       external: [
         "react",
         "react-dom",
