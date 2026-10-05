@@ -26,7 +26,7 @@ const CURSOR = "🎯";
 /**
  * A minimal LSP CancellationToken that is never cancelled, suitable for unit tests.
  */
-const CANCELLATION_TOKEN = {
+export const CANCELLATION_TOKEN = {
   isCancellationRequested: false,
   onCancellationRequested: () => ({ dispose: () => {} }),
 };
@@ -34,7 +34,9 @@ const CANCELLATION_TOKEN = {
 /**
  * A minimal Volar LanguageServiceContext suitable for unit tests.
  */
-export const MINIMAL_CONTEXT = { env: { workspaceFolders: [] } } as LanguageServiceContext;
+export const MINIMAL_CONTEXT = {
+  env: { workspaceFolders: [] },
+} as unknown as LanguageServiceContext;
 
 /**
  * Parses a content string containing a 🎯 cursor marker and returns:
@@ -77,7 +79,9 @@ export async function getAllCompletionLabels(
   position: Position,
 ): Promise<string[]> {
   const results = await Promise.all(
-    instances.map((instance) => instance.provideCompletionItems?.(document, position, {})),
+    instances.map((instance) =>
+      instance.provideCompletionItems?.(document, position, { triggerKind: 1 }, CANCELLATION_TOKEN),
+    ),
   );
   return results.flatMap((result) => result?.items.map((i) => i.label) ?? []);
 }
@@ -101,5 +105,8 @@ export async function getDiagnosticMessages(
   const results = await Promise.all(
     instances.map((instance) => instance.provideDiagnostics?.(document, CANCELLATION_TOKEN)),
   );
-  return results.flatMap((diags) => diags?.map((d) => d.message) ?? []);
+  return results.flatMap(
+    (diags) =>
+      diags?.map((d) => (typeof d.message === "string" ? d.message : d.message.value)) ?? [],
+  );
 }

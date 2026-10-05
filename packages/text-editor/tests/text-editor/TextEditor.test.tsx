@@ -348,7 +348,7 @@ describe("TextEditor", () => {
     it("removes the system color mode listener on unmount", () => {
       const { unmount } = renderHook(() => useResolvedColorMode("system"));
 
-      const listener = mediaQueryList.addEventListener.mock.calls[0][1];
+      const listener = mediaQueryList.addEventListener.mock.calls[0]![1];
 
       unmount();
 

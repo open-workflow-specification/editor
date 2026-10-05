@@ -27,8 +27,10 @@
     }
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "clean": "rimraf ./dist",
-    "build:dev": "pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:dev": "pnpm typecheck && pnpm typecheck:test && pnpm clean && tsc -p tsconfig.json && vite build",
     "build:prod": "pnpm lint && pnpm run build:dev && pnpm test",
     "lint": "oxlint --config .oxlintrc.json src/ tests/",
     "format": "oxfmt --config .oxfmtrc.json",
