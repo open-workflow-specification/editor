@@ -19,14 +19,16 @@
  * listen.to.any arrays.  Covers read mode display, edit mode mutations
  * (add / delete / update with / correlate), and RHF synchronisation.
  *
- * Aria-label / placeholder reference (from src/i18n/locales/en.ts):
+ * Aria-label reference (from src/i18n/locales/en.ts):
  *   deleteFilter  → "Remove filter" + space + (idx+1)  e.g. "Remove filter 1"
  *   addFilter     → "+ Add filter"
- *   typePlaceholder → "e.g. com.example.event.created"
  *   correlate button → no explicit aria-label; accessible name = text content
  *                      e.g. "correlate0 keys" — matched by class "dec-correlate-header"
  *   addKey        → "+ Add key"
  *   keyPlaceholder → "key name"
+ *
+ * Event-property inputs are queried by accessible name (label text), e.g.
+ *   getByRole("textbox", { name: "type" })
  */
 
 import { describe, it, expect } from "vitest";
@@ -38,7 +40,10 @@ import { I18nProvider } from "@openworkflowspec/i18n";
 import { en } from "../../../../src/i18n/locales/en";
 import { EventFilterListField } from "../../../../src/side-panel/forms/customFields/EventFilterListField";
 import { TaskFormContext } from "../../../../src/side-panel/forms/taskFormContext";
-import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../../src/core/schemaToFormFields";
+import type {
+  EventFilterListField as EventFilterListFieldDescriptor,
+  ObjectField,
+} from "../../../../src/core/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -230,8 +235,7 @@ describe("EventFilterListField — edit mode: adding filters", () => {
     await user.click(screen.getByRole("button", { name: /add filter/i }));
 
     // New items start with withExpanded: true — event-props inputs visible
-    // Placeholder per i18n: "e.g. com.example.event.created"
-    expect(screen.getByPlaceholderText("e.g. com.example.event.created")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "type" })).toBeInTheDocument();
   });
 });
 
@@ -270,15 +274,15 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
     const disclosureBtn = screen.getByRole("button", { name: /event properties/i });
 
     // Initially closed — no type input visible
-    expect(screen.queryByPlaceholderText("e.g. com.example.event.created")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "type" })).not.toBeInTheDocument();
 
     // Open
     await user.click(disclosureBtn);
-    expect(screen.getByPlaceholderText("e.g. com.example.event.created")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "type" })).toBeInTheDocument();
 
     // Close again
     await user.click(disclosureBtn);
-    expect(screen.queryByPlaceholderText("e.g. com.example.event.created")).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "type" })).not.toBeInTheDocument();
   });
 
   it("shows pre-populated type value in the with sub-panel", async () => {
@@ -286,7 +290,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
     renderWithFilters([TWO_FILTERS[0]]);
 
     await user.click(screen.getByRole("button", { name: /event properties/i }));
-    const typeInput = screen.getByPlaceholderText("e.g. com.example.event.created");
+    const typeInput = screen.getByRole("textbox", { name: "type" });
     expect(typeInput).toHaveValue("com.fake-hospital.vitals.measurements.temperature");
   });
 
@@ -328,7 +332,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
     // The input is a controlled React component — use fireEvent.change so the
     // onChange handler receives the full new value in one event, avoiding issues
     // with tripleClick selection in JSDOM.
-    const typeInput = screen.getByPlaceholderText("e.g. com.example.event.created");
+    const typeInput = screen.getByRole("textbox", { name: "type" });
     fireEvent.change(typeInput, { target: { value: "com.new.event.type" } });
 
     // Dump form values and read the flat "all" key
@@ -377,22 +381,17 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
     render(<FullPropsTester />);
     await user.click(screen.getByRole("button", { name: /event properties/i }));
 
-    const sourceInput = screen.getByPlaceholderText("https://… or ${...}");
+    const sourceInput = screen.getByRole("textbox", { name: "source" });
     fireEvent.change(sourceInput, { target: { value: "https://example.com/events" } });
 
-    const dataTextarea = screen.getByPlaceholderText("${ .expression } or structured value");
+    const dataTextarea = screen.getByRole("textbox", { name: "data" });
     fireEvent.change(dataTextarea, { target: { value: "key: value" } });
 
-    // Subject and id inputs (sibling of labels)
-    const subjectLabel = screen.getByText("subject");
-    const subjectInput = subjectLabel.parentElement?.querySelector("input");
-    expect(subjectInput).toBeTruthy();
-    fireEvent.change(subjectInput!, { target: { value: "my-subject" } });
+    const subjectInput = screen.getByRole("textbox", { name: "subject" });
+    fireEvent.change(subjectInput, { target: { value: "my-subject" } });
 
-    const idLabel = screen.getByText("id");
-    const idInput = idLabel.parentElement?.querySelector("input");
-    expect(idInput).toBeTruthy();
-    fireEvent.change(idInput!, { target: { value: "evt-123" } });
+    const idInput = screen.getByRole("textbox", { name: "id" });
+    fireEvent.change(idInput, { target: { value: "evt-123" } });
 
     await user.click(screen.getByRole("button", { name: "dump" }));
     let dumped = JSON.parse(screen.getByTestId("dump").textContent ?? "{}") as Record<
@@ -454,7 +453,7 @@ describe("EventFilterListField — edit mode: with sub-panel", () => {
     render(<DataTextTester />);
     await user.click(screen.getByRole("button", { name: /event properties/i }));
 
-    const dataTextarea = screen.getByPlaceholderText("${ .expression } or structured value");
+    const dataTextarea = screen.getByRole("textbox", { name: "data" });
     fireEvent.change(dataTextarea, { target: { value: "test:" } });
 
     expect(dataTextarea).toHaveValue("test:");
@@ -661,5 +660,151 @@ describe("EventFilterListField — RHF synchronisation", () => {
 
     // After reset: 2 filters
     await screen.findByText(/2 filters/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deriveWithFieldLabels — label map built from ObjectField children
+// ---------------------------------------------------------------------------
+
+/**
+ * A field descriptor where `itemFields` contains an `ObjectField` for `with`,
+ * whose children carry human-readable labels for each CloudEvent attribute.
+ */
+const withObjectField: ObjectField = {
+  kind: "object",
+  path: "with",
+  label: "With",
+  required: false,
+  children: [
+    {
+      kind: "string",
+      path: "with.type",
+      label: "Event type",
+      required: false,
+      multiline: false,
+      isRuntimeExpression: false,
+    },
+    {
+      kind: "string",
+      path: "with.source",
+      label: "Source URI",
+      required: false,
+      multiline: false,
+      isRuntimeExpression: false,
+    },
+    {
+      kind: "string",
+      path: "with.data",
+      label: "Data",
+      required: false,
+      multiline: true,
+      isRuntimeExpression: false,
+    },
+    {
+      kind: "string",
+      path: "with.subject",
+      label: "Subject",
+      required: false,
+      multiline: false,
+      isRuntimeExpression: false,
+    },
+    {
+      kind: "string",
+      path: "with.id",
+      label: "Event ID",
+      required: false,
+      multiline: false,
+      isRuntimeExpression: false,
+    },
+  ],
+};
+
+const fieldWithLabels: EventFilterListFieldDescriptor = {
+  kind: "event-filter-list",
+  path: "listen.to.all",
+  label: "all",
+  required: true,
+  itemFields: [withObjectField],
+};
+
+describe("EventFilterListField — deriveWithFieldLabels / label rendering", () => {
+  it("uses the label from ObjectField children as input labels in the with sub-panel", async () => {
+    const user = userEvent.setup();
+    const flatField: EventFilterListFieldDescriptor = { ...fieldWithLabels, path: "all" };
+    render(
+      <Wrapper
+        field={flatField}
+        defaultValues={{ all: [{ with: { type: "com.example.event" } }] }}
+        taskData={{ all: [{ with: { type: "com.example.event" } }] }}
+        isReadOnly={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /event properties/i }));
+
+    // The type input label should be the ObjectField child's label, not the raw key
+    expect(screen.getByRole("textbox", { name: "Event type" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Source URI" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Subject" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Event ID" })).toBeInTheDocument();
+  });
+
+  it("falls back to the raw key name when the field has no ObjectField children (itemFields: [])", async () => {
+    const user = userEvent.setup();
+    const flatField: EventFilterListFieldDescriptor = { ...allField, path: "all" };
+    render(
+      <Wrapper
+        field={flatField}
+        defaultValues={{ all: [{ with: { type: "com.example.event" } }] }}
+        taskData={{ all: [{ with: { type: "com.example.event" } }] }}
+        isReadOnly={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /event properties/i }));
+
+    // With no ObjectField children, labels fall back to the raw CloudEvent attribute key
+    expect(screen.getByRole("textbox", { name: "type" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "source" })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ReadOnlyFilterList — correlate count excludes empty-key rows
+// ---------------------------------------------------------------------------
+
+describe("EventFilterListField — read mode: correlate count excludes empty-key rows", () => {
+  it("does not show the correlate section when all correlate entries have empty keys", () => {
+    // A correlate object with a single empty-key entry should be treated as
+    // having 0 entries, so the correlate section must not render.
+    const filtersWithEmptyKey = [
+      {
+        with: { type: "com.example.event" },
+        correlate: { "": { from: "${ .id }" } },
+      },
+    ];
+    renderReadOnly(filtersWithEmptyKey);
+
+    // The correlate header must not appear
+    expect(screen.queryByText(/correlate/i)).not.toBeInTheDocument();
+  });
+
+  it("counts only non-empty-key correlate entries in the read-only badge", () => {
+    // Two entries: one empty-key, one real key — only the real one should count.
+    const filters = [
+      {
+        with: { type: "com.example.event" },
+        correlate: {
+          "": { from: "${ .empty }" },
+          orderId: { from: "${ .orderId }" },
+        },
+      },
+    ];
+    renderReadOnly(filters);
+
+    // Correlate section should show "1 key", not "2 keys"
+    expect(screen.getByText(/1 key/i)).toBeInTheDocument();
+    expect(screen.queryByText(/2 key/i)).not.toBeInTheDocument();
   });
 });

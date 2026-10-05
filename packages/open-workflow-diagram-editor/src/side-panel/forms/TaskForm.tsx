@@ -179,15 +179,12 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
       task as Record<string, unknown>,
       liveSentinels,
     );
+    const taskClone = structuredClone(task as Record<string, unknown>);
     const resetVals: Record<string, unknown> = {
-      ...(task as Record<string, unknown>),
+      ...taskClone,
       ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
     };
-    padRemovedPaths(
-      resetVals,
-      prevTask as Record<string, unknown>,
-      task as Record<string, unknown>,
-    );
+    padRemovedPaths(resetVals, prevTask as Record<string, unknown>, taskClone);
     form.reset(resetVals);
   }, [task, form, allFields]);
 

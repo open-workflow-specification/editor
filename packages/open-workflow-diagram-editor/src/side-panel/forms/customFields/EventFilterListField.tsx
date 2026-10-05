@@ -20,7 +20,10 @@ import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import type { EventFilterListField as EventFilterListFieldDescriptor } from "../../../core/schemaToFormFields";
+import type {
+  EventFilterListField as EventFilterListFieldDescriptor,
+  ObjectField,
+} from "../../../core/schemaToFormFields";
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { MapRow, newId } from "./KeyValueMapField";
@@ -63,6 +66,14 @@ function extractFilters(source: unknown): FilterItem[] {
 }
 
 /**
+ * Returns a human-readable count string, e.g. "1 key" or "3 keys".
+ * Centralises the singular/plural pattern used in both editable and read-only views.
+ */
+function formatCorrelateCount(count: number, keyLabel: string, keysLabel: string): string {
+  return count === 1 ? `1 ${keyLabel}` : `${count} ${keysLabel}`;
+}
+
+/**
  * Converts the schema `correlate` object (key → `{ from, expect? }`) into
  * MapEntry rows. The full correlation object is stored as the entry value so
  * that optional fields such as `expect` are not discarded.
@@ -87,7 +98,8 @@ function deserializeCorrelate(correlate: unknown): MapEntry[] {
 /**
  * Converts MapEntry rows back into the schema `correlate` object.
  * Rows with empty keys are skipped.
- * Each entry's value is the full correlation object; `from` is updated in-place.
+ * Each entry's value is the full correlation object; `from` has already been
+ * updated by the caller (via `withUpdatedFrom`) before this function is invoked.
  */
 function serializeCorrelate(rows: MapEntry[]): Record<string, unknown> | undefined {
   const result: Record<string, unknown> = {};
@@ -194,10 +206,12 @@ function EventPropertiesPanel({
   eventProps,
   onChange,
   idPrefix,
+  labels,
 }: {
   eventProps: Record<string, unknown>;
   onChange: (updated: Record<string, unknown>) => void;
   idPrefix: string;
+  labels: Record<string, string>;
 }) {
   const [dataText, setDataText] = React.useState(() => valueToText(eventProps["data"], "yaml"));
 
@@ -219,42 +233,40 @@ function EventPropertiesPanel({
   };
 
   const fieldId = (key: string) => `${idPrefix}-evtprop-${key}`;
+  const label = (key: string) => labels[key] ?? key;
 
   return (
     <div className="dec-event-props-panel">
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("type")} className="dec-event-props-label">
-          type
+          {label("type")}
         </label>
         <Input
           id={fieldId("type")}
           className="dec-event-props-input"
           value={str("type")}
-          placeholder="e.g. com.example.event.created"
           onChange={(e) => set("type", e.target.value)}
         />
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("source")} className="dec-event-props-label">
-          source
+          {label("source")}
         </label>
         <Input
           id={fieldId("source")}
           className="dec-event-props-input"
           value={str("source")}
-          placeholder="https://… or ${...}"
           onChange={(e) => set("source", e.target.value)}
         />
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("data")} className="dec-event-props-label">
-          data
+          {label("data")}
         </label>
         <Textarea
           id={fieldId("data")}
           className="dec-event-props-input dec-form-scrollable-textarea dec-form-structured-value-textarea"
           value={dataText}
-          placeholder="${ .expression } or structured value"
           onChange={(e) => {
             const raw = e.target.value;
             setDataText(raw);
@@ -276,7 +288,7 @@ function EventPropertiesPanel({
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("subject")} className="dec-event-props-label">
-          subject
+          {label("subject")}
         </label>
         <Input
           id={fieldId("subject")}
@@ -287,7 +299,7 @@ function EventPropertiesPanel({
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("id")} className="dec-event-props-label">
-          id
+          {label("id")}
         </label>
         <Input
           id={fieldId("id")}
@@ -308,19 +320,19 @@ function EditableFilterList({
   items,
   setItems,
   commitToForm,
+  withFieldLabels,
 }: {
   items: FilterItem[];
   setItems: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   commitToForm: (next: FilterItem[]) => void;
+  withFieldLabels: Record<string, string>;
 }) {
   const { t } = useI18n();
 
   const update = (updater: (prev: FilterItem[]) => FilterItem[]) => {
-    setItems((prev) => {
-      const next = updater(prev);
-      commitToForm(next);
-      return next;
-    });
+    const next = updater(items);
+    setItems(next);
+    commitToForm(next);
   };
 
   const addFilter = () => {
@@ -390,6 +402,11 @@ function EditableFilterList({
             const eventProps = (item.data["with"] ?? {}) as Record<string, unknown>;
             const correlateRows = deserializeCorrelate(item.data["correlate"]);
             const correlateCount = correlateRows.filter((r) => r.key !== "").length;
+            const correlateCountLabel = formatCorrelateCount(
+              correlateCount,
+              t("sidebar.eventFilter.correlate.key"),
+              t("sidebar.eventFilter.correlate.keys"),
+            );
 
             return (
               <div key={item.id} className="dec-filter-item">
@@ -436,6 +453,7 @@ function EditableFilterList({
                     eventProps={eventProps}
                     onChange={(updated) => updateWith(item.id, updated)}
                     idPrefix={item.id}
+                    labels={withFieldLabels}
                   />
                 )}
 
@@ -446,7 +464,6 @@ function EditableFilterList({
                     className="dec-correlate-header"
                     onClick={() => toggleCorrelate(item.id)}
                     aria-expanded={item.correlateExpanded}
-                    aria-label={`${t("sidebar.eventFilter.correlate.label")} ${correlateCount === 1 ? `1 ${t("sidebar.eventFilter.correlate.key")}` : `${correlateCount} ${t("sidebar.eventFilter.correlate.keys")}`}`}
                   >
                     {item.correlateExpanded ? (
                       <ChevronDown className="dec-correlate-chevron" aria-hidden="true" />
@@ -456,11 +473,7 @@ function EditableFilterList({
                     <span className="dec-correlate-label">
                       {t("sidebar.eventFilter.correlate.label")}
                     </span>
-                    <span className="dec-map-count">
-                      {correlateCount === 1
-                        ? `1 ${t("sidebar.eventFilter.correlate.key")}`
-                        : `${correlateCount} ${t("sidebar.eventFilter.correlate.keys")}`}
-                    </span>
+                    <span className="dec-map-count">{correlateCountLabel}</span>
                   </button>
 
                   {item.correlateExpanded && (
@@ -518,6 +531,7 @@ function ReadOnlyFilterList({ items }: { items: FilterItem[] }) {
             ([, v]) => v !== undefined && v !== null && v !== "",
           );
           const correlateRows = deserializeCorrelate(item.data["correlate"]);
+          const correlateCount = correlateRows.filter((r) => r.key !== "").length;
 
           return (
             <div key={item.id} className="dec-filter-item-readonly">
@@ -540,16 +554,18 @@ function ReadOnlyFilterList({ items }: { items: FilterItem[] }) {
                 </div>
               )}
 
-              {correlateRows.length > 0 && (
+              {correlateCount > 0 && (
                 <div className="dec-correlate-readonly">
                   <div className="dec-correlate-readonly-header">
                     <span className="dec-correlate-label">
                       {t("sidebar.eventFilter.correlate.label")}
                     </span>
                     <span className="dec-map-count">
-                      {correlateRows.length === 1
-                        ? `1 ${t("sidebar.eventFilter.correlate.key")}`
-                        : `${correlateRows.length} ${t("sidebar.eventFilter.correlate.keys")}`}
+                      {formatCorrelateCount(
+                        correlateCount,
+                        t("sidebar.eventFilter.correlate.key"),
+                        t("sidebar.eventFilter.correlate.keys"),
+                      )}
                     </span>
                   </div>
                   {correlateRows.map((row) => (
@@ -576,10 +592,22 @@ export type EventFilterListFieldProps = {
   field: EventFilterListFieldDescriptor;
 };
 
+/** Builds a key→label map from the `with` object's children in itemFields. */
+function deriveWithFieldLabels(field: EventFilterListFieldDescriptor): Record<string, string> {
+  const withField = field.itemFields.find(
+    (f): f is ObjectField => f.kind === "object" && f.path === "with",
+  );
+  if (!withField) return {};
+  return Object.fromEntries(
+    withField.children.map((c) => [c.path.split(".").pop() ?? c.path, c.label]),
+  );
+}
+
 export function EventFilterListField({ field }: EventFilterListFieldProps) {
   const { isReadOnly, taskData } = useTaskFormContext();
   const form = useFormContext() as UseFormReturn<Record<string, unknown>>;
   const { setValue, getValues } = form;
+  const withFieldLabels = React.useMemo(() => deriveWithFieldLabels(field), [field]);
 
   const [items, setItems] = React.useState<FilterItem[]>(() => {
     const rhfValue = (getValues as (path: string) => unknown)(field.path);
@@ -614,5 +642,12 @@ export function EventFilterListField({ field }: EventFilterListFieldProps) {
     return <ReadOnlyFilterList items={items} />;
   }
 
-  return <EditableFilterList items={items} setItems={setItems} commitToForm={commitToForm} />;
+  return (
+    <EditableFilterList
+      items={items}
+      setItems={setItems}
+      commitToForm={commitToForm}
+      withFieldLabels={withFieldLabels}
+    />
+  );
 }
