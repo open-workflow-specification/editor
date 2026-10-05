@@ -641,7 +641,7 @@ describe("diagramBuilder", () => {
       /* Errors are matched against the node's taskReference (indexed JSON pointer) */
       const target = baseline.nodes.find((node) => node.data.taskReference !== undefined)!;
       const targetId = target.id;
-      const targetReference = target.data.taskReference!;
+      const targetReference = target.data.taskReference as string;
 
       it("does not set hasError on any node when no errors are passed", () => {
         const diagram = buildDiagramElements(model);

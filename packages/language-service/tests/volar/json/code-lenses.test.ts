@@ -17,7 +17,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createJsonCodeLensesPlugin } from "../../../src/index";
 import type { LanguageServicePlugin, LanguageServicePluginInstance } from "../../../src/index";
-import { treat, MINIMAL_CONTEXT } from "../../testUtils";
+import { CANCELLATION_TOKEN, treat, MINIMAL_CONTEXT } from "../../testUtils";
 
 describe("createJsonCodeLensesPlugin", () => {
   let plugin: LanguageServicePlugin;
@@ -29,28 +29,28 @@ describe("createJsonCodeLensesPlugin", () => {
   });
 
   describe("provideCodeLenses", () => {
-    it("provides a code lens on an empty document", () => {
+    it("provides a code lens on an empty document", async () => {
       const { doc } = treat("🎯");
-      const result = instance.provideCodeLenses!(doc, {});
+      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toHaveLength(1);
-      expect(result![0].command?.title).toBe("Create an Open Workflow");
+      expect(result?.[0]?.command?.title).toBe("Create an Open Workflow");
     });
 
-    it("does not provide a code lens on bare {}", () => {
+    it("does not provide a code lens on bare {}", async () => {
       const { doc } = treat("{🎯}");
-      const result = instance.provideCodeLenses!(doc, {});
+      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
 
-    it("does not provide a code lens on partial OWS content", () => {
+    it("does not provide a code lens on partial OWS content", async () => {
       const { doc } = treat('{ "document": { 🎯 }, "do": [] }');
-      const result = instance.provideCodeLenses!(doc, {});
+      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
 
-    it("does not provide a code lens on an empty YAML document", () => {
+    it("does not provide a code lens on an empty YAML document", async () => {
       const { doc } = treat("🎯", "yaml");
-      const result = instance.provideCodeLenses!(doc, {});
+      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
   });

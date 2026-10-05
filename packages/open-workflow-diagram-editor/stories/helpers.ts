@@ -26,11 +26,11 @@ const DEFAULT_STORY_ARGS = {
 
 /**
  * Creates a workflow story with default configuration and play function.
- * 
+ *
  * @param workflowContent - The workflow YAML/JSON content to display
  * @returns A configured Story object
  */
-export const createWorkflowStory = (workflowContent: string): Story => {
+export const createWorkflowStory = (workflowContent: string) => {
   return {
     args: {
       ...DEFAULT_STORY_ARGS,
@@ -40,5 +40,5 @@ export const createWorkflowStory = (workflowContent: string): Story => {
       // Wait for the start node to be rendered to ensure all async state updates are complete
       await canvas.findByTestId("start-node-root-entry-node");
     },
-  };
+  } satisfies Story;
 };

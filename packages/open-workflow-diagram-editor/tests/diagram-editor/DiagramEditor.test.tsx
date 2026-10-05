@@ -127,7 +127,7 @@ describe("DiagramEditor Component", () => {
   });
 
   it("getContent returns JSON when fed JSON content", () => {
-    const ref = React.createRef<{ getContent: () => string }>();
+    const ref = React.createRef<DiagramEditorRef>();
 
     render(
       <DiagramEditor ref={ref} content={BASIC_VALID_WORKFLOW_JSON} locale="en" isReadOnly={true} />,
@@ -220,7 +220,7 @@ do:
   });
 
   it("getContent returns empty string when content is unparseable (no model loaded)", () => {
-    const ref = React.createRef<{ getContent: () => string }>();
+    const ref = React.createRef<DiagramEditorRef>();
 
     render(<DiagramEditor ref={ref} content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />);
 

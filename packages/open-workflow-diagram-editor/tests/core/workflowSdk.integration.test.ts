@@ -62,7 +62,7 @@ describe("parseWorkflow", () => {
   ])("returns null model with error for $description", ({ input }) => {
     const result = parseWorkflow(input);
     expect(result.model).toBeNull();
-    expect(result.errors[0].message).toContain("Not a valid workflow");
+    expect(result.errors[0]!.message).toContain("Not a valid workflow");
   });
 
   it("returns null model with errors for unparseable text", () => {
@@ -90,7 +90,7 @@ describe("parseValidationErrorMessage", () => {
     const message = "- /do/0/task | #/required | must have property | {invalid json}";
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
-    expect(errors[0].object).toEqual({});
+    expect(errors[0]!.object).toEqual({});
   });
 
   it("ignores lines that don't have 4 parts", () => {
@@ -103,10 +103,10 @@ describe("parseValidationErrorMessage", () => {
     const message = '- /do/0/task | #/required | message with | pipes | {"key": "value"}';
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
-    expect(errors[0].path).toBe("/do/0/task");
-    expect(errors[0].errorType).toBe("#/required");
-    expect(errors[0].message).toBe("message with | pipes");
-    expect(errors[0].object).toEqual({ key: "value" });
+    expect(errors[0]!.path).toBe("/do/0/task");
+    expect(errors[0]!.errorType).toBe("#/required");
+    expect(errors[0]!.message).toBe("message with | pipes");
+    expect(errors[0]!.object).toEqual({ key: "value" });
   });
 
   it("handles pipes in the JSON object field correctly", () => {
@@ -114,10 +114,10 @@ describe("parseValidationErrorMessage", () => {
       '- /do/0/task | #/required | must have property | {"message": "value | with | pipes"}';
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
-    expect(errors[0].path).toBe("/do/0/task");
-    expect(errors[0].errorType).toBe("#/required");
-    expect(errors[0].message).toBe("must have property");
-    expect(errors[0].object).toEqual({ message: "value | with | pipes" });
+    expect(errors[0]!.path).toBe("/do/0/task");
+    expect(errors[0]!.errorType).toBe("#/required");
+    expect(errors[0]!.message).toBe("must have property");
+    expect(errors[0]!.object).toEqual({ message: "value | with | pipes" });
   });
 
   it.each([
@@ -130,7 +130,7 @@ describe("parseValidationErrorMessage", () => {
     const message = `- /do/0/task | #/required | must have property | ${jsonValue}`;
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
-    expect(errors[0].object).toEqual({});
+    expect(errors[0]!.object).toEqual({});
   });
 
   it("accepts valid plain object JSON", () => {
@@ -138,7 +138,7 @@ describe("parseValidationErrorMessage", () => {
       '- /do/0/task | #/required | must have property | {"nested": {"key": "value"}, "count": 5}';
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
-    expect(errors[0].object).toEqual({ nested: { key: "value" }, count: 5 });
+    expect(errors[0]!.object).toEqual({ nested: { key: "value" }, count: 5 });
   });
 
   it("sanitizes dangerous prototype pollution keys from parsed JSON", () => {
@@ -147,12 +147,12 @@ describe("parseValidationErrorMessage", () => {
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
     // Dangerous keys should be stripped
-    expect(errors[0].object).not.toHaveProperty("__proto__");
-    expect(errors[0].object).not.toHaveProperty("constructor");
-    expect(errors[0].object).not.toHaveProperty("prototype");
+    expect(errors[0]!.object).not.toHaveProperty("__proto__");
+    expect(errors[0]!.object).not.toHaveProperty("constructor");
+    expect(errors[0]!.object).not.toHaveProperty("prototype");
     // Safe keys should remain
-    expect(errors[0].object).toHaveProperty("safeKey");
-    expect(errors[0].object?.safeKey).toBe("value");
+    expect(errors[0]!.object).toHaveProperty("safeKey");
+    expect(errors[0]!.object?.safeKey).toBe("value");
   });
 
   it("creates object with null prototype to prevent pollution", () => {
@@ -160,7 +160,7 @@ describe("parseValidationErrorMessage", () => {
     const errors = parseValidationErrorMessage(message);
     expect(errors).toHaveLength(1);
     // Object should have null prototype
-    expect(Object.getPrototypeOf(errors[0].object)).toBeNull();
+    expect(Object.getPrototypeOf(errors[0]!.object)).toBeNull();
   });
 });
 

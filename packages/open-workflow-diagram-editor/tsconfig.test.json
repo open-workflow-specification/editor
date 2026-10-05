@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
 
   "compilerOptions": {
-    "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "node"],
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "node", "vite/client"],
 
     // Tests can import JS or TS freely
     "allowJs": true,
@@ -12,11 +12,13 @@
 
     // No declaration output during tests
     "declaration": false,
+    "declarationMap": false,
     "emitDeclarationOnly": false,
     "noEmit": true,
+    "rootDir": ".",
 
     // Tests often work with dynamic/loosely typed objects
     "exactOptionalPropertyTypes": false
   },
-  "include": ["**/*.test.ts", "**/*.test.tsx", "**/tests/**/*"]
+  "include": ["tests/**/*", "tests-e2e/**/*"]
 }

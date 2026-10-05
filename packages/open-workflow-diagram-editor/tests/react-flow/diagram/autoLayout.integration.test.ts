@@ -131,10 +131,10 @@ describe("autoLayout", () => {
       const elkGraph = buildElkGraphFromReactFlowGraph(reactFlowGraph);
 
       expect(elkGraph.children).toHaveLength(1);
-      expect(elkGraph.children?.[0].id).toBe("parent");
-      expect(elkGraph.children?.[0].children).toHaveLength(2);
-      expect(elkGraph.children?.[0].children?.[0].id).toBe("child1");
-      expect(elkGraph.children?.[0].children?.[1].id).toBe("child2");
+      expect(elkGraph.children?.[0]!.id).toBe("parent");
+      expect(elkGraph.children?.[0]!.children).toHaveLength(2);
+      expect(elkGraph.children?.[0]!.children?.[0]!.id).toBe("child1");
+      expect(elkGraph.children?.[0]!.children?.[1]!.id).toBe("child2");
     });
 
     it("handles empty graph", () => {
@@ -194,7 +194,7 @@ describe("autoLayout", () => {
       const elkGraph = buildElkGraphFromReactFlowGraph(reactFlowGraph);
 
       expect(elkGraph.children).toHaveLength(1);
-      expect(elkGraph.children?.[0].id).toBe("node1");
+      expect(elkGraph.children?.[0]!.id).toBe("node1");
     });
 
     it("applies PARENT_LAYOUT_OPTIONS to nodes with children", () => {
@@ -220,18 +220,18 @@ describe("autoLayout", () => {
       const elkGraph = buildElkGraphFromReactFlowGraph(reactFlowGraph);
 
       // Parent node should have layout options and no fixed dimensions
-      expect(elkGraph.children?.[0].layoutOptions).toBeDefined();
-      expect(elkGraph.children?.[0].layoutOptions?.["org.eclipse.elk.padding"]).toBe(
+      expect(elkGraph.children?.[0]!.layoutOptions).toBeDefined();
+      expect(elkGraph.children?.[0]!.layoutOptions?.["org.eclipse.elk.padding"]).toBe(
         "[top=60,left=20,bottom=20,right=20]",
       );
-      expect(elkGraph.children?.[0].width).toBeUndefined();
-      expect(elkGraph.children?.[0].height).toBeUndefined();
+      expect(elkGraph.children?.[0]!.width).toBeUndefined();
+      expect(elkGraph.children?.[0]!.height).toBeUndefined();
 
       // Child node should have fixed dimensions; no edges so no ports/layoutOptions override
-      expect(elkGraph.children?.[0].children?.[0].width).toBe(100);
-      expect(elkGraph.children?.[0].children?.[0].height).toBe(50);
-      expect(elkGraph.children?.[0].children?.[0].ports).toBeUndefined();
-      expect(elkGraph.children?.[0].children?.[0].layoutOptions).toBeUndefined();
+      expect(elkGraph.children?.[0]!.children?.[0]!.width).toBe(100);
+      expect(elkGraph.children?.[0]!.children?.[0]!.height).toBe(50);
+      expect(elkGraph.children?.[0]!.children?.[0]!.ports).toBeUndefined();
+      expect(elkGraph.children?.[0]!.children?.[0]!.layoutOptions).toBeUndefined();
     });
 
     it("places edges at correct hierarchy level - root level", () => {
@@ -246,7 +246,7 @@ describe("autoLayout", () => {
       const elkGraph = buildElkGraphFromReactFlowGraph(reactFlowGraph);
 
       expect(elkGraph.edges).toHaveLength(1);
-      expect(elkGraph.edges?.[0].id).toBe("edge1");
+      expect(elkGraph.edges?.[0]!.id).toBe("edge1");
     });
 
     it("places edges at correct hierarchy level - inside parent", () => {
@@ -263,8 +263,8 @@ describe("autoLayout", () => {
 
       // Edge should be inside parent, not at root
       expect(elkGraph.edges).toHaveLength(0);
-      expect(elkGraph.children?.[0].edges).toHaveLength(1);
-      expect(elkGraph.children?.[0].edges?.[0].id).toBe("edge1");
+      expect(elkGraph.children?.[0]!.edges).toHaveLength(1);
+      expect(elkGraph.children?.[0]!.edges?.[0]!.id).toBe("edge1");
     });
 
     it("places edges at lowest common ancestor", () => {
@@ -282,8 +282,8 @@ describe("autoLayout", () => {
 
       // Edge connects children from different parents, should be at root
       expect(elkGraph.edges).toHaveLength(1);
-      expect(elkGraph.children?.[0].edges).toBeUndefined();
-      expect(elkGraph.children?.[1].edges).toBeUndefined();
+      expect(elkGraph.children?.[0]!.edges).toBeUndefined();
+      expect(elkGraph.children?.[1]!.edges).toBeUndefined();
     });
 
     it("cleans up empty edges arrays", () => {
@@ -298,8 +298,8 @@ describe("autoLayout", () => {
       const elkGraph = buildElkGraphFromReactFlowGraph(reactFlowGraph);
 
       // Nodes should not have empty edges arrays
-      expect(elkGraph.children?.[0].edges).toBeUndefined();
-      expect(elkGraph.children?.[0].children?.[0].edges).toBeUndefined();
+      expect(elkGraph.children?.[0]!.edges).toBeUndefined();
+      expect(elkGraph.children?.[0]!.children?.[0]!.edges).toBeUndefined();
     });
 
     describe("port assignment", () => {
@@ -471,8 +471,8 @@ describe("autoLayout", () => {
 
       // Edge should be at parent level (lowest common ancestor)
       expect(elkGraph.edges).toHaveLength(0);
-      expect(elkGraph.children?.[0].edges).toBeUndefined();
-      expect(elkGraph.children?.[0].children?.[0].edges).toHaveLength(1);
+      expect(elkGraph.children?.[0]!.edges).toBeUndefined();
+      expect(elkGraph.children?.[0]!.children?.[0]!.edges).toHaveLength(1);
     });
   });
 
@@ -497,10 +497,10 @@ describe("autoLayout", () => {
 
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(result.nodes[0].position).toEqual({ x: 50, y: 100 });
-      expect(result.nodes[0].width).toBe(200);
-      expect(result.nodes[0].height).toBe(60);
-      expect(result.nodes[1].position).toEqual({ x: 50, y: 200 });
+      expect(result.nodes[0]!.position).toEqual({ x: 50, y: 100 });
+      expect(result.nodes[0]!.width).toBe(200);
+      expect(result.nodes[0]!.height).toBe(60);
+      expect(result.nodes[1]!.position).toEqual({ x: 50, y: 200 });
     });
 
     it("preserves original node data when no ELK node found", () => {
@@ -517,8 +517,8 @@ describe("autoLayout", () => {
 
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(result.nodes[0].position).toEqual({ x: 10, y: 20 });
-      expect(result.nodes[0].data).toEqual({ label: "Test" });
+      expect(result.nodes[0]!.position).toEqual({ x: 10, y: 20 });
+      expect(result.nodes[0]!.data).toEqual({ label: "Test" });
     });
 
     it("adds waypoints to edges from ELK bend points", () => {
@@ -558,7 +558,7 @@ describe("autoLayout", () => {
 
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(result.edges[0].data?.wayPoints).toEqual([
+      expect(result.edges[0]!.data?.wayPoints).toEqual([
         { x: 100, y: 0 },
         { x: 100, y: 100 },
       ]);
@@ -598,7 +598,7 @@ describe("autoLayout", () => {
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
       // When there are no bend points, wayPoints should be an empty array
-      expect(result.edges[0].data?.wayPoints).toEqual([]);
+      expect(result.edges[0]!.data?.wayPoints).toEqual([]);
     });
 
     it("clears stale wayPoints when ELK edge has no sections", () => {
@@ -629,8 +629,8 @@ describe("autoLayout", () => {
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
       // When ELK edge exists but has no sections, wayPoints is normalized to empty array
-      expect(result.edges[0].data).toEqual({ label: "Test Edge", wayPoints: [] });
-      expect(result.edges[0].data?.wayPoints).toEqual([]);
+      expect(result.edges[0]!.data).toEqual({ label: "Test Edge", wayPoints: [] });
+      expect(result.edges[0]!.data?.wayPoints).toEqual([]);
     });
 
     it("clears stale wayPoints when ELK edge sections have no bend points", () => {
@@ -668,8 +668,8 @@ describe("autoLayout", () => {
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
       // When there are no bend points, wayPoints should be an empty array
-      expect(result.edges[0].data).toEqual({ label: "Test Edge", wayPoints: [] });
-      expect(result.edges[0].data?.wayPoints).toEqual([]);
+      expect(result.edges[0]!.data).toEqual({ label: "Test Edge", wayPoints: [] });
+      expect(result.edges[0]!.data?.wayPoints).toEqual([]);
     });
 
     it("preserves edge data when no ELK edge found", () => {
@@ -693,7 +693,7 @@ describe("autoLayout", () => {
 
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(result.edges[0].data).toEqual({ label: "Test Edge" });
+      expect(result.edges[0]!.data).toEqual({ label: "Test Edge" });
     });
 
     it("does not mutate original graph", () => {
@@ -702,7 +702,7 @@ describe("autoLayout", () => {
         edges: [],
       };
 
-      const originalPosition = { ...reactFlowGraph.nodes[0].position };
+      const originalPosition = { ...reactFlowGraph.nodes[0]!.position };
 
       const layoutedElkGraph: ElkNode = {
         id: "root",
@@ -712,7 +712,7 @@ describe("autoLayout", () => {
 
       matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(reactFlowGraph.nodes[0].position).toEqual(originalPosition);
+      expect(reactFlowGraph.nodes[0]!.position).toEqual(originalPosition);
     });
 
     it("handles multiple sections with bend points", () => {
@@ -750,7 +750,7 @@ describe("autoLayout", () => {
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
       // Should include all intermediate points (excluding first startPoint and last endPoint)
-      expect(result.edges[0].data?.wayPoints).toEqual([
+      expect(result.edges[0]!.data?.wayPoints).toEqual([
         { x: 50, y: 0 }, // bendPoint from section1
         { x: 100, y: 50 }, // endPoint of section1
         { x: 100, y: 50 }, // startPoint of section2 (duplicate of previous)
@@ -803,7 +803,7 @@ describe("autoLayout", () => {
 
       // wayPoints are intermediate bend points converted to absolute coordinates.
       // Parent is at (100, 200), bendPoint is at (10, 40) relative to parent → (110, 240) absolute.
-      expect(result.edges[0].data?.wayPoints).toEqual([{ x: 110, y: 240 }]);
+      expect(result.edges[0]!.data?.wayPoints).toEqual([{ x: 110, y: 240 }]);
     });
 
     it("preserves wayPoints for edges not inside parent nodes", () => {
@@ -853,7 +853,7 @@ describe("autoLayout", () => {
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
       // wayPoints contains only intermediate bend points (startPoint/endPoint are stripped)
-      expect(result.edges[0].data?.wayPoints).toEqual([{ x: 100, y: 10 }]);
+      expect(result.edges[0]!.data?.wayPoints).toEqual([{ x: 100, y: 10 }]);
     });
 
     it("preserves other edge data when updating wayPoints", () => {
@@ -897,7 +897,7 @@ describe("autoLayout", () => {
 
       const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-      expect(result.edges[0].data).toEqual({
+      expect(result.edges[0]!.data).toEqual({
         label: "Test",
         color: "blue",
         customProp: 123,
@@ -954,8 +954,8 @@ describe("autoLayout", () => {
       const result = await applyAutoLayout(reactFlowGraph);
 
       expect(core.processElkLayout).toHaveBeenCalledTimes(1);
-      expect(result.nodes[0].position).toEqual({ x: 50, y: 100 });
-      expect(result.nodes[1].position).toEqual({ x: 50, y: 200 });
+      expect(result.nodes[0]!.position).toEqual({ x: 50, y: 100 });
+      expect(result.nodes[1]!.position).toEqual({ x: 50, y: 200 });
     });
 
     it("returns original graph when ELK layout fails", async () => {
@@ -969,7 +969,7 @@ describe("autoLayout", () => {
       const result = await applyAutoLayout(reactFlowGraph);
 
       expect(result).toEqual(reactFlowGraph);
-      expect(result.nodes[0].position).toEqual({ x: 10, y: 20 });
+      expect(result.nodes[0]!.position).toEqual({ x: 10, y: 20 });
     });
 
     it("handles empty graph", async () => {
@@ -1137,8 +1137,8 @@ describe("autoLayout", () => {
       const result = await applyAutoLayout(reactFlowGraph);
 
       expect(result.nodes).toHaveLength(3);
-      expect(result.nodes[0].position).toEqual({ x: 0, y: 0 });
-      expect(result.nodes[2].position).toEqual({ x: 350, y: 50 });
+      expect(result.nodes[0]!.position).toEqual({ x: 0, y: 0 });
+      expect(result.nodes[2]!.position).toEqual({ x: 350, y: 50 });
     });
 
     it("passes abort signal to processElkLayout", async () => {
@@ -1217,18 +1217,18 @@ describe("autoLayout", () => {
         const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
         // Parent node should be positioned
-        expect(result.nodes[0].position).toEqual({ x: 50, y: 100 });
-        expect(result.nodes[0].width).toBe(300);
-        expect(result.nodes[0].height).toBe(200);
+        expect(result.nodes[0]!.position).toEqual({ x: 50, y: 100 });
+        expect(result.nodes[0]!.width).toBe(300);
+        expect(result.nodes[0]!.height).toBe(200);
 
         // Nested children should also be positioned (this was the bug)
-        expect(result.nodes[1].position).toEqual({ x: 10, y: 10 });
-        expect(result.nodes[1].width).toBe(100);
-        expect(result.nodes[1].height).toBe(50);
+        expect(result.nodes[1]!.position).toEqual({ x: 10, y: 10 });
+        expect(result.nodes[1]!.width).toBe(100);
+        expect(result.nodes[1]!.height).toBe(50);
 
-        expect(result.nodes[2].position).toEqual({ x: 10, y: 70 });
-        expect(result.nodes[2].width).toBe(100);
-        expect(result.nodes[2].height).toBe(50);
+        expect(result.nodes[2]!.position).toEqual({ x: 10, y: 70 });
+        expect(result.nodes[2]!.width).toBe(100);
+        expect(result.nodes[2]!.height).toBe(50);
       });
 
       it("handles deeply nested nodes", () => {
@@ -1273,9 +1273,9 @@ describe("autoLayout", () => {
 
         const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
-        expect(result.nodes[0].position).toEqual({ x: 0, y: 0 });
-        expect(result.nodes[1].position).toEqual({ x: 10, y: 10 });
-        expect(result.nodes[2].position).toEqual({ x: 20, y: 20 });
+        expect(result.nodes[0]!.position).toEqual({ x: 0, y: 0 });
+        expect(result.nodes[1]!.position).toEqual({ x: 10, y: 10 });
+        expect(result.nodes[2]!.position).toEqual({ x: 20, y: 20 });
       });
     });
 
@@ -1295,8 +1295,8 @@ describe("autoLayout", () => {
         const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
         // Should include width and height even though they are 0
-        expect(result.nodes[0].width).toBe(0);
-        expect(result.nodes[0].height).toBe(0);
+        expect(result.nodes[0]!.width).toBe(0);
+        expect(result.nodes[0]!.height).toBe(0);
       });
 
       it("does not add width/height when undefined", () => {
@@ -1314,8 +1314,8 @@ describe("autoLayout", () => {
         const result = matchReactFlowGraphWithElkLayoutedGraph(reactFlowGraph, layoutedElkGraph);
 
         // Should not have width/height properties
-        expect(result.nodes[0].width).toBeUndefined();
-        expect(result.nodes[0].height).toBeUndefined();
+        expect(result.nodes[0]!.width).toBeUndefined();
+        expect(result.nodes[0]!.height).toBeUndefined();
       });
     });
 

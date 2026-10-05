@@ -22,14 +22,14 @@ type Story = StoryObj<typeof TextEditor>;
 /**
  * Creates a text editor story with sensible defaults.
  *
- * @param args - Partial TextEditor props to apply to the story
+ * @param args - TextEditor props to apply to the story
  * @returns A configured Story object
  */
-export const createTextEditorStory = (args: Partial<Parameters<typeof TextEditor>[0]>): Story => {
+export const createTextEditorStory = (args: Parameters<typeof TextEditor>[0]) => {
   return {
     args: {
       isReadOnly: false,
       ...args,
     },
-  };
+  } satisfies Story;
 };
