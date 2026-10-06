@@ -25,7 +25,9 @@ type Story = StoryObj<typeof TextEditor>;
  * @param args - TextEditor props to apply to the story
  * @returns A configured Story object
  */
-export const createTextEditorStory = (args: Parameters<typeof TextEditor>[0]) => {
+export const createTextEditorStory = (
+  args: Omit<Parameters<typeof TextEditor>[0], "createLanguageServiceWorker">,
+) => {
   return {
     args: {
       isReadOnly: false,

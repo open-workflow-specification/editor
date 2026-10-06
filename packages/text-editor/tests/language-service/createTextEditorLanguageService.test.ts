@@ -85,7 +85,7 @@ describe("createTextEditorLanguageService", () => {
         expect.anything(),
       );
 
-      const getSyncUris = mockActivateMarkers.mock.calls[0][3] as () => unknown[];
+      const getSyncUris = mockActivateMarkers.mock.calls[0]![3];
       expect(getSyncUris()).toEqual([mockModel.uri]);
     });
   });

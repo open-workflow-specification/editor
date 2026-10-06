@@ -22,4 +22,12 @@ export const mockRegisterProviders = vi.fn(() =>
 );
 
 export const mockMarkersDispose = vi.fn();
-export const mockActivateMarkers = vi.fn(() => ({ dispose: mockMarkersDispose }));
+export const mockActivateMarkers = vi.fn<
+  (
+    monaco: unknown,
+    languages: string[],
+    owner: string,
+    getSyncUris: () => unknown[],
+    worker: unknown,
+  ) => { dispose: typeof mockMarkersDispose }
+>(() => ({ dispose: mockMarkersDispose }));

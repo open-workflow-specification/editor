@@ -26,7 +26,7 @@ declare global {
   }
 }
 
-const createLanguageServiceWorker = () =>
+export const createLanguageServiceWorker = () =>
   new Worker(new URL("../../src/worker/language.worker.ts", import.meta.url), { type: "module" });
 
 /** Primary UI component for user interaction */
@@ -48,8 +48,8 @@ export const TextEditor = ({ ...props }: TextEditorProps) => {
   return (
     <div style={{ height: "100vh" }}>
       <Component
-        createLanguageServiceWorker={createLanguageServiceWorker}
         {...props}
+        createLanguageServiceWorker={createLanguageServiceWorker}
         language={languageOverride ?? props.language}
         isReadOnly={isReadOnlyOverride ?? props.isReadOnly}
       />

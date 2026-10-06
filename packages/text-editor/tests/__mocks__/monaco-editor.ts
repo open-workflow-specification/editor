@@ -89,7 +89,9 @@ export const simulateEditorContentChange = (value: string) => {
 export const mockSetTheme = vi.fn();
 
 export const mockMonacoWorkerDispose = vi.fn();
-export const mockCreateWebWorker = vi.fn(() => ({
+export const mockCreateWebWorker = vi.fn<
+  (options: { worker: Promise<Worker> }) => { dispose: typeof mockMonacoWorkerDispose }
+>(() => ({
   dispose: mockMonacoWorkerDispose,
 }));
 

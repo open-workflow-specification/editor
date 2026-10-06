@@ -18,13 +18,19 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Controls, Primary, Title } from "@storybook/addon-docs/blocks";
 import { createTextEditorStory } from "../helpers";
 import { helloWorldJson, helloWorldYaml, invalidWorkflowJson } from "../samples";
-import { TextEditor } from "./TextEditor";
+import { TextEditor, createLanguageServiceWorker } from "./TextEditor";
 
 const meta = {
   id: "text-editor",
   title: "Features/Text-Editor",
   component: TextEditor,
   tags: ["autodocs"],
+  args: {
+    createLanguageServiceWorker,
+  },
+  argTypes: {
+    createLanguageServiceWorker: { table: { disable: true } },
+  },
   parameters: {
     layout: "fullscreen",
     docs: {

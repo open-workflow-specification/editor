@@ -158,8 +158,8 @@ describe("TextEditor", () => {
         expect(mockSetModelLanguage).toHaveBeenCalledOnce();
         expect(mockSetModelLanguage).toHaveBeenCalledWith(mockModel, toLang);
 
-        expect(mockEditorUpdateOptions.mock.invocationCallOrder[0]).toBeLessThan(
-          mockSetModelLanguage.mock.invocationCallOrder[0],
+        expect(mockEditorUpdateOptions.mock.invocationCallOrder[0]!).toBeLessThan(
+          mockSetModelLanguage.mock.invocationCallOrder[0]!,
         );
       },
     );
