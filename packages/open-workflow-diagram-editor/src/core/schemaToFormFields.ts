@@ -1038,6 +1038,19 @@ function buildConstWrites(resolved: Record<string, unknown>): Record<string, unk
 }
 
 /**
+ * The key that identifies a variant: its only required property (optional ones may
+ * sit beside it, e.g. listen's `any` + `until`). Shared by `buildDiscriminator`, which
+ * reads the selection, and `withPresenceKey`, which writes it — they must agree, or
+ * an empty switch to the variant loses the selection.
+ */
+function singleRequiredKey(resolved: Record<string, unknown>): string | undefined {
+  const properties = resolved.properties as Record<string, unknown> | undefined;
+  const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
+  const key = required.length === 1 ? required[0] : undefined;
+  return properties && key !== undefined && key in properties ? key : undefined;
+}
+
+/**
  * Returns presence key for variants identified by a single required object property
  */
 function withPresenceKey(
@@ -1045,13 +1058,10 @@ function withPresenceKey(
   defs: Record<string, unknown> | undefined,
 ): { presenceKey?: string } {
   if (Object.keys(buildConstWrites(resolved)).length > 0) return {};
-  const properties = resolved.properties as Record<string, unknown> | undefined;
-  const keys = properties ? Object.keys(properties) : [];
-  const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
-  const key = keys.length === 1 && required.includes(keys[0]!) ? keys[0]! : undefined;
+  const key = singleRequiredKey(resolved);
   if (key === undefined) return {};
 
-  const prop = properties![key];
+  const prop = (resolved.properties as Record<string, unknown>)[key];
   if (!isPlainObject(prop)) return {};
   const target = typeof prop.$ref === "string" ? { ...resolveRef(prop.$ref, defs), ...prop } : prop;
   return target.type === "object" ? { presenceKey: key } : {};
@@ -1074,14 +1084,9 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
   }
 
   // Strategy 2: single required property key (variant may have optional properties too).
-  // Picks the discriminating key when exactly one property is required.
-  if (properties) {
-    const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
-    if (required.length === 1 && required[0] !== undefined && required[0] in properties) {
-      const uniqueKey = required[0];
-      return (data: unknown) =>
-        isPlainObject(data) && (data as Record<string, unknown>)[uniqueKey] !== undefined;
-    }
+  const uniqueKey = singleRequiredKey(resolved);
+  if (uniqueKey !== undefined) {
+    return (data: unknown) => isPlainObject(data) && data[uniqueKey] !== undefined;
   }
 
   // Strategy 3: pattern-refined string discriminator.

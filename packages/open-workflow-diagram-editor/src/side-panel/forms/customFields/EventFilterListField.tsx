@@ -25,6 +25,7 @@ import type {
   ObjectField,
 } from "../../../core/schemaToFormFields";
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
+import { isPlainObject } from "../../../core/utils";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { MapRow, newId } from "./KeyValueMapField";
 import type { MapEntry } from "./KeyValueMapField";
@@ -53,11 +54,11 @@ interface FilterItem {
 function extractFilters(source: unknown): FilterItem[] {
   if (!Array.isArray(source)) return [];
   return (source as unknown[]).flatMap((item) => {
-    if (item == null || typeof item !== "object" || Array.isArray(item)) return [];
+    if (!isPlainObject(item)) return [];
     return [
       {
         id: newId(),
-        data: item as Record<string, unknown>,
+        data: item,
         withExpanded: false,
         correlateExpanded: false,
       },
@@ -79,12 +80,9 @@ function formatCorrelateCount(count: number, keyLabel: string, keysLabel: string
  * that optional fields such as `expect` are not discarded.
  */
 function deserializeCorrelate(correlate: unknown): MapEntry[] {
-  if (correlate == null || typeof correlate !== "object" || Array.isArray(correlate)) return [];
-  return Object.entries(correlate as Record<string, unknown>).map(([key, val]) => {
-    const v = (val != null && typeof val === "object" && !Array.isArray(val) ? val : {}) as Record<
-      string,
-      unknown
-    >;
+  if (!isPlainObject(correlate)) return [];
+  return Object.entries(correlate).map(([key, val]) => {
+    const v = isPlainObject(val) ? val : {};
     return {
       id: newId(),
       key,
@@ -105,31 +103,22 @@ function serializeCorrelate(rows: MapEntry[]): Record<string, unknown> | undefin
   const result: Record<string, unknown> = {};
   for (const r of rows) {
     if (!r.key) continue;
-    const existing =
-      r.value != null && typeof r.value === "object" && !Array.isArray(r.value)
-        ? (r.value as Record<string, unknown>)
-        : {};
-    result[r.key] = { ...existing };
+    result[r.key] = isPlainObject(r.value) ? { ...r.value } : {};
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /** Extracts the editable `from` string from a correlation object stored as a MapEntry value. */
 function correlateFrom(value: unknown): string {
-  if (value != null && typeof value === "object" && !Array.isArray(value)) {
-    const v = value as Record<string, unknown>;
-    return typeof v["from"] === "string" ? v["from"] : "";
+  if (isPlainObject(value)) {
+    return typeof value["from"] === "string" ? value["from"] : "";
   }
   return typeof value === "string" ? value : "";
 }
 
 /** Returns a new correlation object with `from` updated, preserving all other fields. */
 function withUpdatedFrom(existing: unknown, from: string): Record<string, unknown> {
-  const base =
-    existing != null && typeof existing === "object" && !Array.isArray(existing)
-      ? (existing as Record<string, unknown>)
-      : {};
-  return { ...base, from };
+  return { ...(isPlainObject(existing) ? existing : {}), from };
 }
 
 // ---------------------------------------------------------------------------
