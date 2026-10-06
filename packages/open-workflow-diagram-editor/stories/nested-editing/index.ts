@@ -17,6 +17,7 @@
 export { default as allTaskTypes } from "./workflows/all-task-types.yaml?raw";
 export { default as callEndpointUnion } from "./workflows/call-endpoint-union.yaml?raw";
 export { default as callHeadersMap } from "./workflows/call-headers-map.yaml?raw";
+export { default as doTaskShapes } from "./workflows/do-task-shapes.yaml?raw";
 export { default as listenDeepNesting } from "./workflows/listen-deep-nesting.yaml?raw";
 export { default as nestedValidation } from "./workflows/nested-validation.yaml?raw";
 export { default as raiseErrorShapes } from "./workflows/raise-error-shapes.yaml?raw";

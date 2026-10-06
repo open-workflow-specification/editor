@@ -1148,3 +1148,20 @@ describe("schemaToFormFields presence keys", () => {
     expect(entries.every((entry) => entry.endsWith("→-"))).toBe(true);
   });
 });
+
+describe("schemaToFormFields do task", () => {
+  const fields = getFormFieldsForNodeType("do");
+
+  it("describes its task list followed by every task base field, and nothing else", () => {
+    expect(fields.map((f) => [f.path, f.kind, f.required])).toEqual([
+      ["do", "child-task-list", true],
+      ["if", "string", false],
+      ["input", "object", false],
+      ["output", "object", false],
+      ["export", "object", false],
+      ["timeout", "one-of", false],
+      ["then", "then", false],
+      ["metadata", "map", false],
+    ]);
+  });
+});

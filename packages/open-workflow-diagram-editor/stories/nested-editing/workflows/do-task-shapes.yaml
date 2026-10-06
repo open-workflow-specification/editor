@@ -1,0 +1,79 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Editing focus: the do task. Its only own field is the child task list, which the
+# panel shows read-only — children are edited from the canvas — so everything
+# editable on the form is a task base field.
+#
+# `prepareOrder` sets no base fields, `fulfilOrder` sets every one (so each renders
+# populated), and `notifyCustomer` holds a do inside a do, which is its own node.
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: do-task-shapes
+  version: "1.0.0"
+do:
+  # Children only: the form shows the task list and empty base fields.
+  - prepareOrder:
+      do:
+        - validateOrder:
+            set:
+              valid: ${ .order.items | length > 0 }
+        - priceOrder:
+            set:
+              total: ${ [.order.items[].price] | add }
+  # Every base field set, so each one renders populated.
+  - fulfillOrder:
+      if: ${ .valid }
+      input:
+        from: ${ .order }
+      output:
+        as: "${ { shipped: true, order: . } }"
+      export:
+        as: "${ $context + { lastOrder: .order.id } }"
+      timeout:
+        after: PT30S
+      metadata:
+        owner: fulfilment
+        tier: gold
+      then: notifyCustomer
+      do:
+        - reserveStock:
+            call: http
+            with:
+              method: post
+              endpoint: https://inventory.example.com/reserve
+        - shipOrder:
+            wait: PT5S
+  - skippedStep:
+      set:
+        skipped: true
+  # A do task nested inside another: the inner one is its own editable node.
+  - notifyCustomer:
+      do:
+        - composeMessage:
+            do:
+              - pickTemplate:
+                  set:
+                    template: shipped
+              - renderMessage:
+                  set:
+                    body: '${ "Order " + .order.id + " has shipped" }'
+        - sendMessage:
+            emit:
+              event:
+                with:
+                  source: https://orders.example.com
+                  type: com.example.order.shipped.v1
