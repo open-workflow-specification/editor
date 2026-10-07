@@ -48,6 +48,7 @@ export const AllTaskTypes: Story = createWorkflowStory(workflows.allTaskTypes);
 export const CallEndpointUnion: Story = createWorkflowStory(workflows.callEndpointUnion);
 export const CallHeadersMap: Story = createWorkflowStory(workflows.callHeadersMap);
 export const DoTaskShapes: Story = createWorkflowStory(workflows.doTaskShapes);
+export const ForkTaskShapes: Story = createWorkflowStory(workflows.forkTaskShapes);
 export const ListenDeepNesting: Story = createWorkflowStory(workflows.listenDeepNesting);
 export const NestedValidation: Story = createWorkflowStory(workflows.nestedValidation);
 export const RaiseErrorShapes: Story = createWorkflowStory(workflows.raiseErrorShapes);

@@ -713,3 +713,44 @@ export const PRESENCE_KEY_SELECTORS_WORKFLOW = {
     },
   ],
 };
+
+/*
+ * A fork inside a fork: the outer one races its branches (`compete: true`), the inner one
+ * leaves `compete` unset, so both states of the flag are present.
+ */
+export const NESTED_FORK_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "nested-fork", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      raiseAlarm: {
+        fork: {
+          compete: true,
+          branches: [
+            {
+              notifyStaff: {
+                fork: {
+                  branches: [
+                    {
+                      callNurse: {
+                        call: "http",
+                        with: { method: "put", endpoint: "https://hospital.example.com/nurses" },
+                      },
+                    },
+                    {
+                      callDoctor: {
+                        call: "http",
+                        with: { method: "put", endpoint: "https://hospital.example.com/doctors" },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            { logAlarm: { set: { alarmRaised: true } } },
+          ],
+        },
+      },
+    },
+    { recordOutcome: { set: { handled: true } } },
+  ],
+};
