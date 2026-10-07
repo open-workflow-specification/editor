@@ -18,7 +18,7 @@ import * as React from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
 import { dump, load } from "js-yaml";
 import { Textarea } from "../ui/textarea";
-import type { JsonField } from "../../../core/schemaToFormFields";
+import { RUNTIME_EXPRESSION_PATTERN, type JsonField } from "../../../core/schemaToFormFields";
 import type { ContentFormat } from "../../../core/workflowSdk";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
@@ -65,7 +65,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
     const wasDirtied = getFieldState(field.path as never).isDirty;
 
     // Stale expression string after Expression→Data kind-boundary switch
-    if (typeof live === "string" && !wasDirtied) {
+    if (typeof live === "string" && !wasDirtied && RUNTIME_EXPRESSION_PATTERN.test(live)) {
       return "";
     }
 
@@ -81,7 +81,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
 
     // Fall back to defaultValues
     const fromDefault = defaultValues ? getNestedValue(defaultValues, field.path) : undefined;
-    if (typeof fromDefault === "string") {
+    if (typeof fromDefault === "string" && RUNTIME_EXPRESSION_PATTERN.test(fromDefault)) {
       return "";
     }
     return valueToText(fromDefault, field.format);
@@ -100,7 +100,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
     prevPathRef.current = field.path;
 
     const fromDefault = defaultValues ? getNestedValue(defaultValues, field.path) : undefined;
-    if (typeof fromDefault === "string") {
+    if (typeof fromDefault === "string" && RUNTIME_EXPRESSION_PATTERN.test(fromDefault)) {
       setText("");
       return;
     }

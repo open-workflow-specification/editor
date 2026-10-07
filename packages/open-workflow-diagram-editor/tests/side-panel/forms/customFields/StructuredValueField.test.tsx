@@ -123,13 +123,26 @@ describe("StructuredValueField — initial render", () => {
     // value is an expression (e.g. "${expr}"). This happens after an Expression→Data
     // kind-boundary switch: the Controller mount restores the expression string from
     // _defaultValues into _formValues, but StructuredValueField treats any non-dirty
-    // string as a stale expression and shows an empty textarea.
+    // expression string as a stale expression and shows an empty textarea.
     // In real usage, OneOfFieldRow would show the Expression variant for a string
     // default, so StructuredValueField never renders with a string default — this
     // test covers the kind-boundary switch detection logic.
     const defaults = { emit: { event: { with: { data: "${expr}" } } } };
     render(<Wrapper field={yamlField} defaultValues={defaults} />);
     expect(getTextarea().value).toBe("");
+  });
+
+  it("shows plain string content when defaultValues has a plain non-expression string (e.g. HTTP body)", () => {
+    const defaults = { with: { body: "hello world" } };
+    const bodyField: JsonField = {
+      kind: "json",
+      format: "yaml",
+      path: "with.body",
+      label: "Body",
+      required: false,
+    };
+    render(<Wrapper field={bodyField} defaultValues={defaults} />);
+    expect(getTextarea().value).toBe("hello world");
   });
 });
 

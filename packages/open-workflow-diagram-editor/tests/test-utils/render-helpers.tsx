@@ -14,20 +14,30 @@
  * limitations under the License.
  */
 
-import type * as React from "react";
+import * as React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import {
   DiagramEditorContext,
   type DiagramEditorContextType,
 } from "../../src/store/DiagramEditorContext";
-import { DiagramEditorContextProvider} from "../../src/store/DiagramEditorContextProvider";
+import { DiagramEditorContextProvider } from "../../src/store/DiagramEditorContextProvider";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
 import { ReactFlowProvider } from "@xyflow/react";
 import { en } from "../../src/i18n/locales/en";
-import { EditSessionProvider } from "../../src/side-panel/EditSession";
+import { EditSessionProvider, useEditSession } from "../../src/side-panel/EditSession";
 
 const noop = () => {};
+
+export type FormRef = { current: ReturnType<typeof useEditSession>["form"] | null };
+
+export function FormSpy({ formRef }: { formRef: FormRef }) {
+  const { form } = useEditSession();
+  React.useLayoutEffect(() => {
+    formRef.current = form;
+  });
+  return null;
+}
 
 /**
  * Creates a mock DiagramEditorContext value with defaults.
@@ -96,7 +106,7 @@ export const renderWithProviders = (
 };
 
 /**
- * Render function that wraps components in a real DiagramEditorContextProvider 
+ * Render function that wraps components in a real DiagramEditorContextProvider
  * so the workflow is actually parsed and validated.
  */
 export const renderWithEditorProviders = (
@@ -104,10 +114,10 @@ export const renderWithEditorProviders = (
   {
     content = "",
     isReadOnly = false,
-    locale="en"
-  }: {content?: string; isReadOnly?: boolean; locale?: string} = {},
+    locale = "en",
+  }: { content?: string; isReadOnly?: boolean; locale?: string } = {},
   renderOptions?: Omit<RenderOptions, "wrapper">,
-) => 
+) =>
   render(
     <ReactFlowProvider>
       <DiagramEditorContextProvider content={content} isReadOnly={isReadOnly} locale={locale}>
@@ -119,4 +129,4 @@ export const renderWithEditorProviders = (
       </DiagramEditorContextProvider>
     </ReactFlowProvider>,
     renderOptions,
-  )
+  );

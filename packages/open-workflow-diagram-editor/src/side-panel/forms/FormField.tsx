@@ -16,12 +16,22 @@
 
 import * as React from "react";
 import { HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { FormFieldDescriptor, ObjectField, OneOfField } from "../../core/schemaToFormFields";
+import type {
+  FormFieldDescriptor,
+  ObjectField,
+  OneOfField,
+  OrderedMapField,
+} from "../../core/schemaToFormFields";
 import { FieldControl } from "./FieldControl";
-import { useTaskFormContext, filterReadOnlyFields, getNestedValue } from "./taskFormContext";
+import {
+  useTaskFormContext,
+  filterReadOnlyFields,
+  getNestedValue,
+  prefixFields,
+} from "./taskFormContext";
 import {
   Combobox,
   ComboboxContent,
@@ -40,6 +50,9 @@ export const SENTINEL_SELF_KEY = "__self__";
 export const SENTINEL_PREFIX = `${SENTINEL_KEY}.`;
 export const SENTINEL_SUFFIX = `.${SENTINEL_SELF_KEY}`;
 
+/* useFieldArry's per entry key, not 'id': (an entry name could be 'id') */
+export const RHF_ENTRY_KEY = "__rhfEntryKey";
+
 // ---------------------------------------------------------------------------
 // FormField — single form row (label + optional tooltip + control)
 // ---------------------------------------------------------------------------
@@ -57,6 +70,9 @@ export function FormField({ field }: FormFieldProps) {
   }
   if (field.kind === "map") {
     return <KeyValueMapField field={field} />;
+  }
+  if (field.kind === "ordered-map") {
+    return <OrderedMapRow field={field} />;
   }
 
   // Boolean controls render as <button role="switch"> — htmlFor→<button> is
@@ -114,13 +130,133 @@ function FieldLabel({
               type="button"
               className="dec-form-field-help"
               aria-label={`${t("aria.help")}: ${label}`}
-              tabIndex={0}
             >
               <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
             </button>
           </TooltipTrigger>
           <TooltipContent>{description}</TooltipContent>
         </Tooltip>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// OrderedMapRow — one group per entry of a `switch` shaped list
+// Renders an ordered map (like switch cases) as collapsible groups.
+// Each entry shows: index number, user-defined name, and editable fields.
+// Uses useFieldArray to efficiently track structural changes only.
+// ---------------------------------------------------------------------------
+
+function OrderedMapRow({ field }: { field: OrderedMapField }) {
+  const [expanded, setExpanded] = React.useState(true);
+  const { isReadOnly } = useTaskFormContext();
+  const { control, getValues } = useFormContext<Record<string, unknown>>();
+  const { t } = useI18n();
+
+  // `useFieldArray` rather than `useWatch`: it re-renders on structural changes to the list only, not on every keystroke inside an entry.
+  // Will be used for add/reorder/delete (`append`/`remove`/`move`) later.
+  const { fields: entries } = useFieldArray({
+    control,
+    name: field.path as never,
+    // Default is `id`, which would collide with a case someone named `id`.
+    keyName: RHF_ENTRY_KEY,
+  });
+
+  function handleToggle() {
+    setExpanded((open) => !open);
+  }
+
+  const values = (getValues(field.path) ?? []) as unknown[];
+
+  const rows = entries.flatMap((entry, index) => {
+    const record = values[index];
+    if (record === null || typeof record !== "object" || Array.isArray(record)) {
+      return [];
+    }
+    const [name] = Object.keys(record);
+    if (name === undefined) {
+      return [];
+    }
+
+    const value = (record as Record<string, unknown>)[name];
+    const entryData =
+      value !== null && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+
+    // Filter while the paths are still relative to this entry, then re-root.
+    const visible = isReadOnly
+      ? filterReadOnlyFields(field.itemFields, entryData)
+      : field.itemFields;
+
+    return [
+      {
+        key: String((entry as unknown as Record<string, unknown>)[RHF_ENTRY_KEY]),
+        index,
+        name,
+        fields: prefixFields(visible, `${field.path}.${index}.${name}`),
+      },
+    ];
+  });
+
+  if (isReadOnly && rows.length === 0) return null;
+  return (
+    <div className="dec-form-ordered-map">
+      <div className="dec-form-object-header">
+        <button
+          type="button"
+          className="dec-form-object-toggle"
+          onClick={handleToggle}
+          aria-expanded={expanded}
+        >
+          {expanded ? (
+            <ChevronDown className="dec-form-object-chevron" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="dec-form-object-chevron" aria-hidden="true" />
+          )}
+          <span className="dec-form-object-label">{field.label}</span>
+          {field.required && (
+            <span className="dec-form-field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
+          <span className="dec-form-ordered-map-count">
+            {" "}
+            {rows.length} {t(rows.length === 1 ? "sidebar.field.item" : "sidebar.field.items")}
+          </span>
+        </button>
+        {field.description !== undefined && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="dec-form-field-help"
+                aria-label={`${t("aria.help")}: ${field.label}`}
+              >
+                <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{field.description}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
+      {expanded && (
+        <div className="dec-form-object-children">
+          {rows.map((row) => (
+            <fieldset key={row.key} className="dec-form-ordered-map-item">
+              <legend className="dec-form-ordered-map-legend">
+                <span className="dec-form-ordered-map-index">{row.index + 1}</span>
+                <span className="dec-form-ordered-map-name">{row.name}</span>
+              </legend>
+              {row.fields.map((child) => (
+                <FormField key={child.path} field={child} />
+              ))}
+            </fieldset>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -209,6 +345,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
   const sentinelPath = field.sentinelPath
     ? `${SENTINEL_PREFIX}${field.sentinelPath}${SENTINEL_SUFFIX}`
     : `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
+
   // Watched so the row follows a reset as well as switch
   const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
 
@@ -235,14 +372,15 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
     setPrevDerivedIdx(derivedIdx);
   }
 
-  // Per-variant saved values — preserves field data when switching variants
-  // and then switching back, so the user does not have to re-type values.
+  // Saved field values per variant — restored when switching back.
+  // Cleared when the committed task changes to avoid stale data after reset.
   const savedVariantValues = React.useRef<Map<number, Record<string, unknown>>>(new Map());
+  React.useEffect(() => {
+    savedVariantValues.current.clear();
+  }, [taskData]);
   const sentinelRef = register(sentinelPath as never);
 
-  // The initial sentinel value is the committed variant label (derived from
-  // taskData). This is written once on mount so that switching back to the
-  // original variant restores the sentinel to its default value and clears dirty.
+  // Sentinel default: the committed variant label. Switching back to it clears dirty.
   const commitedVariantLabel = field.variants[derivedIdx]?.label ?? "";
 
   const handleVariantChange = React.useCallback(
@@ -263,15 +401,11 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
       setSelectedVariantIdx(newIdx);
 
       const newLabel = field.variants[newIdx]?.label ?? "";
-      // Update sentinel: always dirty - the default is the committed variants label so returning it clears the flag
+      // Always mark sentinel dirty — the default is the committed label, so switching back clears it.
       setValue(sentinelPath as never, newLabel as never, { shouldDirty: true });
 
-      // Restore saved values for the new variant if previously stored;
-      // otherwise clear its leaf paths so stale values from the old variant.
-      // Exception: paths that are shared with the current variant AND whose
-      // field kind is identical are kept as-is. Paths shared by variants of
-      // different kinds must be cleared — the stored value is meaningless across
-      // the kind boundary.
+      // Restore saved values for the new variant if available; otherwise clear
+      // leaf paths, keeping shared paths whose field kind is unchanged.
       const saved = savedVariantValues.current.get(newIdx);
       const newVariant = field.variants[newIdx];
       const currentKindByPath = currentVariant
@@ -289,7 +423,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
         for (const [path, newKind] of newKindByPath) {
           const currentKind = currentKindByPath.get(path);
           if (currentKind !== newKind) {
-            setValue(path, undefined, { shouldDirty: false });
+            setValue(path, "" as never, { shouldDirty: true });
           }
         }
       }
@@ -396,6 +530,8 @@ function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
       }
     } else if (f.kind === "string") {
       result.set(f.path, f.isRuntimeExpression ? "string:re" : "string:plain");
+    } else if (f.kind === "enum") {
+      result.set(f.path, `enum:${[...f.options].sort().join(",")}`);
     } else {
       result.set(f.path, f.kind);
     }
@@ -406,30 +542,45 @@ function collectLeafKinds(fields: FormFieldDescriptor[]): Map<string, string> {
 export function computeSentinelDefaults(
   fields: FormFieldDescriptor[],
   taskData: Record<string, unknown>,
+  /** Optional: current sentinel label values keyed by field path (dot-notation).
+   *  Used as a fallback when no variant matches the committed data — preserves
+   *  the user's last variant selection instead of snapping back to index 0. */
+  currentSentinels: Record<string, string> = {},
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  collectSentinelDefaults(fields, taskData, result);
+  collectSentinelDefaults(fields, taskData, currentSentinels, result);
   return result;
 }
 
 function collectSentinelDefaults(
   fields: FormFieldDescriptor[],
   taskData: Record<string, unknown>,
+  currentSentinels: Record<string, string>,
   result: Record<string, unknown>,
 ): void {
   for (const f of fields) {
     if (f.kind === "object") {
-      collectSentinelDefaults(f.children, taskData, result);
+      collectSentinelDefaults(f.children, taskData, currentSentinels, result);
     } else if (f.kind === "one-of") {
       const dataAtPath = f.path === "__root__" ? taskData : getNestedValue(taskData, f.path);
       const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
-      const selectedIdx = idx >= 0 ? idx : 0;
+      let selectedIdx: number;
+      if (idx >= 0) {
+        selectedIdx = idx;
+      } else {
+        // No variant matches — fall back to the sentinel label, then to 0.
+        const fallbackLabel = currentSentinels[f.path];
+        const fallbackIdx = fallbackLabel
+          ? f.variants.findIndex((v) => v.label === fallbackLabel)
+          : -1;
+        selectedIdx = fallbackIdx >= 0 ? fallbackIdx : 0;
+      }
       const selected = f.variants[selectedIdx];
       setNestedSentinel(result, f.sentinelPath ?? f.path, selected?.label ?? "");
       // Only the selected variant's fields are mounted, so only its nested one-ofs
       // have a sentinel to match
       if (selected) {
-        collectSentinelDefaults(selected.fields, taskData, result);
+        collectSentinelDefaults(selected.fields, taskData, currentSentinels, result);
       }
     }
   }

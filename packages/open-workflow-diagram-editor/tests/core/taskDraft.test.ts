@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from "vitest";
 import { unflattenValues, applyDirtyValues } from "../../src/core/taskDraft";
+import { switchCase } from "../test-utils";
 
 describe("unflattenValues", () => {
   it("reconstructs a single-level object", () => {
@@ -206,10 +207,150 @@ describe("applyDirtyValues", () => {
     });
   });
 
+  describe("applyDirtyValues with array values", () => {
+    // The switch-case editor registers `switch.0.<name>.when`, but `flattenTask`
+    // collapses an array to a single key — so the whole list arrives here as one dirty value
+    const original = {
+      switch: [
+        switchCase("electronicOrder", "fulfillElectronic", "${ .type == 'e' }"),
+        switchCase("fallback", "reject"),
+      ],
+    };
+
+    it("writes an edited entry without disturbing its siblings", () => {
+      const edited = [
+        switchCase("electronicOrder", "fulfillElectronic", "${ .type == 'digital' }"),
+        switchCase("fallback", "reject"),
+      ];
+
+      const result = applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(result).toEqual({ switch: edited });
+    });
+
+    it("removes a key the user cleared inside an entry it was told to prune", () => {
+      const edited = [
+        switchCase("electronicOrder", "fulfillElectronic", ""),
+        switchCase("fallback", "reject"),
+      ];
+
+      const result = applyDirtyValues(
+        original,
+        { switch: edited },
+        new Set(["switch"]),
+        new Set(),
+        new Map(),
+        new Map(),
+        new Set(["switch"]),
+      );
+
+      expect(result).toEqual({
+        switch: [
+          switchCase("electronicOrder", "fulfillElectronic"),
+          switchCase("fallback", "reject"),
+        ],
+      });
+    });
+
+    it("keeps an empty value in an array it was not told to prune", () => {
+      const authored = { listen: { to: { all: [{ with: { type: "" } }] } } };
+      const edited = [{ with: { type: "" } }];
+
+      const result = applyDirtyValues(
+        authored,
+        { "listen.to.all": edited },
+        new Set(["listen.to.all"]),
+      );
+
+      expect(result).toEqual({ listen: { to: { all: [{ with: { type: "" } }] } } });
+    });
+
+    it("leaves the draft it was given untouched", () => {
+      const edited = [switchCase("electronicOrder", "fulfillElectronic", "")];
+
+      applyDirtyValues(original, { switch: edited }, new Set(["switch"]));
+
+      expect(edited[0]!.electronicOrder).toHaveProperty("when", "");
+    });
+  });
+
   it("does not mutate the original object", () => {
     const original = { set: { startEvent: "${x}" } };
     const allValues = { "set.startEvent": "${changed}" };
     applyDirtyValues(original, allValues, new Set(["set.startEvent"]));
     expect(original.set.startEvent).toBe("${x}");
+  });
+
+  it("writes constWrites for a sentinel-dirty root one-of path (call type change)", () => {
+    // Simulates: CallHTTP task, user switches to CallMCP, clicks Apply.
+    // The sentinel "__root__" is dirty; constWrites = { call: "mcp" }.
+    const original = { call: "http", with: { method: "GET", endpoint: "https://example.com" } };
+    const allValues = {
+      call: "http",
+      "with.method": "GET",
+      "with.endpoint": "https://example.com",
+    };
+    const dirtyPaths = new Set<string>();
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "mcp" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      dirtyPaths,
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    // The call property must be updated to the new variant's value.
+    expect(result.call).toBe("mcp");
+  });
+
+  it("constWrites for __root__ are placed at root level (not under __root__ key)", () => {
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "GET" };
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      new Set(),
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result).not.toHaveProperty("__root__");
+    expect(result.call).toBe("grpc");
+  });
+
+  it("constWrites are applied even when sentinelPath is independently dirty", () => {
+    // When the user edits a field in the new variant AND changes the variant,
+    // both the independent dirty path and the constWrites must be applied.
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "POST" };
+    const dirtyPaths = new Set(["with.method"]);
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      dirtyPaths,
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result.call).toBe("grpc");
+    expect((result.with as Record<string, unknown>).method).toBe("POST");
+  });
+
+  it("empty constWrites map leaves existing properties unchanged", () => {
+    const original = { call: "http", with: { method: "GET" } };
+    const allValues = { "with.method": "GET" };
+    const sentinelPaths = new Set(["__root__"]);
+    const sentinelConstWrites = new Map<string, Record<string, unknown>>();
+    const result = applyDirtyValues(
+      original,
+      allValues,
+      new Set(),
+      sentinelPaths,
+      sentinelConstWrites,
+    );
+    expect(result.call).toBe("http");
   });
 });

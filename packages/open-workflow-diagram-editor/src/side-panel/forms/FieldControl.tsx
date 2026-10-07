@@ -22,6 +22,8 @@ import {
   BooleanControl,
   EnumControl,
   DurationField,
+  McpProtocolVersionField,
+  StringListField,
   ThenField,
   ChildTaskListField,
   StructuredValueField,
@@ -32,7 +34,10 @@ import {
 // ---------------------------------------------------------------------------
 
 export type FieldControlProps = {
-  field: Exclude<FormFieldDescriptor, { kind: "object" } | { kind: "one-of" } | { kind: "map" }>;
+  field: Exclude<
+    FormFieldDescriptor,
+    { kind: "object" } | { kind: "one-of" } | { kind: "map" } | { kind: "ordered-map" }
+  >;
   /** DOM id forwarded to the underlying <input>/<select>/<textarea> so that
    *  <label htmlFor> association works. Not applicable to boolean (Switch). */
   id?: string;
@@ -52,10 +57,14 @@ export function FieldControl({ field, id }: FieldControlProps) {
       return <EnumControl field={field} {...idProp} />;
     case "duration":
       return <DurationField field={field} {...idProp} />;
+    case "mcp-protocol-version":
+      return <McpProtocolVersionField field={field} {...idProp} />;
     case "then":
       return <ThenField field={field} {...idProp} />;
     case "child-task-list":
       return <ChildTaskListField field={field} />;
+    case "string-list":
+      return <StringListField field={field} />;
     case "json":
       return <StructuredValueField field={field} {...idProp} />;
   }

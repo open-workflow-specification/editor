@@ -45,6 +45,28 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
   return result;
 }
 
+/* Removes empty values (null, undefined, "") from objects and arrays.
+ * Used to clean up ordered maps where clearing a field means deleting it.
+ */
+function pruneEmptyLeaves<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry) => pruneEmptyLeaves(entry)) as T;
+  }
+
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const result: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === undefined || v === null || v === "") {
+      continue;
+    }
+    result[key] = pruneEmptyLeaves(v);
+  }
+  return result as T;
+}
+
 /**
  * Produces an updated task by applying only the dirty form fields onto a deep
  * clone of the original task.
@@ -62,8 +84,19 @@ export function applyDirtyValues(
   allValues: Record<string, unknown>,
   dirtyPaths: Set<string>,
 
-  // Paths that are dirty solely because the variant selector (sentinel) changed.
+  // Paths dirty solely because the variant selector (sentinel) changed.
   sentinelPaths: Set<string> = new Set(),
+
+  // For each sentinel-dirty path, the constWrites of the selected variant
+  // (hidden discriminator properties that must be written into the model).
+  sentinelConstWrites: Map<string, Record<string, unknown>> = new Map(),
+
+  // For each sentinel-dirty path, the model paths that belong exclusively to
+  // the previously active variant(s) and must be removed from the result.
+  sentinelStalePaths: Map<string, string[]> = new Map(),
+  // Paths holding a list the user edits through an `ordered-map`
+  // Only these get their empty leaves pruned, because clearing a control is how you remove a key there.
+  formListPaths: Set<string> = new Set(),
 ): Record<string, unknown> {
   // Deep clone the original so we never mutate the store value.
   const result = deepClone(original);
@@ -79,15 +112,45 @@ export function applyDirtyValues(
         prune: !sentinelPaths.has(dotPath),
         protectedKey: taskTypeKey,
       });
+    } else if (Array.isArray(value) && formListPaths.has(dotPath)) {
+      setPath(result, dotPath.split("."), pruneEmptyLeaves(value));
     } else {
       setPath(result, dotPath.split("."), value);
     }
   }
 
-  // For sentinel-derived paths: delete from the model unless a dirty field supplied a value - the path itself, a leaf under it or an ancestor
-  // (Ancestor because RHF reports that when a whole shape has changed like raise.error does when an error name becomes an inline definition)
+  // For sentinel paths: write const discriminators, delete stale variant paths,
+  // and delete the model path itself unless a dirty field supplied a value.
   for (const sentinelPath of sentinelPaths) {
     const prefix = sentinelPath + ".";
+    const baseParts = sentinelPath === "__root__" ? [] : sentinelPath.split(".");
+
+    const constWrites = sentinelConstWrites.get(sentinelPath);
+    if (constWrites && Object.keys(constWrites).length > 0) {
+      for (const [constKey, constVal] of Object.entries(constWrites)) {
+        setPath(result, [...baseParts, constKey], constVal);
+      }
+    }
+
+    // Remove fields that belong exclusively to the old variant(s) so they do
+    // not bleed into the newly selected variant's representation.
+    // Exclude any path that is also a constWrite key for this sentinel — those
+    // were just set above and must not be clobbered (e.g. the `call` field is a
+    // plain string in some variants but a const discriminator in others).
+    const constWriteAbsolutePaths = constWrites
+      ? new Set(Object.keys(constWrites).map((k) => [...baseParts, k].join(".")))
+      : undefined;
+    const stalePaths = sentinelStalePaths.get(sentinelPath);
+    if (stalePaths) {
+      for (const stalePath of stalePaths) {
+        // Only delete when the user has not explicitly set the path in this edit
+        // and the path is not occupied by a constWrite for this sentinel.
+        if (!isDirtyPath(stalePath, dirtyPaths) && !constWriteAbsolutePaths?.has(stalePath)) {
+          deletePath(result, stalePath.split("."), { prune: true, protectedKey: taskTypeKey });
+        }
+      }
+    }
+
     const suppliedByEdit = [...dirtyPaths].some(
       (p) => p === sentinelPath || p.startsWith(prefix) || sentinelPath.startsWith(p + "."),
     );

@@ -32,11 +32,14 @@ export type FormFieldDescriptor =
   | BooleanField
   | EnumField
   | DurationField
+  | McpProtocolVersionField
   | ThenField
   | ChildTaskListField
+  | StringListField
   | ObjectField
   | MapField
   | JsonField
+  | OrderedMapField
   | OneOfField;
 
 interface FieldBase {
@@ -56,6 +59,12 @@ export interface StringField extends FieldBase {
   multiline: boolean;
   /** The runtime-expression pattern — field value must match `${...}` syntax */
   isRuntimeExpression: boolean;
+  /**
+   * True when this literal/URI variant coexists in a oneOf with an expression
+   * variant. Used to guard against showing stale expression data in the literal
+   * field after a variant switch.
+   */
+  hasExpressionSibling?: boolean;
   /** Optional placeholder hint, e.g. "https://example.com/api/{id}" */
   placeholder?: string | undefined;
 }
@@ -82,6 +91,15 @@ export interface DurationField extends FieldBase {
 }
 
 /**
+ * An MCP protocol version field — a calendar date string in YYYY-MM-DD format.
+ * Identified structurally: a string property whose `default` value matches the
+ * date-based MCP version pattern (e.g. "2025-06-18").
+ */
+export interface McpProtocolVersionField extends FieldBase {
+  kind: "mcp-protocol-version";
+}
+
+/**
  * The `then` transition field — a combobox driven by sibling task names
  * in the workflow. Identified structurally: any property named `then`, or
  * any property whose schema is an `anyOf` containing an enum variant and a
@@ -97,6 +115,14 @@ export interface ChildTaskListField extends FieldBase {
   kind: "child-task-list";
 }
 
+/* A map where order is significant, written as array of single key objects with a user defined name e.g switch
+ * In schema terms: an array whose `items` is an object with `minProperties: 1`,
+ * `maxProperties: 1` and an `additionalProperties` sub-schema of its own.
+ */
+export interface OrderedMapField extends FieldBase {
+  kind: "ordered-map";
+  itemFields: FormFieldDescriptor[];
+}
 export interface ObjectField extends FieldBase {
   kind: "object";
   children: FormFieldDescriptor[];
@@ -106,11 +132,18 @@ export interface MapField extends FieldBase {
   kind: "map";
 }
 
+/**
+ * An ordered list of strings — `type: "array"` with `items: { type: "string" }`.
+ * Used for fields like `McpStdioTransportArguments` that model `argv`-style lists.
+ */
+export interface StringListField extends FieldBase {
+  kind: "string-list";
+}
+
 export interface JsonField extends FieldBase {
   kind: "json";
   format: ContentFormat;
 }
-
 export interface OneOfField extends FieldBase {
   kind: "one-of";
   variants: OneOfVariant[];
@@ -127,19 +160,46 @@ export interface OneOfVariant {
    * Used in read-only mode to auto-select the correct variant.
    */
   matchesData: (data: unknown) => boolean;
+  /**
+   * Properties that must be written into the model whenever this variant is
+   * selected and the form is applied.  Populated for schema variants whose
+   * discriminator is a `const`-valued property (e.g. `call: "http"` for
+   * CallHTTP).  These properties are hidden from the form but must be kept
+   * in sync with the variant selection.
+   *
+   * The keys are dot-notation paths relative to the one-of field's own path.
+   * For a top-level one-of (`path === "__root__"`) the paths are at root level,
+   * e.g. `{ call: "http" }`.
+   */
+  constWrites: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const RUNTIME_EXPRESSION_PATTERN = /^\s*\$\{.+\}\s*$/;
+export const RUNTIME_EXPRESSION_PATTERN = /^\s*\$\{.+\}\s*$/;
 
 /** JSON Schema primitive type names that are too generic to use as variant labels. */
 const GENERIC_TYPE_LABELS = new Set(["string", "object", "number", "integer", "boolean", "array"]);
 
 /** Schema keys that are purely descriptive and carry no structural meaning. */
 const SCHEMA_META_KEYS = new Set(["title", "description", "$comment", "examples"]);
+
+/**
+ * Property keys whose value is an arbitrary structured document (JSON/YAML)
+ * rather than a flat string map. When the schema for these properties has no
+ * fixed sub-properties (i.e. would normally fall through to MapField or the
+ * string fallback), render a YAML/JSON textarea instead.
+ */
+const STRUCTURED_PAYLOAD_KEYS = new Set([
+  "payload",
+  "body",
+  "data",
+  // `output.as` and `export.as` accept any JSON/YAML value (not just a flat
+  // key-value map), so render them as a YAML/JSON textarea like payload/body.
+  "as",
+]);
 
 /* Returns true when a oneOf/anyOf candidate is the runtime expression schema */
 function isRuntimeExpressionSchema(
@@ -188,6 +248,17 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
 }
 
 /**
+ *  Returns the items schema for an array, following one $ref if present.
+ *  Used by both task lists and ordered maps to get the array's item structure
+ */
+function arrayItemsSchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const node = typeof schema.$ref === "string" ? resolveRef(schema.$ref, defs) : schema;
+  return node?.type === "array" && isPlainObject(node.items) ? node.items : undefined;
+}
+/**
  * Returns true if the schema node (or any `$ref` it resolves to) represents
  * a task-list — an array whose `items.additionalProperties.$ref` points to
  * the task union.
@@ -196,23 +267,30 @@ function isTaskListSchema(
   schema: Record<string, unknown>,
   defs: Record<string, unknown> | undefined,
 ): boolean {
-  let node: Record<string, unknown> = schema;
+  const entry = arrayItemsSchema(schema, defs)?.additionalProperties;
+  const ref = isPlainObject(entry) ? entry.$ref : undefined;
 
-  // Follow one level of $ref
-  if (typeof node.$ref === "string") {
-    const resolved = resolveRef(node.$ref, defs);
-    if (!resolved) return false;
-    node = resolved;
+  return typeof ref === "string" && (ref === "#/$defs/task" || ref.endsWith("/task"));
+}
+
+/*
+ * Checks if this is an ordered map (eg switch cases).
+ * An ordered map is an array where each item is a single-key object
+ * with user-defined names (e.g. { "electronicOrder": {...} }).
+ * Returns the schema for one entry, or undefined if not an ordered map.
+ */
+
+function orderedMapEntrySchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  const items = arrayItemsSchema(schema, defs);
+  if (items?.minProperties !== 1 || items?.maxProperties !== 1) {
+    return undefined;
   }
 
-  if (node.type !== "array") return false;
-  const items = node.items;
-  if (!isPlainObject(items)) return false;
-  const ap = (items as Record<string, unknown>).additionalProperties;
-  if (!isPlainObject(ap)) return false;
-  const apRef = ap.$ref;
-  // Matches any ref whose last path segment is "task" (e.g. "#/$defs/task")
-  return typeof apRef === "string" && (apRef === "#/$defs/task" || apRef.endsWith("/task"));
+  const entry = items.additionalProperties;
+  return isPlainObject(entry) && isPlainObject(entry.properties) ? entry : undefined;
 }
 
 /**
@@ -396,6 +474,12 @@ export function schemaToFormFields(
       }
     }
 
+    // ── Skip const-locked discriminator properties ─────────────────────────
+    // Const-locked discriminator properties are not user-editable.
+    if (resolved.const !== undefined) {
+      continue;
+    }
+
     // ── Child task list ────────────────────────────────────────────────────
     if (isTaskListSchema(resolved, localDefs)) {
       fields.push({
@@ -408,45 +492,245 @@ export function schemaToFormFields(
       continue;
     }
 
+    // ── Ordered map list ────────────────────────────────────────────────────
+    const itemSchema = orderedMapEntrySchema(resolved, localDefs);
+    if (itemSchema) {
+      const itemRequired = new Set<string>(
+        Array.isArray(itemSchema.required) ? (itemSchema.required as string[]) : [],
+      );
+
+      fields.push({
+        kind: "ordered-map",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+        itemFields: schemaToFormFields(
+          itemSchema as DereferencedSchema,
+          localDefs,
+          itemRequired,
+          "",
+          format,
+        ),
+      });
+      continue;
+    }
+
     // ── oneOf / anyOf at property level ────────────────────────────────────
     const candidates = (resolved.oneOf ?? resolved.anyOf) as unknown[] | undefined;
     if (Array.isArray(candidates)) {
-      const variants = buildOneOfVariants(candidates, localDefs, fieldPath, format);
-      if (variants.length > 1) {
-        fields.push({
-          kind: "one-of",
-          path: fieldPath,
-          label: deriveLabel(prop, key),
-          ...withDesc(description),
-          required: isRequired,
-          variants,
-        });
-        continue;
-      } else if (variants.length === 1 && variants[0]) {
-        // When only 1 variant exists (e.g. collapsed string/expression scalar),
-        // unwrap its inner fields directly instead of rendering a 1-option dropdown.
-        const singleVariant = variants[0];
-        for (const childField of singleVariant.fields) {
-          if (childField.path === fieldPath || childField.path === `${fieldPath}.__leaf__`) {
+      // Validation-only oneOf: candidates are required-combination constraints
+      // with no properties/type/$ref — a schema annotation, not a variant selector.
+      const isValidationOnly = candidates.every(
+        (c) =>
+          isPlainObject(c) &&
+          (c as Record<string, unknown>).required !== undefined &&
+          !(c as Record<string, unknown>).properties &&
+          !(c as Record<string, unknown>).type &&
+          !(c as Record<string, unknown>).$ref,
+      );
+      if (isValidationOnly) {
+        // Each candidate names a single key from the parent properties — a structural
+        // choice between named sub-objects. Build a one-of selector from those sub-schemas
+        // and append the remaining base properties to each variant.
+        const resolvedProps = resolved.properties as Record<string, unknown> | undefined;
+        const singleKeyPerCandidate =
+          resolvedProps !== undefined &&
+          candidates.every((c) => {
+            if (!isPlainObject(c)) return false;
+            const req = (c as Record<string, unknown>).required;
+            return (
+              Array.isArray(req) &&
+              req.length === 1 &&
+              typeof req[0] === "string" &&
+              req[0] in resolvedProps
+            );
+          });
+
+        if (singleKeyPerCandidate && resolvedProps) {
+          // Keys named as the sole required key in each candidate.
+          const discriminatorKeys = candidates.map((c) => {
+            const req = (c as Record<string, unknown>).required as string[];
+            return req[0]!;
+          });
+          const discriminatorKeySet = new Set(discriminatorKeys);
+
+          // Build one variant per discriminator key using its sub-schema.
+          // Child fields are rooted at fieldPath.dk (e.g. "with.transport.stdio")
+          // so that form paths match the actual data structure in the schema:
+          //   transport: { stdio: { command: "...", arguments: [...] } }
+          const structuralVariants: OneOfVariant[] = discriminatorKeys.map((dk) => {
+            const subSchema = resolvedProps[dk] as Record<string, unknown>;
+            let subResolved: Record<string, unknown> = subSchema;
+            if (typeof subSchema.$ref === "string") {
+              const ref = resolveRef(subSchema.$ref, localDefs);
+              if (ref) subResolved = { ...ref, ...subSchema, $ref: undefined };
+            }
+            const rawTitle = typeof subResolved.title === "string" ? subResolved.title : undefined;
+            const label =
+              rawTitle && !GENERIC_TYPE_LABELS.has(rawTitle)
+                ? formatVariantLabel(rawTitle)
+                : formatVariantLabel(dk);
+
+            const subPath = `${fieldPath}.${dk}`;
+            const childRequired = new Set<string>(
+              Array.isArray(subResolved.required) ? (subResolved.required as string[]) : [],
+            );
+            const childFields = schemaToFormFields(
+              subResolved as DereferencedSchema,
+              localDefs,
+              childRequired,
+              subPath,
+              format,
+            );
+
+            const variantObjectField: ObjectField = {
+              kind: "object",
+              path: subPath,
+              label,
+              required: true,
+              children: childFields,
+            };
+
+            return {
+              label,
+              fields: [variantObjectField],
+              matchesData: (data: unknown): boolean =>
+                isPlainObject(data) && (data as Record<string, unknown>)[dk] !== undefined,
+              constWrites: {},
+            };
+          });
+
+          // Collect fields for base properties (those NOT named as a discriminator key).
+          const baseFields = schemaToFormFields(
+            resolved as DereferencedSchema,
+            localDefs,
+            new Set<string>(
+              Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
+            ),
+            fieldPath,
+            format,
+          ).filter((f) => {
+            const seg = f.path.split(".").pop() ?? f.path;
+            return !discriminatorKeySet.has(seg);
+          });
+
+          if (baseFields.length > 0) {
+            for (const v of structuralVariants) {
+              v.fields = [...v.fields, ...baseFields];
+            }
+          }
+
+          if (structuralVariants.length > 1) {
             fields.push({
-              ...childField,
+              kind: "one-of",
               path: fieldPath,
               label: deriveLabel(prop, key),
               ...withDesc(description),
               required: isRequired,
+              variants: structuralVariants,
             });
-          } else {
-            fields.push(childField);
+            continue;
+          }
+          // Single structural variant — fall through to the plain object branch.
+        }
+      } else {
+        const variants = buildOneOfVariants(candidates, localDefs, fieldPath, format);
+
+        // Base-property injection: when the schema has its own `properties` alongside
+        // a `oneOf`, prepend those shared fields to every variant.
+        if (resolved.properties && variants.length > 0) {
+          // Collect all keys that appear in any variant to identify base-only keys.
+          const variantOwnKeys = new Set<string>(
+            candidates.flatMap((c) => {
+              if (!isPlainObject(c)) return [];
+              const cp = (c as Record<string, unknown>).properties;
+              return isPlainObject(cp) ? Object.keys(cp as Record<string, unknown>) : [];
+            }),
+          );
+          const baseFields = schemaToFormFields(
+            resolved as DereferencedSchema,
+            localDefs,
+            new Set<string>(
+              Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
+            ),
+            fieldPath,
+            format,
+          ).filter((f) => {
+            // Keep only fields whose last path segment is not variant-specific.
+            const seg = f.path.split(".").pop() ?? f.path;
+            return !variantOwnKeys.has(seg);
+          });
+          if (baseFields.length > 0) {
+            for (const v of variants) {
+              v.fields = [...baseFields, ...v.fields];
+            }
           }
         }
-        continue;
+
+        if (variants.length > 1) {
+          fields.push({
+            kind: "one-of",
+            path: fieldPath,
+            label: deriveLabel(prop, key),
+            ...withDesc(description),
+            required: isRequired,
+            variants,
+          });
+          continue;
+        } else if (variants.length === 1 && variants[0]) {
+          // Single variant: unwrap its fields directly instead of a 1-option dropdown.
+          const singleVariant = variants[0];
+          for (const childField of singleVariant.fields) {
+            if (childField.path === fieldPath || childField.path === `${fieldPath}.__leaf__`) {
+              fields.push({
+                ...childField,
+                path: fieldPath,
+                label: deriveLabel(prop, key),
+                ...withDesc(description),
+                required: isRequired,
+              });
+            } else {
+              fields.push(childField);
+            }
+          }
+          continue;
+        }
       }
     }
 
     // ── Open-ended key-value map (additionalProperties, no fixed properties) ─
+    // Structured-payload keys use a JSON/YAML textarea instead of a key-value editor.
     if (isMapSchema(resolved)) {
+      if (STRUCTURED_PAYLOAD_KEYS.has(key)) {
+        fields.push({
+          kind: "json",
+          format,
+          path: fieldPath,
+          label: deriveLabel(prop, key),
+          ...withDesc(description),
+          required: isRequired,
+        });
+      } else {
+        fields.push({
+          kind: "map",
+          path: fieldPath,
+          label: deriveLabel(prop, key),
+          ...withDesc(description),
+          required: isRequired,
+        });
+      }
+      continue;
+    }
+
+    // ── Array of strings (e.g. McpStdioTransportArguments — argv-style lists) ─
+    if (
+      resolved.type === "array" &&
+      isPlainObject(resolved.items) &&
+      (resolved.items as Record<string, unknown>).type === "string"
+    ) {
       fields.push({
-        kind: "map",
+        kind: "string-list",
         path: fieldPath,
         label: deriveLabel(prop, key),
         ...withDesc(description),
@@ -528,6 +812,23 @@ export function schemaToFormFields(
       continue;
     }
 
+    // ── MCP protocol version (string with a YYYY-MM-DD default) ───────────
+    // Detected by a calendar-date default value pattern.
+    if (
+      resolved.type === "string" &&
+      typeof resolved.default === "string" &&
+      /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(resolved.default)
+    ) {
+      fields.push({
+        kind: "mcp-protocol-version",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+      });
+      continue;
+    }
+
     // ── Number / integer ───────────────────────────────────────────────────
     if (resolved.type === "number" || resolved.type === "integer") {
       fields.push({
@@ -557,7 +858,32 @@ export function schemaToFormFields(
       continue;
     }
 
-    // ── Fallback: treat as free-form string ────────────────────────────────
+    // ── Any other array ───────────────────────────────────────────────────
+    // Fallback for other arrays - the same textarea 'json' uses elsewhere
+    if (resolved.type === "array") {
+      fields.push({
+        kind: "json",
+        format,
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+      });
+      continue;
+    }
+
+    // ── Fallback: unconstrained structured-payload key → JSON/YAML textarea ─
+    if (STRUCTURED_PAYLOAD_KEYS.has(key)) {
+      fields.push({
+        kind: "json",
+        format,
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+      });
+      continue;
+    }
     const fallbackMultiline = key === "document";
     fields.push({
       kind: "string",
@@ -588,6 +914,26 @@ export function schemaToFormFields(
  * 4. Object type (no const discriminator) → data must be a non-array object.
  * 5. Fallback → always returns false (last variant wins at the call site).
  */
+/**
+ * Extracts the `{ key: constValue }` pairs that act as write-once discriminators
+ * on a resolved schema variant (Strategy-1 const properties, e.g. `call: "http"`).
+ * Returns an empty object when the variant has no such discriminators.
+ */
+function buildConstWrites(resolved: Record<string, unknown>): Record<string, unknown> {
+  const properties = resolved.properties as Record<string, unknown> | undefined;
+  if (!properties) return {};
+  const writes: Record<string, unknown> = {};
+  for (const [key, propSchema] of Object.entries(properties)) {
+    if (isPlainObject(propSchema)) {
+      const constVal = (propSchema as Record<string, unknown>).const;
+      if (constVal !== undefined) {
+        writes[key] = constVal;
+      }
+    }
+  }
+  return writes;
+}
+
 function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) => boolean {
   const properties = resolved.properties as Record<string, unknown> | undefined;
 
@@ -764,13 +1110,20 @@ function buildOneOfVariants(
         },
       ];
     }
-
-    /*
-     * Empty schema -> JSON field.
-     */
-    if (!resolved.properties) {
-      const isEmptySchema = Object.keys(resolved).every((key) => SCHEMA_META_KEYS.has(key));
-
+    // Variants with no fixed properties and no nested oneOf/anyOf are either maps or scalars.
+    // A uriTemplate anyOf (LiteralUriTemplate | LiteralUri) is a string scalar — treat it as one.
+    const isUriTemplateAnyOf =
+      typeof c.$ref === "string" &&
+      c.$ref.includes("uriTemplate") &&
+      Array.isArray(resolved.anyOf) &&
+      !resolved.properties &&
+      !Array.isArray(resolved.oneOf);
+    if (
+      (!resolved.properties && !Array.isArray(resolved.oneOf) && !Array.isArray(resolved.anyOf)) ||
+      isUriTemplateAnyOf
+    ) {
+      // ── Truly-empty schema {} — treat as unconstrained JSON value ─────────
+      const isEmptySchema = Object.keys(resolved).every((k) => SCHEMA_META_KEYS.has(k));
       if (isEmptySchema) {
         const isFallbackLabel = /^Option \d+$/.test(rawLabel);
         const pathSegment = parentPath.split(".").pop() ?? "";
@@ -802,6 +1155,30 @@ function buildOneOfVariants(
        * Open-ended map.
        */
       if (isMapSchema(resolved)) {
+        // Exception: keys that hold arbitrary structured documents (e.g. `as`
+        // in output/export) must use a JSON/YAML textarea even when the schema
+        // is an unconstrained object — a flat key-value editor cannot represent
+        // nested structures or arrays.
+        const lastSegment = parentPath.split(".").pop() ?? parentPath;
+        if (STRUCTURED_PAYLOAD_KEYS.has(lastSegment)) {
+          const jsonField: JsonField = {
+            kind: "json",
+            format,
+            path: leafPath,
+            label: "object",
+            required: false,
+          };
+          return [
+            {
+              kind: "json" as const,
+              label: "object",
+              matchesData: (d) => typeof d !== "string",
+              fields: [jsonField],
+              resolved,
+              c,
+            },
+          ];
+        }
         const isGenericTypeLabel = GENERIC_TYPE_LABELS.has(titleCandidate ?? "");
 
         const label =
@@ -1034,41 +1411,65 @@ function buildOneOfVariants(
   );
 
   const allStrings = resolvedList.every((item) => item.kind === "string");
-
-  if (allStrings && resolvedList.length > 1 && hasExplicitVariantLabels) {
-    return resolvedList.map((item) => ({
-      label: item.label,
-      fields: item.fields,
-      matchesData: item.matchesData,
-    }));
-  }
-
-  /*
-   * Preserve semantically different string schemas.
-   */
-  function shouldPreserveStringVariants(variants: ResolvedVariant[]): boolean {
-    const stringVariants = variants.filter((item) => item.kind === "string");
-
-    if (stringVariants.length < 2) return false;
-
-    const signatures = stringVariants.map((item) =>
-      JSON.stringify({
-        title: item.resolved.title,
-        pattern: item.resolved.pattern,
-        format: item.resolved.format,
-        enum: item.resolved.enum,
-      }),
+  if (allStrings && resolvedList.length > 1) {
+    const hasExpVariant = resolvedList.some((item) =>
+      isRuntimeExpressionSchema(item.c, item.resolved),
     );
 
-    return new Set(signatures).size > 1;
-  }
+    if (hasExplicitVariantLabels) {
+      return resolvedList.map((item) => ({
+        label: item.label,
+        fields: item.fields,
+        matchesData: item.matchesData,
+        constWrites: {},
+      }));
+    }
 
-  if (shouldPreserveStringVariants(resolvedList)) {
-    return resolvedList.map((item) => ({
-      label: item.label,
-      fields: item.fields,
-      matchesData: item.matchesData,
-    }));
+    /*
+     * Preserve semantically different string schemas.
+     */
+    function shouldPreserveStringVariants(variants: ResolvedVariant[]): boolean {
+      const stringVariants = variants.filter((item) => item.kind === "string");
+
+      if (stringVariants.length < 2) return false;
+
+      const signatures = stringVariants.map((item) =>
+        JSON.stringify({
+          title: item.resolved.title,
+          pattern: item.resolved.pattern,
+          format: item.resolved.format,
+          enum: item.resolved.enum,
+        }),
+      );
+
+      return new Set(signatures).size > 1;
+    }
+
+    if (shouldPreserveStringVariants(resolvedList)) {
+      return resolvedList.map((item) => ({
+        label: item.label,
+        fields: item.fields,
+        matchesData: item.matchesData,
+        constWrites: {},
+      }));
+    }
+
+    return resolvedList.map((item) => {
+      if (hasExpVariant && !isRuntimeExpressionSchema(item.c, item.resolved)) {
+        const f = item.fields[0];
+
+        if (f?.kind === "string") {
+          f.hasExpressionSibling = true;
+        }
+      }
+
+      return {
+        label: item.label,
+        fields: item.fields,
+        matchesData: item.matchesData,
+        constWrites: {},
+      };
+    });
   }
 
   const collapsed: OneOfVariant[] = [];
@@ -1092,12 +1493,20 @@ function buildOneOfVariants(
 
       const inheritedPlaceholder = firstPassField?.placeholder;
 
+      // RE variants in endpoint context → "Expression"; non-RE URI context → "URI"; else keep label.
       const preferredLabel =
-        item.label === "Option 1" || item.label === "Option 2" ? "string" : item.label;
+        isRuntimeExpression && isApiEndpoint
+          ? "Expression"
+          : isUriContext
+            ? "URI"
+            : item.label === "Option 1" || item.label === "Option 2"
+              ? "string"
+              : item.label;
 
       /*
        * Never rename an explicitly named URI variant to "URI".
        */
+
       if (
         item.resolved.title === "LiteralUriTemplate" ||
         item.resolved.title === "LiteralUri" ||
@@ -1107,12 +1516,29 @@ function buildOneOfVariants(
           label: item.label,
           fields: item.fields,
           matchesData: item.matchesData,
+          constWrites: {},
         });
 
         continue;
       }
 
-      if (!mergedStringVariant) {
+      // Only merge consecutive strings with matching isRuntimeExpression — distinct
+      // modes (RE vs literal URI) must remain separate selectable variants.
+      const mergedIsRe = (mergedStringVariant?.fields[0] as StringField | undefined)
+        ?.isRuntimeExpression;
+      const canMerge = mergedStringVariant !== null && mergedIsRe === isRuntimeExpression;
+
+      if (!canMerge) {
+        if (mergedStringVariant) {
+          const preds = [...mergedStringVariant.matchPredicates];
+          collapsed.push({
+            label: mergedStringVariant.label,
+            fields: mergedStringVariant.fields,
+            matchesData: buildStringMatchesData(preds),
+            constWrites: {},
+          });
+          mergedStringVariant = null;
+        }
         const stringField: StringField = {
           kind: "string",
           path: parentPath || "__leaf__",
@@ -1120,7 +1546,7 @@ function buildOneOfVariants(
           required: false,
           multiline: false,
           isRuntimeExpression: isRuntimeExpression,
-          ...(isApiEndpoint
+          ...(isApiEndpoint && !isRuntimeExpression
             ? { placeholder: API_ENDPOINT_PLACEHOLDER }
             : inheritedPlaceholder !== undefined
               ? { placeholder: inheritedPlaceholder }
@@ -1132,10 +1558,10 @@ function buildOneOfVariants(
           matchPredicates: [item.matchesData],
         };
       } else {
-        mergedStringVariant.matchPredicates.push(item.matchesData);
-        const merged = mergedStringVariant.fields[0] as StringField;
+        mergedStringVariant!.matchPredicates.push(item.matchesData);
+        const merged = mergedStringVariant!.fields[0] as StringField;
         if (isUriContext) {
-          mergedStringVariant.label = "URI";
+          mergedStringVariant!.label = "URI";
         }
         if (isApiEndpoint) {
           merged.placeholder = API_ENDPOINT_PLACEHOLDER;
@@ -1154,6 +1580,7 @@ function buildOneOfVariants(
           label: mergedStringVariant.label,
           fields: mergedStringVariant.fields,
           matchesData: buildStringMatchesData(preds),
+          constWrites: {},
         });
         mergedStringVariant = null;
       }
@@ -1161,6 +1588,7 @@ function buildOneOfVariants(
         label: item.label,
         fields: item.fields,
         matchesData: item.matchesData,
+        constWrites: buildConstWrites(item.resolved),
       });
     }
   }
@@ -1171,7 +1599,21 @@ function buildOneOfVariants(
       label: mergedStringVariant.label,
       fields: mergedStringVariant.fields,
       matchesData: buildStringMatchesData(preds),
+      constWrites: {},
     });
+  }
+
+  // Mark literal string fields whose sibling variants include an expression variant.
+  const hasExpVariantInCollapsed = collapsed.some(
+    (v) => v.fields[0]?.kind === "string" && (v.fields[0] as StringField).isRuntimeExpression,
+  );
+  if (hasExpVariantInCollapsed) {
+    for (const v of collapsed) {
+      const f = v.fields[0];
+      if (f?.kind === "string" && !(f as StringField).isRuntimeExpression) {
+        (f as StringField).hasExpressionSibling = true;
+      }
+    }
   }
 
   return collapsed;

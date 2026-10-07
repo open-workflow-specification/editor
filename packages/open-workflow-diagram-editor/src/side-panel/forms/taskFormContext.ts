@@ -80,6 +80,51 @@ function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
   return v !== null && v !== undefined && typeof v === "object" && !Array.isArray(v);
 }
 
+/*
+ * Finds paths of arrays edited through form controls (i.e ordered maps).
+ * These arrays get empty values pruned before saving, since clearing a control means "delete this key".
+ */
+export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string> {
+  const paths = new Set<string>();
+
+  const walk = (list: FormFieldDescriptor[]): void => {
+    for (const field of list) {
+      if (field.kind === "ordered-map") paths.add(field.path);
+      else if (field.kind === "object") walk(field.children);
+      else if (field.kind === "one-of") for (const v of field.variants) walk(v.fields);
+    }
+  };
+  walk(fields);
+
+  return paths;
+}
+
+/*
+ * Re-roots field descriptors under a new path prefix.
+ * Used to render ordered map entries with their full paths.
+ * Example: prefixFields([{path: "when"}], "switch.0.electronicOrder")  -> [{path: "switch.0.electronicOrder.when"}]
+ * i.e Converts relative paths to absolute RHF paths
+ */
+export function prefixFields(fields: FormFieldDescriptor[], prefix: string): FormFieldDescriptor[] {
+  return fields.map((field): FormFieldDescriptor => {
+    const path = `${prefix}.${field.path}`;
+    if (field.kind === "object") {
+      return { ...field, path, children: prefixFields(field.children, prefix) };
+    }
+    if (field.kind === "one-of") {
+      return {
+        ...field,
+        path,
+        variants: field.variants.map((variant) => ({
+          ...variant,
+          fields: prefixFields(variant.fields, prefix),
+        })),
+      };
+    }
+    return { ...field, path };
+  });
+}
+
 /**
  * Recursively filters a field list for read-only display.
  *
@@ -117,6 +162,11 @@ export function filterReadOnlyFields(
     if (field.kind === "map") {
       // Show the map group only when the task contains a non-empty object at this path.
       return hasObjectAtPath(task, field.path) ? [field] : [];
+    }
+
+    if (field.kind === "ordered-map") {
+      const v = getNestedValue(task, field.path);
+      return Array.isArray(v) && v.length > 0 ? [field] : [];
     }
 
     if (field.kind === "json") {
