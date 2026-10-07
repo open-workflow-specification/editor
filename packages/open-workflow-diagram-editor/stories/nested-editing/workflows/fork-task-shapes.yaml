@@ -1,0 +1,73 @@
+#
+# Copyright 2021-Present The Open Workflow Specification Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# One fork per shape the panel has to handle:
+#  - notifyChannels: `compete` unset, so the switch reads off (the schema default)
+#  - raiseAlarm:     `compete: true`, with a fork nested among its branches
+#  - escalate:       the shared task fields set (`if`, `timeout`, `then`) beside the branches
+document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: fork-task-shapes
+  version: "0.1.0"
+do:
+  - notifyChannels:
+      fork:
+        branches:
+          - sendEmail:
+              call: http
+              with:
+                method: post
+                endpoint: https://mail.example.com/api/send
+          - sendSms:
+              call: http
+              with:
+                method: post
+                endpoint: https://sms.example.com/api/send
+  - raiseAlarm:
+      fork:
+        compete: true
+        branches:
+          - notifyStaff:
+              fork:
+                branches:
+                  - callNurse:
+                      call: http
+                      with:
+                        method: put
+                        endpoint: https://hospital.example.com/api/nurses
+                  - callDoctor:
+                      call: http
+                      with:
+                        method: put
+                        endpoint: https://hospital.example.com/api/doctors
+          - logAlarm:
+              set:
+                alarmRaised: true
+  - escalate:
+      if: ${ .severity == "critical" }
+      timeout:
+        after: PT5M
+      fork:
+        branches:
+          - pageOnCall:
+              call: http
+              with:
+                method: post
+                endpoint: https://pager.example.com/api/page
+          - openIncident:
+              set:
+                incidentOpen: true
+      then: end
