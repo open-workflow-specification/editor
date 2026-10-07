@@ -127,7 +127,7 @@ describe("do task form", () => {
     /** The task as it would be after a child was renamed and its sibling removed. */
     const changedChildren = (): DoTask => {
       const task = structuredClone(doTaskOf(model));
-      const [assign, notify] = task.do;
+      const [assign, notify] = task.do!;
       task.do = [{ assignToDev: assign!.assign! }, notify!];
       return task;
     };
