@@ -1165,3 +1165,30 @@ describe("schemaToFormFields do task", () => {
     ]);
   });
 });
+
+describe("schemaToFormFields fork task", () => {
+  it("describes the fork's branches and compete flag", () => {
+    expect(describeFields(ownFields("fork"))).toMatchInlineSnapshot(`
+     [
+       "fork  object  "fork"",
+       "fork.branches  child-task-list  "Branches"",
+       "fork.compete  boolean  "Compete"",
+     ]
+   `);
+  });
+
+  it("lists the fork's own property before the shared task fields", () => {
+    expect(getFormFieldsForNodeType("fork").map((f) => f.path)).toMatchInlineSnapshot(`
+     [
+       "fork",
+       "if",
+       "input",
+       "output",
+       "export",
+       "timeout",
+       "then",
+       "metadata",
+     ]
+   `);
+  });
+});
