@@ -802,3 +802,29 @@ export const NESTED_FORK_WORKFLOW = {
     { recordOutcome: { set: { handled: true } } },
   ],
 };
+
+/**
+ * Four tasks for the common-fields drill-in
+ */
+export const COMMON_FIELDS_WORKFLOW = {
+  document: { dsl: "1.0.3", namespace: "test", name: "common-fields", version: "0.1.0" },
+  do: [
+    {
+      prepare: {
+        if: "${ .ready }",
+        set: { greeting: "hello" },
+        timeout: { after: "PT30S" },
+        output: { as: "${ .greeting }" },
+      },
+    },
+    {
+      fetch: {
+        call: "http",
+        with: { method: "get", endpoint: "https://example.com/orders" },
+        input: { from: "${ .orders }" },
+      },
+    },
+    { bare: { set: { done: true } } },
+    { emptyMetadata: { set: { done: true }, metadata: {} } },
+  ],
+};

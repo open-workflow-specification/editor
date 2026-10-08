@@ -48,7 +48,7 @@ import {
 } from "../test-utils/render-helpers";
 import { nodeAt, parseFixture } from "../test-utils";
 import { EditSessionProvider } from "../../src/side-panel/EditSession";
-import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/FormField";
+import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/sentinels";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import { DiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";

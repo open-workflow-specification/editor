@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { padRemovedPaths } from "../../../src/side-panel/forms/TaskForm";
+import { padRemovedPaths } from "../../../src/side-panel/forms/taskFormContext";
 
 describe("padRemovedPaths", () => {
   it.each([

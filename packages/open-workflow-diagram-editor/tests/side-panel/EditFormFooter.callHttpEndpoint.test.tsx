@@ -34,12 +34,13 @@ import { TaskForm } from "../../src/side-panel/forms/TaskForm";
 import { createMockContextValue, FormSpy, type FormRef } from "../test-utils/render-helpers";
 import { nodeAt, parseFixture } from "../test-utils";
 import { EditSessionProvider } from "../../src/side-panel/EditSession";
-import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/FormField";
+import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/sentinels";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import { DiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
 import { ReactFlowProvider } from "@xyflow/react";
 import { en } from "../../src/i18n/locales/en";
+import { ROOT_ONE_OF_PATH } from "../../src/core";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -270,7 +271,7 @@ describe("EditFormFooter — full round-trip: type expression → Apply → clea
 // Apply+reopen the form snapped back to CallHTTP.
 // ---------------------------------------------------------------------------
 
-const SENTINEL_ROOT = `${SENTINEL_PREFIX}__root__${SENTINEL_SUFFIX}` as const;
+const SENTINEL_ROOT = `${SENTINEL_PREFIX}${ROOT_ONE_OF_PATH}${SENTINEL_SUFFIX}` as const;
 
 describe("EditFormFooter — call type switch (CallHTTP → CallMCP)", () => {
   it("committed model has call: 'mcp' after switching to CallMCP and applying", async () => {
@@ -327,6 +328,6 @@ describe("EditFormFooter — call type switch (CallHTTP → CallMCP)", () => {
     )._defaultValues;
     const sentinelOneof = defaultValues.__oneof__ as Record<string, unknown> | undefined;
     // The root sentinel default should NOT be "CallHTTP" after committing CallMCP.
-    expect(sentinelOneof?.["__root__"]).not.toBe("CallHTTP");
+    expect(sentinelOneof?.[ROOT_ONE_OF_PATH]).not.toBe("CallHTTP");
   });
 });

@@ -43,6 +43,27 @@ import { Textarea } from "../ui/textarea";
 const innerObjectTextStore = new Map<string, string>();
 
 /**
+ * Inner-object texts stashed per option, restored when switching back to that option. Keyed by
+ * the form's `defaultValues`, whose identity changes on every `form.reset()` (Apply, Cancel, node
+ * switch, undo), so a reset discards the stash while a drill, which unmounts the row without
+ * resetting, keeps it.
+ */
+const stashedInnerTexts = new WeakMap<object, Map<string, string>>();
+const NO_DEFAULTS = {};
+
+function stashFor(defaultValues: object | undefined): Map<string, string> {
+  const owner = defaultValues ?? NO_DEFAULTS;
+  let stash = stashedInnerTexts.get(owner);
+  if (stash === undefined) {
+    stash = new Map();
+    stashedInnerTexts.set(owner, stash);
+  }
+  return stash;
+}
+
+const stashKey = (path: string, optionKey: string) => `${path}\u0000${optionKey}`;
+
+/**
  * Parses the inner object text stored for a given field path.
  *
  * Returns:
@@ -126,13 +147,6 @@ export function EnumControl({ field, id }: EnumControlProps) {
   const hasValueMap = field.valueMap !== undefined;
   const hasInnerObject = field.innerObjectFormat !== undefined;
 
-  // Saved inner-object texts per option key — restored when switching back.
-  // Cleared when the committed task changes to avoid stale data after apply/undo/redo.
-  const savedInnerTexts = React.useRef<Map<string, string>>(new Map());
-  React.useEffect(() => {
-    savedInnerTexts.current.clear();
-  }, [taskData]);
-
   // Local selected-key state for valueMap fields.
   const [selectedKey, setSelectedKey] = React.useState<string>(() => {
     if (!hasValueMap) return "";
@@ -162,7 +176,12 @@ export function EnumControl({ field, id }: EnumControlProps) {
 
   // Tracks whether the current innerText fails to parse as a plain object.
   // When true, the textarea shows an inline error and Apply is blocked for this field.
-  const [innerParseError, setInnerParseError] = React.useState(false);
+  // Read from the stored text, not assumed clean: a drill remounts this row with the draft intact.
+  const [innerParseError, setInnerParseError] = React.useState(
+    () =>
+      hasInnerObject &&
+      getInnerObjectForPath(field.path, field.innerObjectFormat ?? "yaml") === null,
+  );
 
   // Re-sync when the form resets (apply, cancel, node switch, undo/redo).
   // defaultValues identity changes on every form.reset() call.
@@ -185,14 +204,6 @@ export function EnumControl({ field, id }: EnumControlProps) {
       innerObjectTextStore.set(field.path, text);
     }
   }
-
-  // Clear stashed inner texts when defaultValues resets (after Apply/cancel/node
-  // switch) so that switching back to a previously stashed option does not restore
-  // stale content from before the commit. Runs in an effect to avoid ref access
-  // during render (react(refs)).
-  React.useEffect(() => {
-    savedInnerTexts.current.clear();
-  }, [defaultValues]);
 
   // Keep the store up-to-date whenever innerText changes.
   React.useEffect(() => {
@@ -230,10 +241,11 @@ export function EnumControl({ field, id }: EnumControlProps) {
               // Stash the current inner text before switching so it can be
               // restored if the user switches back (same pattern as
               // savedVariantValues in OneOfFieldRow).
+              const stash = stashFor(defaultValues);
               if (selectedKey) {
-                savedInnerTexts.current.set(selectedKey, innerText);
+                stash.set(stashKey(field.path, selectedKey), innerText);
               }
-              const restored = savedInnerTexts.current.get(val ?? "");
+              const restored = stash.get(stashKey(field.path, val ?? ""));
               const newText = restored ?? "";
               setInnerText(newText);
               innerObjectTextStore.set(field.path, newText);

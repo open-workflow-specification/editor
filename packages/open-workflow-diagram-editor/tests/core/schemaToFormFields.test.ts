@@ -15,7 +15,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { schemaToFormFields } from "../../src/core/schemaToFormFields";
+import {
+  COMMON_FIELDS_PATH,
+  ROOT_ONE_OF_PATH,
+  schemaToFormFields,
+} from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
 import type {
   OneOfField,
@@ -26,12 +30,21 @@ import type {
   JsonField,
   FormFieldDescriptor,
   OrderedMapField,
+  SectionField,
 } from "../../src/core/schemaToFormFields";
 
+/** A task's taskBase fields, which the walker groups into one section at the end. */
+function commonFields(nodeType: string): FormFieldDescriptor[] {
+  const section = getFormFieldsForNodeType(nodeType).find(
+    (f): f is SectionField => f.kind === "section",
+  );
+  return section?.children ?? [];
+}
 describe("schemaToFormFields endpoint and oneOf unwrapping", () => {
   it("generates clean endpoint options for setTask input.schema.resource.endpoint", () => {
-    const fields = getFormFieldsForNodeType("set");
-    const inputField = fields.find((f) => f.path === "input") as ObjectField | undefined;
+    const inputField = commonFields("set").find((f) => f.path === "input") as
+      | ObjectField
+      | undefined;
     expect(inputField).toBeDefined();
 
     const schemaOneOf = inputField?.children.find((f) => f.path === "input.schema") as
@@ -527,7 +540,7 @@ describe("schemaToFormFields URI placeholders", () => {
       .map((line) => line.slice(line.indexOf("  ph=") + 5));
 
   it("suggests an API endpoint where the path is one", () => {
-    const endpoint = getFormFieldsForNodeType("set").find((f) => f.path === "input");
+    const endpoint = commonFields("set").find((f) => f.path === "input");
     expect(endpoint).toBeDefined();
 
     expect(placeholdersIn([endpoint!])).toContain(API_ENDPOINT_EXAMPLE);
@@ -997,7 +1010,7 @@ function fieldsByPath(
 ): Map<string, FormFieldDescriptor> {
   for (const f of fields) {
     if (!out.has(f.path)) out.set(f.path, f);
-    if (f.kind === "object") fieldsByPath(f.children, out);
+    if (f.kind === "object" || f.kind === "section") fieldsByPath(f.children, out);
     if (f.kind === "one-of") for (const v of f.variants) fieldsByPath(v.fields, out);
   }
   return out;
@@ -1102,7 +1115,7 @@ describe("schemaToFormFields presence keys", () => {
     const oneOfs: OneOfField[] = [];
     const walk = (fields: FormFieldDescriptor[]) =>
       fields.forEach((f) => {
-        if (f.kind === "object") walk(f.children);
+        if (f.kind === "object" || f.kind === "section") walk(f.children);
         if (f.kind === "one-of") {
           if (f.path === path) oneOfs.push(f);
           f.variants.forEach((v) => walk(v.fields));
@@ -1137,7 +1150,7 @@ describe("schemaToFormFields presence keys", () => {
   });
 
   it("carries none on a const-discriminated option", () => {
-    const entries = presenceKeysAt("call", "__root__");
+    const entries = presenceKeysAt("call", ROOT_ONE_OF_PATH);
 
     expect(entries.length).toBeGreaterThan(0);
     expect(entries.every((entry) => entry.endsWith("→-"))).toBe(true);
@@ -1150,12 +1163,16 @@ describe("schemaToFormFields do task", () => {
   it("describes its task list followed by every task base field, and nothing else", () => {
     expect(fields.map((f) => [f.path, f.kind, f.required])).toEqual([
       ["do", "child-task-list", true],
+      ["then", "then", false],
+      [`${COMMON_FIELDS_PATH}`, "section", false],
+    ]);
+
+    expect(commonFields("do").map((f) => [f.path, f.kind, f.required])).toEqual([
       ["if", "string", false],
       ["input", "object", false],
       ["output", "object", false],
       ["export", "object", false],
       ["timeout", "one-of", false],
-      ["then", "then", false],
       ["metadata", "map", false],
     ]);
   });
@@ -1275,13 +1292,8 @@ describe("schemaToFormFields fork task", () => {
     expect(getFormFieldsForNodeType("fork").map((f) => f.path)).toMatchInlineSnapshot(`
      [
        "fork",
-       "if",
-       "input",
-       "output",
-       "export",
-       "timeout",
        "then",
-       "metadata",
+       "__common__",
      ]
    `);
   });

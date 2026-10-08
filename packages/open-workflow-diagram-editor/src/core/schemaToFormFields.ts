@@ -39,6 +39,7 @@ export type FormFieldDescriptor =
   | ChildTaskListField
   | StringListField
   | ObjectField
+  | SectionField
   | EventFilterListField
   | MapField
   | JsonField
@@ -153,6 +154,18 @@ export interface ObjectField extends FieldBase {
   children: FormFieldDescriptor[];
 }
 
+/* Task base fields */
+export interface SectionField extends FieldBase {
+  kind: "section";
+  children: FormFieldDescriptor[];
+}
+
+/* The path of a task whose root is itself a one-of (e.g call). Its variant stands for the whole task so it addresses the task root rather tahn the key its in */
+export const ROOT_ONE_OF_PATH = "__root__";
+
+/* The path of a section that has the tasks 'taskBase' fields */
+export const COMMON_FIELDS_PATH = "__common__";
+
 export interface MapField extends FieldBase {
   kind: "map";
 }
@@ -193,7 +206,7 @@ export interface OneOfVariant {
    * in sync with the variant selection.
    *
    * The keys are dot-notation paths relative to the one-of field's own path.
-   * For a top-level one-of (`path === "__root__"`) the paths are at root level,
+   * For a top-level one-of (`path === ROOT_ONE_OF_PATH`) the paths are at root level,
    * e.g. `{ call: "http" }`.
    */
   constWrites: Record<string, unknown>;
@@ -302,24 +315,24 @@ function isBackoffSchema(
 
   const keys: string[] = [];
   for (const candidate of candidates) {
-    if (!isPlainObject(candidate)) return undefined;
+    if (!isObjectNotArray(candidate)) return undefined;
     const c = candidate as Record<string, unknown>;
 
     const props = c.properties as Record<string, unknown> | undefined;
-    if (!props || !isPlainObject(props)) return undefined;
+    if (!props || !isObjectNotArray(props)) return undefined;
     const propKeys = Object.keys(props);
     if (propKeys.length !== 1) return undefined;
     const key = propKeys[0]!;
 
     let valueProp = props[key] as unknown;
     if (
-      isPlainObject(valueProp) &&
+      isObjectNotArray(valueProp) &&
       typeof (valueProp as Record<string, unknown>).$ref === "string"
     ) {
       const ref = resolveRef((valueProp as Record<string, unknown>).$ref as string, defs);
       if (ref) valueProp = ref;
     }
-    if (!isPlainObject(valueProp)) return undefined;
+    if (!isObjectNotArray(valueProp)) return undefined;
     const valueObj = valueProp as Record<string, unknown>;
     // Reject if the value schema has any structural constraints.
     const hasStructure =
@@ -531,7 +544,7 @@ export function schemaToFormFields(
     if (variants.length > 1) {
       fields.push({
         kind: "one-of",
-        path: path || "__root__",
+        path: path || ROOT_ONE_OF_PATH,
         label: typeof schema.title === "string" ? schema.title : "Type",
         ...withDesc(typeof schema.description === "string" ? schema.description : undefined),
         required: false,

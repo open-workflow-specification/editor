@@ -15,8 +15,14 @@
  */
 
 import { GraphNodeType } from "@openworkflowspec/sdk";
-import { getSchemaForDefinition } from "./schemaFilter";
-import { schemaToFormFields, FormFieldDescriptor } from "./schemaToFormFields";
+import { getSchemaForDefinition, getTaskBaseKeys } from "./schemaFilter";
+import {
+  schemaToFormFields,
+  COMMON_FIELDS_PATH,
+  ROOT_ONE_OF_PATH,
+  type FormFieldDescriptor,
+  type OneOfField,
+} from "./schemaToFormFields";
 import type { ContentFormat } from "./workflowSdk";
 
 // ---------------------------------------------------------------------------
@@ -51,6 +57,72 @@ const NODE_TYPE_TO_DEF: Readonly<Record<string, string>> = {
 
 const _fieldCache = new Map<string, FormFieldDescriptor[]>();
 
+// ---------------------------------------------------------------------------
+// taskBase partition — the task's own fields, then `then`, then the common section
+// ---------------------------------------------------------------------------
+
+/**
+ * Moves the `taskBase` fields that every variant of a root one-of shares out of the variants, so
+ * they sit beside the selector instead of inside each option. Shapes are compared serialised —
+ * functions such as `matchesData` drop out.
+ */
+function hoistSharedBaseFields(
+  fields: FormFieldDescriptor[],
+  baseKeys: ReadonlySet<string>,
+): FormFieldDescriptor[] {
+  const rootIndex = fields.findIndex(
+    (field) => field.kind === "one-of" && field.path === ROOT_ONE_OF_PATH,
+  );
+  const root = fields[rootIndex] as OneOfField | undefined;
+  const [first, ...rest] = root?.variants ?? [];
+  if (root === undefined || first === undefined) return fields;
+
+  const shape = (field: FormFieldDescriptor) => JSON.stringify(field);
+  const shared = first.fields.filter(
+    (field) =>
+      baseKeys.has(field.path) &&
+      rest.every((variant) =>
+        variant.fields.some((other) => other.path === field.path && shape(other) === shape(field)),
+      ),
+  );
+  if (shared.length === 0) return fields;
+
+  const sharedPaths = new Set(shared.map((field) => field.path));
+  const hoistedRoot: OneOfField = {
+    ...root,
+    variants: root.variants.map((variant) => ({
+      ...variant,
+      fields: variant.fields.filter((field) => !sharedPaths.has(field.path)),
+    })),
+  };
+  return [...fields.slice(0, rootIndex), hoistedRoot, ...fields.slice(rootIndex + 1), ...shared];
+}
+
+/**
+ * Orders a task's fields as: its own fields, then the `then` row.
+ * Driven by `baseKeys` and descriptor kinds alone, so a key the spec adds
+ * to `taskBase` joins the section by itself.
+ */
+export function partitionTaskBaseFields(
+  fields: FormFieldDescriptor[],
+  baseKeys: ReadonlySet<string>,
+): FormFieldDescriptor[] {
+  const own: FormFieldDescriptor[] = [];
+  const flow: FormFieldDescriptor[] = [];
+  const common: FormFieldDescriptor[] = [];
+  for (const field of hoistSharedBaseFields(fields, baseKeys)) {
+    if (!baseKeys.has(field.path)) own.push(field);
+    else if (field.kind === "then") flow.push(field);
+    else common.push(field);
+  }
+  if (common.length === 0) return [...own, ...flow];
+  return [
+    ...own,
+    ...flow,
+    { kind: "section", path: COMMON_FIELDS_PATH, label: "", required: false, children: common },
+  ];
+}
+
 /**
  * Returns the ordered list of `FormFieldDescriptor`s for a given graph node
  * type, or an empty array when no schema definition is registered for it.
@@ -74,7 +146,10 @@ export function getFormFieldsForNodeType(
     const s = getSchemaForDefinition(defName);
     const defs = s.$defs as Record<string, unknown> | undefined;
     const requiredSet = new Set<string>(Array.isArray(s.required) ? (s.required as string[]) : []);
-    const fields = schemaToFormFields(s, defs, requiredSet, "", format);
+    const fields = partitionTaskBaseFields(
+      schemaToFormFields(s, defs, requiredSet, "", format),
+      getTaskBaseKeys(),
+    );
     _fieldCache.set(cacheKey, fields);
     return fields;
   } catch {

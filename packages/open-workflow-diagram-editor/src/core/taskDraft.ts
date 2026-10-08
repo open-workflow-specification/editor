@@ -14,11 +14,73 @@
  * limitations under the License.
  */
 
+import { ROOT_ONE_OF_PATH } from "./schemaToFormFields";
 import { getTaskTypeKey } from "./taskTypes";
 
 /**
+ * Flattens a task object into a dot-notation record (`with.endpoint.uri`), the shape the panel's
+ * draft is keyed by. `unflattenValues` is the inverse. Arrays are kept whole at their own path:
+ * they are edited as one value.
+ */
+
+export function flattenTask(
+  value: unknown,
+  prefix = "",
+  wholeValuePaths: ReadonlySet<string> = new Set(),
+): Record<string, unknown> {
+  if (value === null || value === undefined) return {};
+  if (Array.isArray(value)) {
+    return prefix ? { [prefix]: value } : {};
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    let result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const fullKey = prefix ? `${prefix}.${k}` : k;
+      if (Array.isArray(v) || wholeValuePaths.has(fullKey)) {
+        result[fullKey] = v;
+      } else if (typeof v === "object" && v !== null) {
+        const nested = flattenTask(v, fullKey, wholeValuePaths);
+        // If recursing into the object produced no entries but the object itself
+        // is non-empty, keep it as a leaf so it is not silently discarded.
+        // Truly empty objects ({}) are dropped as before.
+        if (Object.keys(nested).length === 0 && Object.keys(v as object).length > 0) {
+          result[fullKey] = v;
+        } else {
+          result = { ...result, ...nested };
+        }
+      } else {
+        result[fullKey] = v;
+      }
+    }
+    return result;
+  }
+  return prefix ? { [prefix]: value } : {};
+}
+
+export function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unknown): void {
+  const parts = dotPath.split(".");
+  if (
+    parts.some((part) => part === "__proto__" || part === "prototype" || part === "constructor")
+  ) {
+    return;
+  }
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i]!;
+    const next = Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
+    current[part] =
+      next && typeof next === "object" && !Array.isArray(next)
+        ? { ...(next as Record<string, unknown>) }
+        : (Object.create(null) as Record<string, unknown>);
+    current = current[part] as Record<string, unknown>;
+  }
+  current[parts[parts.length - 1]!] = value;
+}
+
+/**
  * Reconstructs a nested task object from the flat dot-notation form values
- * produced by `flattenTask` in TaskForm. Arrays (child-task-list values) are
+ * produced by `flattenTask` above. Arrays (child-task-list values) are
  * kept as-is.
  * Empty strings, null, and undefined values are omitted so the resulting
  * object only carries properties that were actually set.
@@ -125,7 +187,7 @@ export function applyDirtyValues(
   // and delete the model path itself unless a dirty field supplied a value.
   for (const sentinelPath of sentinelPaths) {
     const prefix = sentinelPath + ".";
-    const baseParts = sentinelPath === "__root__" ? [] : sentinelPath.split(".");
+    const baseParts = sentinelPath === ROOT_ONE_OF_PATH ? [] : sentinelPath.split(".");
 
     const constWrites = sentinelConstWrites.get(sentinelPath);
     if (constWrites && Object.keys(constWrites).length > 0) {
@@ -169,7 +231,7 @@ export function applyDirtyValues(
   // Restore a selected variant's key that an edit emptied, so the selection survives
   for (const [oneOfPath, presenceKey] of sentinelPresenceKeys) {
     if (sentinelPaths.has(oneOfPath)) continue;
-    const keyParts = [...(oneOfPath === "__root__" ? [] : oneOfPath.split(".")), presenceKey];
+    const keyParts = [...(oneOfPath === ROOT_ONE_OF_PATH ? [] : oneOfPath.split(".")), presenceKey];
     if (getPath(original, keyParts) !== undefined && getPath(result, keyParts) === undefined) {
       setPath(result, keyParts, {});
     }

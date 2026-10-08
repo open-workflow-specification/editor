@@ -186,7 +186,6 @@
     @apply dec:text-gray-100;
   }
 
-
   .dec-root .dec-sidebar-prop-activator {
     @apply dec:block dec:w-full dec:cursor-pointer dec:bg-transparent dec:text-left;
   }
@@ -195,39 +194,39 @@
     outline: 1px solid rgb(var(--dec-selected-rgb));
     outline-offset: -1px;
   }
-    /* End Property row */
+  /* End Property row */
 
   /* Sidebar Footer */
-  .dec-root .dec-sidebar-form-footer{
+  .dec-root .dec-sidebar-form-footer {
     @apply dec:-mx-2 dec:-mt-2 dec:flex dec:items-center dec:justify-between dec:gap-2 dec:border-t dec:border-gray-200 dec:px-3 dec:py-3;
   }
 
-  .dec-root.dark .dec-sidebar-form-footer{
+  .dec-root.dark .dec-sidebar-form-footer {
     @apply dec:border-gray-700;
   }
 
-  .dec-root .dec-sidebar-form-footer-status{
+  .dec-root .dec-sidebar-form-footer-status {
     @apply dec:flex dec:min-w-0 dec:items-center dec:gap-1 dec:overflow-hidden dec:whitespace-nowrap dec:text-xs dec:font-medium;
   }
 
-  .dec-root .dec-sidebar-form-footer-status.changed{
+  .dec-root .dec-sidebar-form-footer-status.changed {
     color: var(--dec-accent-text);
   }
 
-  .dec-root .dec-sidebar-form-footer-status.applied{
+  .dec-root .dec-sidebar-form-footer-status.applied {
     color: var(--dec-success-text);
     animation: dec-sidebar-status-in 140ms ease-out;
   }
 
-  .dec-root .dec-sidebar-form-footer-status.nochanges{
+  .dec-root .dec-sidebar-form-footer-status.nochanges {
     @apply dec:font-normal dec:text-gray-500;
   }
 
-  .dec-root.dark .dec-sidebar-form-footer-status.nochanges{
+  .dec-root.dark .dec-sidebar-form-footer-status.nochanges {
     @apply dec:text-gray-400;
   }
 
-  .dec-root.dark .dec-sidebar-form-footer-status-icon{
+  .dec-root.dark .dec-sidebar-form-footer-status-icon {
     @apply dec:h-3.5 dec:w-3.5 dec:shrink-0;
   }
 
@@ -240,13 +239,13 @@
     }
   }
 
-  @media (prefers-reduced-motion:reduce) {
-    .dec-root .dec-sidebar-form-footer-status.applied{
+  @media (prefers-reduced-motion: reduce) {
+    .dec-root .dec-sidebar-form-footer-status.applied {
       animation: none;
     }
   }
 
-  .dec-root .dec-sidebar-form-footer-actions{
+  .dec-root .dec-sidebar-form-footer-actions {
     @apply dec:flex dec:shrink-0 dec:items-center dec:gap-2;
   }
   /* End Sidebar Footer */
@@ -255,12 +254,12 @@
     @apply dec:gap-4 dec:py-1;
   }
 
-  .dec-root .dec-sidebar-edit-field-label{
+  .dec-root .dec-sidebar-edit-field-label {
     @apply dec:text-xs dec:font-normal dec:text-gray-500;
     overflow-wrap: anywhere;
   }
 
-    .dec-root.dark .dec-sidebar-edit-field-label{
+  .dec-root.dark .dec-sidebar-edit-field-label {
     @apply dec:text-gray-400;
   }
 
@@ -464,7 +463,7 @@
     @apply dec:text-gray-400;
   }
 
-    .dec-root .dec-sidebar-trigger {
+  .dec-root .dec-sidebar-trigger {
     @apply dec:relative dec:inline-flex;
   }
   .dec-root .dec-sidebar-trigger-badge {
@@ -498,7 +497,7 @@
   .dec-root.dark .dec-sidebar-trigger-badge:hover {
     @apply dec:bg-red-300;
   }
-    /* end validation errors */
+  /* end validation errors */
 
   /* ── Task form ───────────────────────────────────────────────────────── */
 
@@ -773,56 +772,56 @@
 
   /* ── Named item list (switch cases) ──────────────────────────────────── */
 
- .dec-root .dec-form-ordered-map {
-   @apply dec:flex dec:flex-col dec:rounded-md
+  .dec-root .dec-form-ordered-map {
+    @apply dec:flex dec:flex-col dec:rounded-md
      dec:border dec:border-gray-200 dec:overflow-hidden;
- }
+  }
 
- .dec-root.dark .dec-form-ordered-map {
-   @apply dec:border-gray-700;
- }
+  .dec-root.dark .dec-form-ordered-map {
+    @apply dec:border-gray-700;
+  }
 
- .dec-root .dec-form-ordered-map-count {
-   @apply dec:ml-auto dec:text-[10px] dec:text-gray-500;
-   font-variant-numeric: tabular-nums;
- }
+  .dec-root .dec-form-ordered-map-count {
+    @apply dec:ml-auto dec:text-[10px] dec:text-gray-500;
+    font-variant-numeric: tabular-nums;
+  }
 
- .dec-root.dark .dec-form-ordered-map-count {
-   @apply dec:text-gray-400;
- }
+  .dec-root.dark .dec-form-ordered-map-count {
+    @apply dec:text-gray-400;
+  }
 
- .dec-root .dec-form-ordered-map-item {
-   @apply dec:flex dec:flex-col dec:gap-2 dec:m-0 dec:border-0 dec:p-0
+  .dec-root .dec-form-ordered-map-item {
+    @apply dec:flex dec:flex-col dec:gap-2 dec:m-0 dec:border-0 dec:p-0
      dec:pl-2.5 dec:border-l dec:border-gray-200;
-   min-width: 0;
- }
+    min-width: 0;
+  }
 
- .dec-root.dark .dec-form-ordered-map-item {
-   @apply dec:border-gray-700;
- }
+  .dec-root.dark .dec-form-ordered-map-item {
+    @apply dec:border-gray-700;
+  }
 
- .dec-root .dec-form-ordered-map-legend {
-   @apply dec:flex dec:items-center dec:gap-1.5 dec:p-0;
- }
+  .dec-root .dec-form-ordered-map-legend {
+    @apply dec:flex dec:items-center dec:gap-1.5 dec:p-0;
+  }
 
- .dec-root .dec-form-ordered-map-index {
-   @apply dec:text-[10px] dec:text-gray-400;
-   font-variant-numeric: tabular-nums;
- }
+  .dec-root .dec-form-ordered-map-index {
+    @apply dec:text-[10px] dec:text-gray-400;
+    font-variant-numeric: tabular-nums;
+  }
 
- .dec-root.dark .dec-form-ordered-map-index {
-   @apply dec:text-gray-500;
- }
+  .dec-root.dark .dec-form-ordered-map-index {
+    @apply dec:text-gray-500;
+  }
 
- .dec-root .dec-form-ordered-map-name {
-   @apply dec:text-xs dec:font-medium dec:text-gray-700 dec:min-w-0;
-   font-family: var(--dec-font-mono);
-   overflow-wrap: anywhere;
- }
+  .dec-root .dec-form-ordered-map-name {
+    @apply dec:text-xs dec:font-medium dec:text-gray-700 dec:min-w-0;
+    font-family: var(--dec-font-mono);
+    overflow-wrap: anywhere;
+  }
 
- .dec-root.dark .dec-form-ordered-map-name {
-   @apply dec:text-gray-200;
- }
+  .dec-root.dark .dec-form-ordered-map-name {
+    @apply dec:text-gray-200;
+  }
 
   /* ── Key-value map editor ────────────────────────────────────────────── */
 
@@ -1228,7 +1227,6 @@
     @apply dec:border-gray-700;
   }
 
-
   /* Read-only filter item */
   .dec-root .dec-filter-item-readonly {
     @apply dec:flex dec:flex-col dec:gap-1
@@ -1425,6 +1423,169 @@
       animation: none;
     }
   }
- /* ── End navigation guard ───────────────────────────────────── */
-}
+  /* ── End navigation guard ───────────────────────────────────── */
 
+  /* ── Drill-in breadcrumb ───────────────────────────────────────────── */
+
+  .dec-root .dec-form-breadcrumb {
+    @apply dec:mb-2 dec:flex dec:items-start dec:gap-1.5;
+  }
+
+  .dec-root .dec-form-breadcrumb-back {
+    @apply dec:grid dec:h-7 dec:w-7 dec:flex-none dec:cursor-pointer dec:place-items-center
+     dec:rounded-md dec:border dec:border-gray-200 dec:bg-gray-50 dec:text-gray-700;
+  }
+
+  .dec-root .dec-form-breadcrumb-back:hover {
+    @apply dec:bg-gray-100;
+  }
+
+  .dec-root .dec-form-breadcrumb-trail {
+    @apply dec:m-0 dec:flex dec:min-w-0 dec:list-none dec:flex-wrap dec:items-center
+     dec:gap-0.5 dec:p-0 dec:pt-1 dec:text-xs;
+  }
+
+  .dec-root .dec-form-breadcrumb-item {
+    @apply dec:flex dec:items-center dec:gap-0.5;
+  }
+
+  .dec-root .dec-form-breadcrumb-crumb {
+    @apply dec:inline-flex dec:cursor-pointer dec:items-center dec:rounded dec:border-0
+     dec:bg-transparent dec:px-1 dec:text-blue-700;
+  }
+
+  .dec-root .dec-form-breadcrumb-crumb:hover {
+    @apply dec:underline;
+  }
+
+  .dec-root .dec-form-breadcrumb-back:focus-visible,
+  .dec-root .dec-form-breadcrumb-crumb:focus-visible {
+    @apply dec:outline-2 dec:outline-offset-1 dec:outline-blue-500;
+  }
+
+  .dec-root .dec-form-breadcrumb-current {
+    @apply dec:px-1 dec:font-semibold dec:text-gray-900;
+  }
+
+  .dec-root .dec-form-breadcrumb-sep {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root .dec-form-breadcrumb-icon {
+    @apply dec:h-4 dec:w-4;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-back {
+    @apply dec:border-gray-700 dec:bg-gray-800 dec:text-gray-200;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-back:hover {
+    @apply dec:bg-gray-700;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-crumb {
+    @apply dec:text-blue-400;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-current {
+    @apply dec:text-gray-100;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-sep {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-form-breadcrumb-back:focus-visible,
+  .dec-root.dark .dec-form-breadcrumb-crumb:focus-visible {
+    @apply dec:outline-blue-400;
+  }
+
+  /* ── Drill-in row ──────────────────────────────────────────────────── */
+
+  .dec-root .dec-form-drill-row {
+    @apply dec:flex dec:w-full dec:cursor-pointer dec:items-center dec:gap-2 dec:rounded-md
+     dec:border dec:border-gray-200 dec:bg-gray-50 dec:px-2.5 dec:py-2 dec:text-left
+     dec:transition-colors;
+  }
+
+  .dec-root .dec-form-drill-row:hover {
+    @apply dec:border-gray-300 dec:bg-gray-100;
+  }
+
+  .dec-root .dec-form-drill-row:focus-visible {
+    @apply dec:outline-2 dec:outline-offset-1 dec:outline-blue-500;
+  }
+
+  .dec-root .dec-form-drill-row.has-error {
+    @apply dec:border-red-300;
+  }
+
+  .dec-root .dec-form-drill-row-text {
+    @apply dec:flex dec:min-w-0 dec:flex-1 dec:flex-col dec:gap-0.5;
+  }
+
+  .dec-root .dec-form-drill-row-label {
+    @apply dec:text-xs dec:font-medium dec:text-gray-900;
+  }
+
+  .dec-root .dec-form-drill-row-summary {
+    @apply dec:truncate dec:text-xs dec:text-gray-600;
+  }
+
+  .dec-root .dec-form-drill-row-pills {
+    @apply dec:flex dec:flex-none dec:gap-1;
+  }
+
+  .dec-root .dec-form-drill-pill {
+    @apply dec:whitespace-nowrap dec:rounded-full dec:px-1.5 dec:text-[11px] dec:font-medium
+     dec:tabular-nums;
+  }
+
+  .dec-root .dec-form-drill-pill.changed {
+    @apply dec:bg-blue-50 dec:text-blue-700;
+  }
+
+  .dec-root .dec-form-drill-pill.error {
+    @apply dec:bg-red-50 dec:text-red-700;
+  }
+
+  .dec-root .dec-form-drill-row-chevron {
+    @apply dec:h-4 dec:w-4 dec:flex-none dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-form-drill-row {
+    @apply dec:border-gray-700 dec:bg-gray-800/60;
+  }
+
+  .dec-root.dark .dec-form-drill-row:hover {
+    @apply dec:border-gray-600 dec:bg-gray-800;
+  }
+
+  .dec-root.dark .dec-form-drill-row:focus-visible {
+    @apply dec:outline-blue-400;
+  }
+
+  .dec-root.dark .dec-form-drill-row.has-error {
+    @apply dec:border-red-500/60;
+  }
+
+  .dec-root.dark .dec-form-drill-row-label {
+    @apply dec:text-gray-100;
+  }
+
+  .dec-root.dark .dec-form-drill-row-summary {
+    @apply dec:text-gray-300;
+  }
+
+  .dec-root.dark .dec-form-drill-pill.changed {
+    @apply dec:bg-blue-500/15 dec:text-blue-300;
+  }
+
+  .dec-root.dark .dec-form-drill-pill.error {
+    @apply dec:bg-red-500/15 dec:text-red-300;
+  }
+
+  .dec-root.dark .dec-form-drill-row-chevron {
+    @apply dec:text-gray-400;
+  }
+}

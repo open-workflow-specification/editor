@@ -72,6 +72,11 @@ function initTaskBaseCache(): void {
   _taskBaseKeys = keys;
 }
 
+export function getTaskBaseKeys(): ReadonlySet<string> {
+  initTaskBaseCache();
+  return _taskBaseKeys!;
+}
+
 // ---------------------------------------------------------------------------
 // Derived structural defs
 // ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ const { TaskForm } = await import("../../src/side-panel/forms/TaskForm");
 const { NESTED_FORK_WORKFLOW } = await import("../fixtures/workflows");
 const { renderWithProviders } = await import("../test-utils/render-helpers");
 const { nodeAt, parseFixture } = await import("../test-utils");
+const { openCommonFields } = await import("../test-utils/drill-helpers");
 
 /** Races its branches (`compete: true`); one of them is the inner fork. */
 const OUTER_FORK_ID = "/do/raiseAlarm";
@@ -105,6 +106,7 @@ describe("fork task editing", () => {
     const { commitWorkflow, original, user } = renderForkFooter(OUTER_FORK_ID);
     await act(async () => {});
 
+    await openCommonFields(user);
     await user.type(screen.getByLabelText("if"), "{{.alarm}");
     await user.click(apply());
 

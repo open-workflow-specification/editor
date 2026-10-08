@@ -19,101 +19,27 @@ import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
 import { getFormFieldsForNodeType, structuralEqual } from "@/core";
-import { FormField, SENTINEL_KEY, SENTINEL_PREFIX, computeSentinelDefaults } from "./FormField";
+import { FormField } from "./FormField";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import {
   TaskFormContext,
   collectWholeValuePaths,
+  computeSentinelDefaults,
   filterReadOnlyFields,
   getNestedValue,
   collectValueMapFields,
+  padRemovedPaths,
+  VariantSnapshotsContext,
+  type VariantSnapshots,
 } from "./taskFormContext";
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Flattens a task object into a dot-notation record suitable for
- * react-hook-form `defaultValues`. Arrays are kept as-is (they are rendered
- * as child-task-list fields, which are always read-only).
- */
-export function flattenTask(
-  value: unknown,
-  prefix = "",
-  wholeValuePaths: ReadonlySet<string> = new Set(),
-): Record<string, unknown> {
-  if (value === null || value === undefined) return {};
-  if (Array.isArray(value)) {
-    return prefix ? { [prefix]: value } : {};
-  }
-  if (typeof value === "object") {
-    const obj = value as Record<string, unknown>;
-    let result: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}.${k}` : k;
-      if (Array.isArray(v) || wholeValuePaths.has(fullKey)) {
-        result[fullKey] = v;
-      } else if (typeof v === "object" && v !== null) {
-        const nested = flattenTask(v, fullKey, wholeValuePaths);
-        // If recursing into the object produced no entries but the object itself
-        // is non-empty, keep it as a leaf so it is not silently discarded.
-        // Truly empty objects ({}) are dropped as before.
-        if (Object.keys(nested).length === 0 && Object.keys(v as object).length > 0) {
-          result[fullKey] = v;
-        } else {
-          result = { ...result, ...nested };
-        }
-      } else {
-        result[fullKey] = v;
-      }
-    }
-    return result;
-  }
-  return prefix ? { [prefix]: value } : {};
-}
-
-export function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unknown): void {
-  const parts = dotPath.split(".");
-  if (
-    parts.some((part) => part === "__proto__" || part === "prototype" || part === "constructor")
-  ) {
-    return;
-  }
-  let current = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i]!;
-    const next = Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
-    current[part] =
-      next && typeof next === "object" && !Array.isArray(next)
-        ? { ...(next as Record<string, unknown>) }
-        : (Object.create(null) as Record<string, unknown>);
-    current = current[part] as Record<string, unknown>;
-  }
-  current[parts[parts.length - 1]!] = value;
-}
-
-/** RHF reset() skips Controllers for absent paths — pad removed ones with "". */
-export function padRemovedPaths(
-  resetVals: Record<string, unknown>,
-  oldTask: Record<string, unknown>,
-  newTask: Record<string, unknown>,
-  wholeValuePaths: ReadonlySet<string> = new Set(),
-): void {
-  const oldFlat = flattenTask(oldTask, "", wholeValuePaths);
-  const newFlat = flattenTask(newTask, "", wholeValuePaths);
-  const newPaths = Object.keys(newFlat);
-  for (const path of Object.keys(oldFlat)) {
-    if (path in newFlat || path.startsWith(SENTINEL_PREFIX)) continue;
-    const conflicts = newPaths.some((np) => path.startsWith(np + ".") || np.startsWith(path + "."));
-    if (!conflicts) {
-      setNestedPath(resetVals, path, "");
-    }
-  }
-}
+import { flattenTask, setNestedPath } from "@/core/taskDraft";
+import { SENTINEL_KEY } from "./sentinels";
+import { useDrillNavigation } from "./drill/useDrillNavigation";
+import { DrillContext } from "./drill/DrillContext";
+import { DrillBreadcrumb } from "./drill/DrillBreadcrumb";
 
 // ---------------------------------------------------------------------------
 // TaskForm
@@ -219,6 +145,13 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     form.reset(resetVals);
   }, [task, nodeId, form, allFields]);
 
+  // ── One-of variant snapshots ──────────────────────────────────────────────
+  // Held at TaskForm level (survives drill unmount). Cleared on task change.
+  const [variantSnapshots] = React.useState<VariantSnapshots>(() => new Map());
+  React.useEffect(() => {
+    variantSnapshots.clear();
+  }, [task, variantSnapshots]);
+
   // ── Seed SDK errors into form field slots ─────────────────────────────────
   useWorkflowErrorsForForm(
     errors,
@@ -235,23 +168,46 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     return filterReadOnlyFields(allFields, task as Record<string, unknown>);
   }, [allFields, isReadOnly, task]);
 
+  //  ── Drill-in navigation  ────────────────────
+  const navigation = useDrillNavigation({
+    fields: visibleFields,
+    nodeId,
+    isReadOnly,
+    task: task as Record<string, unknown>,
+  });
+
   if (allFields.length === 0 || visibleFields.length === 0) return null;
 
   return (
     <TaskFormContext.Provider
       value={{ isReadOnly, siblingTaskNames, taskData: task as Record<string, unknown> }}
     >
-      <form
-        className="dec-task-form"
-        onSubmit={(e) => e.preventDefault()}
-        aria-label={t("aria.form.taskProperties")}
-      >
-        <div className="dec-task-form-fields">
-          {visibleFields.map((field) => (
-            <FormField key={field.path} field={field} />
-          ))}
-        </div>
-      </form>
+      <VariantSnapshotsContext.Provider value={variantSnapshots}>
+        <DrillContext.Provider value={navigation.drill}>
+          <form
+            ref={navigation.formRef}
+            className="dec-task-form"
+            onSubmit={(e) => e.preventDefault()}
+            aria-label={t("aria.form.taskProperties")}
+          >
+            <div className="dec:sr-only" aria-live="polite">
+              {navigation.announcement}
+            </div>
+            {navigation.trail.length > 0 && (
+              <DrillBreadcrumb
+                taskName={navigation.taskName}
+                levels={navigation.trail}
+                onNavigate={navigation.goTo}
+              />
+            )}
+            <div className="dec-task-form-fields">
+              {navigation.levelFields.map((field) => (
+                <FormField key={field.path} field={field} />
+              ))}
+            </div>
+          </form>
+        </DrillContext.Provider>
+      </VariantSnapshotsContext.Provider>
     </TaskFormContext.Provider>
   );
 }

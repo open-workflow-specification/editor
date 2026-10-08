@@ -23,16 +23,8 @@ import { SidebarFooter } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useFormState } from "react-hook-form";
 import { updateTask } from "@/core/workflowEditing";
-import { applyDirtyValues } from "@/core/taskDraft";
-import { flattenTask, padRemovedPaths, setNestedPath } from "@/side-panel/forms/TaskForm";
-import {
-  computeSentinelDefaults,
-  SENTINEL_KEY,
-  SENTINEL_PREFIX,
-  SENTINEL_SUFFIX,
-} from "@/side-panel/forms/FormField";
+import { applyDirtyValues, flattenTask, setNestedPath } from "@/core/taskDraft";
 import { getFormFieldsForNodeType } from "@/core";
-import type { FormFieldDescriptor, OneOfField, OneOfVariant } from "@/core/schemaToFormFields";
 import { getInnerObjectForPath } from "@/side-panel/forms/customFields/EnumControl";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { useEditSession } from "./EditSession";
@@ -40,82 +32,19 @@ import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
 import {
   collectFormListPaths,
+  collectSelectedVariants,
   collectValueMapFields,
+  collectVariantFieldPaths,
   collectWholeValuePaths,
+  computeSentinelDefaults,
   getNestedValue,
+  padRemovedPaths,
 } from "./forms/taskFormContext";
+import { SENTINEL_KEY, SENTINEL_PREFIX, SENTINEL_SUFFIX } from "@/side-panel/forms/sentinels";
+import { changedPaths } from "./forms/draftChanges";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
-
-type SelectedVariant = { field: OneOfField; variant: OneOfVariant };
-
-/**
- * The selected variant of each one-of on screen, keyed by path. One-ofs inside an
- * unselected variant are skipped.
- */
-function collectSelectedVariants(
-  fields: FormFieldDescriptor[],
-  values: Record<string, unknown>,
-  result: Map<string, SelectedVariant> = new Map(),
-): Map<string, SelectedVariant> {
-  for (const field of fields) {
-    if (field.kind === "object") {
-      collectSelectedVariants(field.children, values, result);
-    } else if (field.kind === "one-of") {
-      const label = values[`${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`];
-      const variant = field.variants.find((v) => v.label === label);
-      if (variant) {
-        result.set(field.path, { field, variant });
-        collectSelectedVariants(variant.fields, values, result);
-      } else {
-        const samePath = field.variants
-          .flatMap((v) => v.fields)
-          .filter((f) => f.kind === "one-of" && f.path === field.path);
-        collectSelectedVariants(samePath, values, result);
-      }
-    }
-  }
-  return result;
-}
-
-/** Recursively collects all leaf/intermediate dot-notation paths from a field list. */
-function collectVariantFieldPaths(fields: FormFieldDescriptor[]): string[] {
-  const paths: string[] = [];
-  for (const field of fields) {
-    paths.push(field.path);
-    if (field.kind === "object") {
-      paths.push(...collectVariantFieldPaths(field.children));
-    } else if (field.kind === "one-of") {
-      for (const variant of field.variants) {
-        paths.push(...collectVariantFieldPaths(variant.fields));
-      }
-    }
-  }
-  return paths;
-}
-
-/**
- * Counts dirty paths that represent real model changes, excluding phantom
- * entries created by variant switching.  A path whose current value AND
- * default are both "empty" (undefined / null / "") maps to the same model
- * operation (delete), so it is not a meaningful change.
- */
-function filterPhantomDirty(
-  dirtyPaths: string[],
-  formValues: Record<string, unknown>,
-  defaultValues: Record<string, unknown> | undefined,
-): number {
-  const flatValues = flattenTask(formValues);
-  const flatDefaults = flattenTask(defaultValues ?? {});
-  return dirtyPaths.filter((p) => {
-    const v = flatValues[p];
-    const d = flatDefaults[p];
-    const vEmpty = v === undefined || v === null || v === "";
-    const dEmpty = d === undefined || d === null || d === "";
-    return !(vEmpty && dEmpty);
-  }).length;
-}
 
 type DraftStatusProps = {
   changedCount: number;
@@ -186,15 +115,11 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     return null;
   }
 
-  // Use the subscribed dirtyFields (public API) for the UI count.
-  const flatDirtyKeys = Object.keys(flattenTask(dirtyFields as Record<string, unknown>)).filter(
-    (p) => !p.startsWith(SENTINEL_PREFIX),
-  );
-  const changedCount = filterPhantomDirty(
-    flatDirtyKeys,
+  const changedCount = changedPaths(
+    dirtyFields,
     form.getValues(),
     defaultValues as Record<string, unknown> | undefined,
-  );
+  ).length;
 
   const handleCancel = () => {
     const nodeType = node.type ?? "";

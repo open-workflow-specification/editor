@@ -36,6 +36,11 @@ do:
         query:
           page: "1"
           limit: "20"
+      if: ${ .apiKey != null }
+      input:
+        from: ${ .request }
+      timeout:
+        after: PT30S
   - setContextTask:
       set:
         userId: ${ .users[0].id }
@@ -44,6 +49,12 @@ do:
         meta:
           source: api.example.com
           version: v2
+      output:
+        as: ${ .userId }
+      export:
+        as: "${ $context + { userId: .userId } }"
+      metadata:
+        owner: identity-team
   - runScriptTask:
       run:
         script:

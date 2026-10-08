@@ -15,8 +15,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { unflattenValues, applyDirtyValues } from "../../src/core/taskDraft";
+import { unflattenValues, applyDirtyValues, flattenTask } from "../../src/core/taskDraft";
 import { switchCase } from "../test-utils";
+import { ROOT_ONE_OF_PATH } from "../../src/core";
+import { SET_EXAMPLE_WORKFLOW } from "../fixtures/workflows";
 
 describe("unflattenValues", () => {
   it("reconstructs a single-level object", () => {
@@ -383,7 +385,7 @@ describe("applyDirtyValues", () => {
 
   it("writes constWrites for a sentinel-dirty root one-of path (call type change)", () => {
     // Simulates: CallHTTP task, user switches to CallMCP, clicks Apply.
-    // The sentinel "__root__" is dirty; constWrites = { call: "mcp" }.
+    // The sentinel ROOT_ONE_OF_PATH is dirty; constWrites = { call: "mcp" }.
     const original = { call: "http", with: { method: "GET", endpoint: "https://example.com" } };
     const allValues = {
       call: "http",
@@ -391,8 +393,8 @@ describe("applyDirtyValues", () => {
       "with.endpoint": "https://example.com",
     };
     const dirtyPaths = new Set<string>();
-    const sentinelPaths = new Set(["__root__"]);
-    const sentinelConstWrites = new Map([["__root__", { call: "mcp" }]]);
+    const sentinelPaths = new Set([ROOT_ONE_OF_PATH]);
+    const sentinelConstWrites = new Map([[ROOT_ONE_OF_PATH, { call: "mcp" }]]);
     const result = applyDirtyValues(
       original,
       allValues,
@@ -404,11 +406,11 @@ describe("applyDirtyValues", () => {
     expect(result.call).toBe("mcp");
   });
 
-  it("constWrites for __root__ are placed at root level (not under __root__ key)", () => {
+  it("constWrites for ROOT_ONE_OF_PATH are placed at root level (not under ROOT_ONE_OF_PATH key)", () => {
     const original = { call: "http", with: { method: "GET" } };
     const allValues = { "with.method": "GET" };
-    const sentinelPaths = new Set(["__root__"]);
-    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const sentinelPaths = new Set([ROOT_ONE_OF_PATH]);
+    const sentinelConstWrites = new Map([[ROOT_ONE_OF_PATH, { call: "grpc" }]]);
     const result = applyDirtyValues(
       original,
       allValues,
@@ -416,7 +418,7 @@ describe("applyDirtyValues", () => {
       sentinelPaths,
       sentinelConstWrites,
     );
-    expect(result).not.toHaveProperty("__root__");
+    expect(result).not.toHaveProperty(ROOT_ONE_OF_PATH);
     expect(result.call).toBe("grpc");
   });
 
@@ -426,8 +428,8 @@ describe("applyDirtyValues", () => {
     const original = { call: "http", with: { method: "GET" } };
     const allValues = { "with.method": "POST" };
     const dirtyPaths = new Set(["with.method"]);
-    const sentinelPaths = new Set(["__root__"]);
-    const sentinelConstWrites = new Map([["__root__", { call: "grpc" }]]);
+    const sentinelPaths = new Set([ROOT_ONE_OF_PATH]);
+    const sentinelConstWrites = new Map([[ROOT_ONE_OF_PATH, { call: "grpc" }]]);
     const result = applyDirtyValues(
       original,
       allValues,
@@ -442,7 +444,7 @@ describe("applyDirtyValues", () => {
   it("empty constWrites map leaves existing properties unchanged", () => {
     const original = { call: "http", with: { method: "GET" } };
     const allValues = { "with.method": "GET" };
-    const sentinelPaths = new Set(["__root__"]);
+    const sentinelPaths = new Set([ROOT_ONE_OF_PATH]);
     const sentinelConstWrites = new Map<string, Record<string, unknown>>();
     const result = applyDirtyValues(
       original,
@@ -452,5 +454,72 @@ describe("applyDirtyValues", () => {
       sentinelConstWrites,
     );
     expect(result.call).toBe("http");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// flattenTask
+// ---------------------------------------------------------------------------
+
+/** The `initialize` task body from the Set Example workflow. */
+const initializeTask = SET_EXAMPLE_WORKFLOW.do[0]!["initialize"]! as Record<string, unknown>;
+const tasks = [{ step1: {} }];
+
+describe("flattenTask", () => {
+  it.each([
+    ["null", null, undefined, {}],
+    ["undefined", undefined, undefined, {}],
+    ["a string at the root", "hello", undefined, {}],
+    ["a number at the root", 42, undefined, {}],
+    ["a boolean at the root", true, undefined, {}],
+    ["a string under a prefix", "hello", "name", { name: "hello" }],
+    ["zero under a prefix", 0, "count", { count: 0 }],
+    ["false under a prefix", false, "flag", { flag: false }],
+    ["an array at the root", [1, 2, 3], undefined, {}],
+    ["an array under a prefix, kept whole", tasks, "do", { do: tasks }],
+    ["a nested array, kept whole at its key", { do: tasks }, undefined, { do: tasks }],
+    [
+      "the Set Example task",
+      initializeTask,
+      undefined,
+      { "set.startEvent": "${ $workflow.input[0] }" },
+    ],
+    ["a single-level object", { call: "http" }, undefined, { call: "http" }],
+    [
+      "two levels",
+      { for: { each: "${items}", in: "${data}" } },
+      undefined,
+      { "for.each": "${items}", "for.in": "${data}" },
+    ],
+    [
+      "deep nesting",
+      { call: { http: { endpoint: "https://example.com" } } },
+      undefined,
+      { "call.http.endpoint": "https://example.com" },
+    ],
+    ["an object under a prefix", { method: "GET" }, "with", { "with.method": "GET" }],
+    [
+      "numbers and booleans as leaves",
+      { with: { retries: 3, redirect: false } },
+      undefined,
+      { "with.retries": 3, "with.redirect": false },
+    ],
+    ["an empty object", {}, undefined, {}],
+    ["an empty nested object, which is dropped", { output: {} }, undefined, {}],
+    // { exponential: {} }: recursing yields no leaves, so the object is kept as the leaf itself.
+    [
+      "a discriminator object whose children are all empty, kept as a leaf",
+      { catch: { retry: { backoff: { exponential: {} } } } },
+      undefined,
+      { "catch.retry.backoff": { exponential: {} } },
+    ],
+    [
+      "a discriminator beside a scalar sibling",
+      { retry: { backoff: { exponential: {} }, delay: { seconds: 2 } } },
+      undefined,
+      { "retry.backoff": { exponential: {} }, "retry.delay.seconds": 2 },
+    ],
+  ] as const)("flattens %s", (_name, value, prefix, expected) => {
+    expect(flattenTask(value, prefix)).toEqual(expected);
   });
 });

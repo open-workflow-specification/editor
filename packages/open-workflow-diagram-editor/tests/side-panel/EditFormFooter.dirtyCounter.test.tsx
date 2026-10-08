@@ -41,8 +41,8 @@ import { DiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { SidebarProvider } from "../../src/components/ui/sidebar";
 import { ReactFlowProvider } from "@xyflow/react";
 import { en } from "../../src/i18n/locales/en";
-import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/FormField";
-import { getFormFieldsForNodeType } from "../../src/core";
+import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "../../src/side-panel/forms/sentinels";
+import { getFormFieldsForNodeType, ROOT_ONE_OF_PATH } from "../../src/core";
 import type { FormFieldDescriptor, OneOfField } from "../../src/core/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ const WORKFLOW = parseFixture({
 });
 const taskNode = nodeAt(WORKFLOW, NODE_ID);
 
-const SENTINEL_ROOT = `${SENTINEL_PREFIX}__root__${SENTINEL_SUFFIX}` as const;
+const SENTINEL_ROOT = `${SENTINEL_PREFIX}${ROOT_ONE_OF_PATH}${SENTINEL_SUFFIX}` as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -145,7 +145,7 @@ function simulateVariantSwitch(
 ): void {
   const allFields = getFormFieldsForNodeType(taskNode.type!, "yaml");
   const rootOneOf = allFields.find(
-    (f) => f.kind === "one-of" && f.path === "__root__",
+    (f) => f.kind === "one-of" && f.path === ROOT_ONE_OF_PATH,
   ) as OneOfField;
 
   const fromIdx = rootOneOf.variants.findIndex((v) => v.label === fromLabel);

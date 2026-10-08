@@ -27,6 +27,7 @@ import { describe, it, expect, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
+import { leaveLevel, openCommonFields } from "../test-utils/drill-helpers";
 
 vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
   const { createComboboxStub } = await import("../test-utils/combobox-stub");
@@ -142,6 +143,19 @@ describe("raise task error variant switch", () => {
     expect(fieldValue("Literal Error Type")).toBe(
       "https://open-workflow-specification.org/errors/validation",
     );
+    expect(fieldValue("Status")).toBe("400");
+  });
+
+  it("keeps the inline fields when a drill into Common fields comes between the switches", async () => {
+    // Drilling unmounts the selector's row, so the switched-away values must not live in it.
+    const { user } = renderRaiseFooter(INLINE_NODE_ID);
+    await act(async () => {});
+
+    await choose(user, "Raise Error Reference");
+    await openCommonFields(user);
+    await leaveLevel(user);
+    await choose(user, "Raise Error Definition");
+
     expect(fieldValue("Status")).toBe("400");
   });
 

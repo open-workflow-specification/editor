@@ -37,7 +37,11 @@ import {
 export type FieldControlProps = {
   field: Exclude<
     FormFieldDescriptor,
-    { kind: "object" } | { kind: "one-of" } | { kind: "map" } | { kind: "ordered-map" }
+    | { kind: "object" }
+    | { kind: "one-of" }
+    | { kind: "map" }
+    | { kind: "ordered-map" }
+    | { kind: "section" }
   >;
   /** DOM id forwarded to the underlying <input>/<select>/<textarea> so that
    *  <label htmlFor> association works. Not applicable to boolean (Switch). */

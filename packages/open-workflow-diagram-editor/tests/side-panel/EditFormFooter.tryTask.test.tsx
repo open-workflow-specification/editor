@@ -40,6 +40,7 @@ const { TaskForm } = await import("../../src/side-panel/forms/TaskForm");
 const { renderWithProviders, createMockContextValue } =
   await import("../test-utils/render-helpers");
 const { parseFixture, nodeAt } = await import("../test-utils");
+const { leaveLevel, openCommonFields } = await import("../test-utils/drill-helpers");
 
 const { render: rtlRender } = await import("@testing-library/react");
 const { I18nProvider } = await import("@openworkflowspec/i18n");
@@ -237,6 +238,36 @@ describe("try task — backoff enum field", () => {
     // textarea should reflect the committed state (empty), not the stale stash.
     await user.click(screen.getByRole("button", { name: "exponential" }));
     expect(getBackoffTextarea("exponential").value).toBe("");
+  });
+
+  // Opening Common fields unmounts the backoff row and remounts it on the way back.
+  describe("across a drill into Common fields", () => {
+    it("switching backoff type and back still restores the inner text", async () => {
+      const { user } = renderTryFooter();
+      await act(async () => {});
+
+      await user.clear(getBackoffTextarea());
+      await user.type(getBackoffTextarea(), "multiplier: 2");
+      await user.click(screen.getByRole("button", { name: "constant" }));
+      await openCommonFields(user);
+      await leaveLevel(user);
+      await user.click(screen.getByRole("button", { name: "exponential" }));
+
+      expect(getBackoffTextarea().value).toBe("multiplier: 2");
+    });
+
+    it("still shows the parse error for malformed inner text", async () => {
+      const { user } = renderTryFooter();
+      await act(async () => {});
+
+      await user.clear(getBackoffTextarea());
+      await user.type(getBackoffTextarea(), "[[unclosed");
+      await openCommonFields(user);
+      await leaveLevel(user);
+
+      expect(getBackoffTextarea()).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent("Must be a valid YAML/JSON object");
+    });
   });
 
   it("selecting '—' clears the backoff field and Apply removes it from the model", async () => {

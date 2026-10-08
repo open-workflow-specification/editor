@@ -27,6 +27,7 @@ import { describe, it, expect, vi } from "vitest";
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
+import { openCommonFields } from "../test-utils/drill-helpers";
 
 vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
   const { createComboboxStub } = await import("../test-utils/combobox-stub");
@@ -101,6 +102,7 @@ describe("do task form", () => {
   it("commits an edited base field and leaves the child tasks untouched", async () => {
     const { commitWorkflow, user } = renderPanel(doTaskOf(model));
     await act(async () => {});
+    await openCommonFields(user);
 
     await user.type(screen.getByLabelText("if"), literal("${ .ready }"));
     await user.click(apply());
@@ -150,6 +152,7 @@ describe("do task form", () => {
 
       rerender(changedChildren());
       await act(async () => {});
+      await openCommonFields(user);
       await user.type(screen.getByLabelText("if"), literal("${ .ready }"));
       await user.click(apply());
 

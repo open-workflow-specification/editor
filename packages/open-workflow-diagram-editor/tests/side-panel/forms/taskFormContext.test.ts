@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  computeSentinelDefaults,
   getNestedValue,
   hasValue,
   filterReadOnlyFields,
@@ -23,8 +24,14 @@ import {
   collectValueMapFields,
   collectWholeValuePaths,
 } from "../../../src/side-panel/forms/taskFormContext";
-import type { FormFieldDescriptor, EnumField } from "../../../src/core/schemaToFormFields";
-import { SET_EXAMPLE_WORKFLOW } from "../../fixtures/workflows";
+import { getFormFieldsForNodeType } from "../../../src/core";
+import {
+  COMMON_FIELDS_PATH,
+  type EnumField,
+  type FormFieldDescriptor,
+} from "../../../src/core/schemaToFormFields";
+import { RAISE_BOTH_ERROR_SHAPES_WORKFLOW, SET_EXAMPLE_WORKFLOW } from "../../fixtures/workflows";
+import { nodeAt, parseFixture } from "../../test-utils/workflow-helpers";
 
 // ---------------------------------------------------------------------------
 // Fixtures derived from the "Set Example" workflow
@@ -505,5 +512,68 @@ describe("collectWholeValuePaths", () => {
 
     const resultMcp = collectWholeValuePaths(fields, { call: "mcp" });
     expect(resultMcp).toEqual(new Set(["with.params"]));
+  });
+});
+
+describe("filterReadOnlyFields on a section", () => {
+  const str = (path: string): FormFieldDescriptor => ({
+    kind: "string",
+    path,
+    label: path,
+    required: false,
+    multiline: false,
+    isRuntimeExpression: false,
+  });
+  const section: FormFieldDescriptor = {
+    kind: "section",
+    path: COMMON_FIELDS_PATH,
+    label: "",
+    required: false,
+    children: [str("if"), str("other")],
+  };
+
+  // Kept whole, so the drill row can say "1 of 2 set"; the opened level filters its own children.
+  it.each([
+    ["keeps the whole section when any child is set", { if: "${ .ok }" }, [section]],
+    ["drops the section when nothing in it is set", {}, []],
+  ])("%s", (_name, task, expected) => {
+    expect(filterReadOnlyFields([section], task)).toEqual(expected);
+  });
+});
+
+const model = parseFixture(RAISE_BOTH_ERROR_SHAPES_WORKFLOW);
+const raiseFields = getFormFieldsForNodeType("raise");
+const taskAt = (nodeId: string) => nodeAt(model, nodeId).data.task as Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
+// Variant sentinels
+//
+// `computeSentinelDefaults` records which variant each one-of has committed, so the
+// footer can tell "the user moved the selector" apart from "the user edited a field".
+// A raise task is the only place where a one-of's selected variant contains further
+// one-ofs at child paths, so a parent and its children compete for the same slot.
+// ---------------------------------------------------------------------------
+
+describe("computeSentinelDefaults", () => {
+  it("records a one-of and the one-ofs nested inside its selected variant", () => {
+    const sentinels = computeSentinelDefaults(raiseFields, taskAt("/do/raiseInline"));
+
+    expect(sentinels.raise).toEqual({
+      error: {
+        __self__: "Raise Error Definition",
+        type: { __self__: "Literal Error Type" },
+        instance: { __self__: "Literal Error Instance" },
+        title: { __self__: "Literal Error Title" },
+        detail: { __self__: "Expression Error Details" },
+      },
+    });
+  });
+
+  it("records only the chosen variant when it has no one-ofs inside it", () => {
+    const sentinels = computeSentinelDefaults(raiseFields, taskAt("/do/raiseByReference"));
+
+    expect(sentinels.raise).toEqual({
+      error: { __self__: "Raise Error Reference" },
+    });
   });
 });
