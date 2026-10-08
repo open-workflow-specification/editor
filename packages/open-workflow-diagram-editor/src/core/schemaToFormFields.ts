@@ -15,7 +15,7 @@
  */
 
 import type { DereferencedSchema } from "./schemaFilter";
-import { isPlainObject } from "./utils";
+import { isObjectNotArray } from "./utils";
 import type { ContentFormat } from "./workflowSdk";
 
 /**
@@ -263,7 +263,7 @@ function resolveRef(
   if (!ref.startsWith("#/$defs/") || !defs) return null;
   const name = ref.slice("#/$defs/".length);
   const def = defs[name];
-  return isPlainObject(def) ? def : null;
+  return isObjectNotArray(def) ? def : null;
 }
 
 /**
@@ -294,7 +294,7 @@ function arrayItemsSchema(
   defs: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
   const node = typeof schema.$ref === "string" ? resolveRef(schema.$ref, defs) : schema;
-  return node?.type === "array" && isPlainObject(node.items) ? node.items : undefined;
+  return node?.type === "array" && isObjectNotArray(node.items) ? node.items : undefined;
 }
 
 /**
@@ -307,7 +307,7 @@ function isTaskListSchema(
   defs: Record<string, unknown> | undefined,
 ): boolean {
   const entry = arrayItemsSchema(schema, defs)?.additionalProperties;
-  const ref = isPlainObject(entry) ? entry.$ref : undefined;
+  const ref = isObjectNotArray(entry) ? entry.$ref : undefined;
   return typeof ref === "string" && (ref === "#/$defs/task" || ref.endsWith("/task"));
 }
 
@@ -326,7 +326,7 @@ function orderedMapEntrySchema(
     return undefined;
   }
   const entry = items.additionalProperties;
-  return isPlainObject(entry) && isPlainObject(entry.properties) ? entry : undefined;
+  return isObjectNotArray(entry) && isObjectNotArray(entry.properties) ? entry : undefined;
 }
 
 /**
@@ -337,7 +337,7 @@ function isEventFilterItemSchema(items: Record<string, unknown>): boolean {
   const required = items.required;
   const props = items.properties;
   return (
-    isPlainObject(props) &&
+    isObjectNotArray(props) &&
     Array.isArray(required) &&
     (required as string[]).includes("with") &&
     "with" in (props as Record<string, unknown>) &&
@@ -367,11 +367,11 @@ function isFlowDirectiveSchema(
   const anyOf = schema.anyOf as unknown[];
 
   const hasEnum = anyOf.some(
-    (v) => isPlainObject(v) && Array.isArray((v as Record<string, unknown>).enum),
+    (v) => isObjectNotArray(v) && Array.isArray((v as Record<string, unknown>).enum),
   );
   const hasPlainString = anyOf.some(
     (v) =>
-      isPlainObject(v) &&
+      isObjectNotArray(v) &&
       (v as Record<string, unknown>).type === "string" &&
       !Array.isArray((v as Record<string, unknown>).enum),
   );
@@ -502,7 +502,7 @@ export function schemaToFormFields(
     new Set<string>(Array.isArray(schema.required) ? (schema.required as string[]) : []);
 
   for (const [key, rawProp] of Object.entries(properties)) {
-    if (!isPlainObject(rawProp)) continue;
+    if (!isObjectNotArray(rawProp)) continue;
 
     const prop = rawProp as Record<string, unknown>;
     const fieldPath = path ? `${path}.${key}` : key;
@@ -623,7 +623,7 @@ export function schemaToFormFields(
       // with no properties/type/$ref — a schema annotation, not a variant selector.
       const isValidationOnly = candidates.every(
         (c) =>
-          isPlainObject(c) &&
+          isObjectNotArray(c) &&
           (c as Record<string, unknown>).required !== undefined &&
           !(c as Record<string, unknown>).properties &&
           !(c as Record<string, unknown>).type &&
@@ -637,7 +637,7 @@ export function schemaToFormFields(
         const singleKeyPerCandidate =
           resolvedProps !== undefined &&
           candidates.every((c) => {
-            if (!isPlainObject(c)) return false;
+            if (!isObjectNotArray(c)) return false;
             const req = (c as Record<string, unknown>).required;
             return (
               Array.isArray(req) &&
@@ -696,7 +696,7 @@ export function schemaToFormFields(
               label,
               fields: [variantObjectField],
               matchesData: (data: unknown): boolean =>
-                isPlainObject(data) && (data as Record<string, unknown>)[dk] !== undefined,
+                isObjectNotArray(data) && (data as Record<string, unknown>)[dk] !== undefined,
               constWrites: {},
             };
           });
@@ -743,9 +743,9 @@ export function schemaToFormFields(
           // Collect all keys that appear in any variant to identify base-only keys.
           const variantOwnKeys = new Set<string>(
             candidates.flatMap((c) => {
-              if (!isPlainObject(c)) return [];
+              if (!isObjectNotArray(c)) return [];
               const cp = (c as Record<string, unknown>).properties;
-              return isPlainObject(cp) ? Object.keys(cp as Record<string, unknown>) : [];
+              return isObjectNotArray(cp) ? Object.keys(cp as Record<string, unknown>) : [];
             }),
           );
           const baseFields = schemaToFormFields(
@@ -826,7 +826,7 @@ export function schemaToFormFields(
     // ── Array of strings (e.g. McpStdioTransportArguments — argv-style lists) ─
     if (
       resolved.type === "array" &&
-      isPlainObject(resolved.items) &&
+      isObjectNotArray(resolved.items) &&
       (resolved.items as Record<string, unknown>).type === "string"
     ) {
       fields.push({
@@ -1027,7 +1027,7 @@ function buildConstWrites(resolved: Record<string, unknown>): Record<string, unk
   if (!properties) return {};
   const writes: Record<string, unknown> = {};
   for (const [key, propSchema] of Object.entries(properties)) {
-    if (isPlainObject(propSchema)) {
+    if (isObjectNotArray(propSchema)) {
       const constVal = (propSchema as Record<string, unknown>).const;
       if (constVal !== undefined) {
         writes[key] = constVal;
@@ -1062,7 +1062,7 @@ function withPresenceKey(
   if (key === undefined) return {};
 
   const prop = (resolved.properties as Record<string, unknown>)[key];
-  if (!isPlainObject(prop)) return {};
+  if (!isObjectNotArray(prop)) return {};
   const target = typeof prop.$ref === "string" ? { ...resolveRef(prop.$ref, defs), ...prop } : prop;
   return target.type === "object" ? { presenceKey: key } : {};
 }
@@ -1073,11 +1073,11 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
   // Strategy 1: property with `const`
   if (properties) {
     for (const [key, propSchema] of Object.entries(properties)) {
-      if (isPlainObject(propSchema)) {
+      if (isObjectNotArray(propSchema)) {
         const constVal = (propSchema as Record<string, unknown>).const;
         if (constVal !== undefined) {
           return (data: unknown) =>
-            isPlainObject(data) && (data as Record<string, unknown>)[key] === constVal;
+            isObjectNotArray(data) && (data as Record<string, unknown>)[key] === constVal;
         }
       }
     }
@@ -1086,7 +1086,7 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
   // Strategy 2: single required property key (variant may have optional properties too).
   const uniqueKey = singleRequiredKey(resolved);
   if (uniqueKey !== undefined) {
-    return (data: unknown) => isPlainObject(data) && data[uniqueKey] !== undefined;
+    return (data: unknown) => isObjectNotArray(data) && data[uniqueKey] !== undefined;
   }
 
   // Strategy 3: pattern-refined string discriminator.
@@ -1112,7 +1112,7 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
 
   // Strategy 4: object type
   if (resolved.type === "object" || properties) {
-    return (data: unknown) => isPlainObject(data) && !Array.isArray(data);
+    return (data: unknown) => isObjectNotArray(data);
   }
 
   // Fallback
@@ -1142,7 +1142,7 @@ function buildOneOfVariants(
 
   // First pass: resolve candidate refs and build raw variant list
   const resolvedList = candidates.flatMap((candidate, idx): ResolvedVariant[] => {
-    if (!isPlainObject(candidate)) return [];
+    if (!isObjectNotArray(candidate)) return [];
     const c = candidate as Record<string, unknown>;
 
     let resolved: Record<string, unknown> = c;

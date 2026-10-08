@@ -25,7 +25,7 @@ import type {
   ObjectField,
 } from "../../../core/schemaToFormFields";
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
-import { isPlainObject } from "../../../core/utils";
+import { isObjectNotArray } from "../../../core/utils";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { MapRow, newId } from "./KeyValueMapField";
 import type { MapEntry } from "./KeyValueMapField";
@@ -54,7 +54,7 @@ interface FilterItem {
 function extractFilters(source: unknown): FilterItem[] {
   if (!Array.isArray(source)) return [];
   return (source as unknown[]).flatMap((item) => {
-    if (!isPlainObject(item)) return [];
+    if (!isObjectNotArray(item)) return [];
     return [
       {
         id: newId(),
@@ -80,9 +80,9 @@ function formatCorrelateCount(count: number, keyLabel: string, keysLabel: string
  * that optional fields such as `expect` are not discarded.
  */
 function deserializeCorrelate(correlate: unknown): MapEntry[] {
-  if (!isPlainObject(correlate)) return [];
+  if (!isObjectNotArray(correlate)) return [];
   return Object.entries(correlate).map(([key, val]) => {
-    const v = isPlainObject(val) ? val : {};
+    const v = isObjectNotArray(val) ? val : {};
     return {
       id: newId(),
       key,
@@ -103,14 +103,14 @@ function serializeCorrelate(rows: MapEntry[]): Record<string, unknown> | undefin
   const result: Record<string, unknown> = {};
   for (const r of rows) {
     if (!r.key) continue;
-    result[r.key] = isPlainObject(r.value) ? { ...r.value } : {};
+    result[r.key] = isObjectNotArray(r.value) ? { ...r.value } : {};
   }
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /** Extracts the editable `from` string from a correlation object stored as a MapEntry value. */
 function correlateFrom(value: unknown): string {
-  if (isPlainObject(value)) {
+  if (isObjectNotArray(value)) {
     return typeof value["from"] === "string" ? value["from"] : "";
   }
   return typeof value === "string" ? value : "";
@@ -118,7 +118,7 @@ function correlateFrom(value: unknown): string {
 
 /** Returns a new correlation object with `from` updated, preserving all other fields. */
 function withUpdatedFrom(existing: unknown, from: string): Record<string, unknown> {
-  return { ...(isPlainObject(existing) ? existing : {}), from };
+  return { ...(isObjectNotArray(existing) ? existing : {}), from };
 }
 
 // ---------------------------------------------------------------------------

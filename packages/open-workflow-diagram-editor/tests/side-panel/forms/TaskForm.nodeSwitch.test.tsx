@@ -53,7 +53,7 @@ const rowKeys = () =>
   screen.getAllByLabelText("Entry key").map((input) => (input as HTMLInputElement).value);
 
 describe("switching the panel to another task of the same type", () => {
-  async function switchToSummarise() {
+  beforeEach(async () => {
     const { rerender } = renderWithProviders(<Panel nodeId="/do/transform" />, {
       isReadOnly: false,
       contentFormat: "yaml",
@@ -62,23 +62,17 @@ describe("switching the panel to another task of the same type", () => {
     await act(async () => {});
     rerender(<Panel nodeId="/do/summarise" />);
     await act(async () => {});
-  }
+  });
 
   it("shows only the new task's environment entries", async () => {
-    await switchToSummarise();
-
     expect(rowKeys()).toEqual(["MODE"]);
   });
 
   it("shows the default for a key only the previous task set", async () => {
-    await switchToSummarise();
-
     expect(fieldValue("return")).toBe("stdout (default)");
   });
 
   it("shows the new task's own values", async () => {
-    await switchToSummarise();
-
     expect(fieldValue("Code")).toBe("print(1)");
     expect(fieldValue("Stdin")).toBe("");
   });

@@ -15,7 +15,7 @@
  */
 
 import { workflowSchema, type Specification } from "@openworkflowspec/sdk";
-import { isPlainObject } from "./utils";
+import { isObjectNotArray } from "./utils";
 
 // Keys shared by all run process types (await, return)
 let runSharedKeys: ReadonlySet<string> | undefined;
@@ -24,17 +24,17 @@ let runSharedKeys: ReadonlySet<string> | undefined;
 export function getRunSharedKeys(): ReadonlySet<string> {
   if (runSharedKeys === undefined) {
     const defs = (workflowSchema as Record<string, unknown>).$defs;
-    const runTask = isPlainObject(defs) ? defs.runTask : undefined;
-    const parts = isPlainObject(runTask) && Array.isArray(runTask.allOf) ? runTask.allOf : [];
+    const runTask = isObjectNotArray(defs) ? defs.runTask : undefined;
+    const parts = isObjectNotArray(runTask) && Array.isArray(runTask.allOf) ? runTask.allOf : [];
     const run = parts
       .map((part: unknown) => {
-        if (!isPlainObject(part)) return undefined;
+        if (!isObjectNotArray(part)) return undefined;
         const { properties } = part;
-        return isPlainObject(properties) ? properties.run : undefined;
+        return isObjectNotArray(properties) ? properties.run : undefined;
       })
-      .find(isPlainObject);
+      .find(isObjectNotArray);
 
-    runSharedKeys = new Set(isPlainObject(run?.properties) ? Object.keys(run.properties) : []);
+    runSharedKeys = new Set(isObjectNotArray(run?.properties) ? Object.keys(run.properties) : []);
   }
 
   return runSharedKeys;
@@ -47,7 +47,7 @@ function getFirstKey(obj: unknown): string | undefined {
 /* Not the first key, the shared keys (i.e await, return) may be written first */
 export function getRunSubType(task: Specification.RunTask): string | undefined {
   const run: unknown = task.run;
-  if (!isPlainObject(run)) {
+  if (!isObjectNotArray(run)) {
     return undefined;
   }
   const shared = getRunSharedKeys();

@@ -15,8 +15,8 @@
  */
 
 /**
- * Checks if value is a plain object (not null or array)
+ * Checks if value is an object but not an array and not null
  */
-export function isPlainObject(v: unknown): v is Record<string, unknown> {
+export function isObjectNotArray(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
