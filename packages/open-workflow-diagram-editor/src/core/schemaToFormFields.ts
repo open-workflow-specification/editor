@@ -170,6 +170,7 @@ export interface JsonField extends FieldBase {
 export interface OneOfField extends FieldBase {
   kind: "one-of";
   variants: OneOfVariant[];
+  sentinelPath?: string;
 }
 
 export interface OneOfVariant {
@@ -396,23 +397,34 @@ function deriveLabel(schema: Record<string, unknown>, key: string): string {
 
 /** Formats a schema title or camelCase identifier into a user-friendly label. */
 function formatVariantLabel(title: string): string {
-  if (
-    title === "UriTemplate" ||
-    title === "LiteralEndpointURI" ||
-    title === "LiteralUriTemplate" ||
-    title === "LiteralUri" ||
-    title === "LiteralDataSchema"
-  ) {
-    return "URI";
+  if (title == "UriTemplate") {
+    return "URI Template";
   }
-  if (
-    title === "RuntimeExpression" ||
-    title === "ExpressionEndpointURI" ||
-    title === "ExpressionDataSchema"
-  ) {
-    return "Expression";
+  if (title == "LiteralUriTemplate") {
+    return "Literal URI Template";
   }
-  // Split camelCase into words (e.g. "EndpointConfiguration" -> "Endpoint Configuration")
+  if (title == "LiteralUri") {
+    return "Literal URI";
+  }
+  if (title == "RuntimeExpression") {
+    return "Runtime Expression";
+  }
+  if (title == "ExpressionEndpointURI") {
+    return "Expression Endpoint URI";
+  }
+  if (title == "LiteralEndpointURI") {
+    return "Literal Endpoint URI";
+  }
+  if (title == "EndpointConfiguration") {
+    return "Endpoint Configuration";
+  }
+  if (title == "LiteralDataSchema") {
+    return "Literal Data Schema";
+  }
+  if (title == "ExpressionDataSchema") {
+    return "Expression Data Schema";
+  }
+
   return title
     .replace(/([A-Z][a-z]+)/g, " $1")
     .replace(/([A-Z]+)(?=[A-Z][a-z])/g, " $1")
@@ -1163,6 +1175,81 @@ function buildOneOfVariants(
     const rawLabel = titleCandidate ? formatVariantLabel(titleCandidate) : `Option ${idx + 1}`;
     const matchesData = buildDiscriminator(resolved);
 
+    /*
+     * IMPORTANT:
+     *
+     * A schema such as:
+     *
+     * UriTemplate
+     *   anyOf:
+     *     - LiteralUriTemplate
+     *     - LiteralUri
+     *
+     * must remain a nested selector.
+     *
+     * Do this BEFORE treating the candidate as a scalar string.
+     */
+    const nestedCandidates = (resolved.oneOf ?? resolved.anyOf) as unknown[] | undefined;
+
+    if (Array.isArray(nestedCandidates)) {
+      const nestedVariants = buildOneOfVariants(nestedCandidates, defs, parentPath, format);
+
+      if (nestedVariants.length > 0) {
+        const nestedLabel =
+          titleCandidate && !GENERIC_TYPE_LABELS.has(titleCandidate) ? rawLabel : "Type";
+
+        const nestedField: OneOfField = {
+          kind: "one-of",
+          path: leafPath,
+          sentinelPath: `${leafPath}.__nested__`,
+          label: nestedLabel,
+          required: false,
+          variants: nestedVariants,
+        };
+
+        return [
+          {
+            kind: "object",
+            label: nestedLabel,
+            matchesData,
+            fields: [nestedField],
+            resolved,
+            c,
+          },
+        ];
+      }
+    }
+
+    /*
+     * RuntimeExpression must stay as its own top-level variant.
+     *
+     * Do this before generic string handling.
+     */
+    if (
+      resolved.type === "string" &&
+      (resolved.title === "RuntimeExpression" || isRuntimeExpressionSchema(c, resolved))
+    ) {
+      const leafField: StringField = {
+        kind: "string",
+        path: leafPath,
+        label: rawLabel,
+        required: false,
+        multiline: false,
+        isRuntimeExpression: true,
+        placeholder: "${...}",
+      };
+
+      return [
+        {
+          kind: "string",
+          label: rawLabel,
+          matchesData,
+          fields: [leafField],
+          resolved,
+          c,
+        },
+      ];
+    }
     // Variants with no fixed properties and no nested oneOf/anyOf are either maps or scalars.
     // A uriTemplate anyOf (LiteralUriTemplate | LiteralUri) is a string scalar — treat it as one.
     const isUriTemplateAnyOf =
@@ -1178,9 +1265,6 @@ function buildOneOfVariants(
       // ── Truly-empty schema {} — treat as unconstrained JSON value ─────────
       const isEmptySchema = Object.keys(resolved).every((k) => SCHEMA_META_KEYS.has(k));
       if (isEmptySchema) {
-        // Use the schema title when available, otherwise derive from the last
-        // segment of the parent path (e.g. "emit.event.with.data" → "data"),
-        // capitalised. Generic fallback labels like "Option N" are replaced.
         const isFallbackLabel = /^Option \d+$/.test(rawLabel);
         const pathSegment = parentPath.split(".").pop() ?? "";
         const valueLabel = isFallbackLabel
@@ -1197,10 +1281,9 @@ function buildOneOfVariants(
         };
         return [
           {
-            kind: "json" as const,
+            kind: "json",
             label: valueLabel,
-            // Match any non-string value, including undefined and null.
-            matchesData: (d) => typeof d !== "string",
+            matchesData: (data) => typeof data !== "string",
             fields: [jsonField],
             resolved,
             c,
@@ -1208,7 +1291,9 @@ function buildOneOfVariants(
         ];
       }
 
-      // ── Key-value map variant ────────────────────────────────────────────
+      /*
+       * Open-ended map.
+       */
       if (isMapSchema(resolved)) {
         // Exception: keys that hold arbitrary structured documents (e.g. `as`
         // in output/export) must use a JSON/YAML textarea even when the schema
@@ -1235,22 +1320,34 @@ function buildOneOfVariants(
           ];
         }
         const isGenericTypeLabel = GENERIC_TYPE_LABELS.has(titleCandidate ?? "");
+
         const label =
           titleCandidate && !isGenericTypeLabel ? formatVariantLabel(titleCandidate) : "key-value";
+
         const mapField: MapField = {
           kind: "map",
           path: leafPath,
           label,
           required: false,
         };
-        return [{ kind: "map" as const, label, matchesData, fields: [mapField], resolved, c }];
+
+        return [
+          {
+            kind: "map",
+            label,
+            matchesData,
+            fields: [mapField],
+            resolved,
+            c,
+          },
+        ];
       }
 
-      // ── Pure scalar variants ─────────────────────────────────────────────
-      let leafField: FormFieldDescriptor;
-
+      /*
+       * Enum.
+       */
       if (resolved.type === "string" && Array.isArray(resolved.enum)) {
-        leafField = {
+        const leafField: EnumField = {
           kind: "enum",
           path: leafPath,
           label: rawLabel,
@@ -1258,67 +1355,8 @@ function buildOneOfVariants(
           options: resolved.enum as string[],
         };
         return [
-          { kind: "enum" as const, label: rawLabel, matchesData, fields: [leafField], resolved, c },
-        ];
-      } else if (resolved.type === "number" || resolved.type === "integer") {
-        leafField = { kind: "number", path: leafPath, label: rawLabel, required: false };
-        return [
           {
-            kind: "number" as const,
-            label: rawLabel,
-            matchesData,
-            fields: [leafField],
-            resolved,
-            c,
-          },
-        ];
-      } else if (resolved.type === "boolean") {
-        leafField = { kind: "boolean", path: leafPath, label: rawLabel, required: false };
-        return [
-          {
-            kind: "boolean" as const,
-            label: rawLabel,
-            matchesData,
-            fields: [leafField],
-            resolved,
-            c,
-          },
-        ];
-      } else if (
-        resolved.type === "string" &&
-        typeof resolved.pattern === "string" &&
-        resolved.pattern.startsWith("^P")
-      ) {
-        // ISO 8601 duration literal — emit as kind:"duration" so it stays
-        // separate from plain strings in the collapse pass.
-        leafField = { kind: "duration", path: leafPath, label: rawLabel, required: false };
-        return [
-          {
-            kind: "duration" as const,
-            label: rawLabel,
-            matchesData,
-            fields: [leafField],
-            resolved,
-            c,
-          },
-        ];
-      } else {
-        // plain string (or uriTemplate anyOf or runtimeExpression)
-        const isRe = isRuntimeExpressionSchema(c, resolved);
-        const placeholder = isRe ? "${...}" : isApiEndpoint ? API_ENDPOINT_PLACEHOLDER : undefined;
-
-        leafField = {
-          kind: "string",
-          path: leafPath,
-          label: rawLabel,
-          required: false,
-          multiline: false,
-          isRuntimeExpression: isRe,
-          ...(placeholder ? { placeholder } : {}),
-        };
-        return [
-          {
-            kind: "string" as const,
+            kind: "enum" as const,
             label: rawLabel,
             matchesData,
             fields: [leafField],
@@ -1327,8 +1365,131 @@ function buildOneOfVariants(
           },
         ];
       }
+
+      /*
+       * Number.
+       */
+      if (resolved.type === "number" || resolved.type === "integer") {
+        const leafField: NumberField = {
+          kind: "number",
+          path: leafPath,
+          label: rawLabel,
+          required: false,
+        };
+
+        return [
+          {
+            kind: "number",
+            label: rawLabel,
+            matchesData,
+            fields: [leafField],
+            resolved,
+            c,
+          },
+        ];
+      }
+
+      /*
+       * Boolean.
+       */
+      if (resolved.type === "boolean") {
+        const leafField: BooleanField = {
+          kind: "boolean",
+          path: leafPath,
+          label: rawLabel,
+          required: false,
+        };
+
+        return [
+          {
+            kind: "boolean",
+            label: rawLabel,
+            matchesData,
+            fields: [leafField],
+            resolved,
+            c,
+          },
+        ];
+      }
+
+      /*
+       * Duration.
+       *
+       * Duration Literal is a string schema with an ISO-8601 duration
+       * pattern. Keep it as a DurationField so the duration-specific
+       * control and validation are preserved.
+       */
+      if (
+        resolved.type === "string" &&
+        typeof resolved.pattern === "string" &&
+        resolved.pattern.startsWith("^P")
+      ) {
+        const leafField: DurationField = {
+          kind: "duration",
+          path: leafPath,
+          label: rawLabel,
+          required: false,
+        };
+
+        return [
+          {
+            kind: "duration",
+            label: rawLabel,
+            matchesData,
+            fields: [leafField],
+            resolved,
+            c,
+          },
+        ];
+      }
+
+      /*
+       * Plain string.
+       *
+       * At this point UriTemplate has already been handled above,
+       * so LiteralUriTemplate and LiteralUri can remain independent
+       * variants.
+       */
+
+      const isUriTemplate =
+        titleCandidate === "LiteralUriTemplate" ||
+        titleCandidate === "LiteralUri" ||
+        titleCandidate === "UriTemplate";
+
+      const isRuntimeExpression = isRuntimeExpressionSchema(c, resolved);
+
+      const placeholder =
+        isApiEndpoint && isUriTemplate
+          ? API_ENDPOINT_PLACEHOLDER
+          : isRuntimeExpression
+            ? "${...}"
+            : undefined;
+
+      const leafField: StringField = {
+        kind: "string",
+        path: leafPath,
+        label: rawLabel,
+        required: false,
+        multiline: false,
+        isRuntimeExpression,
+        ...(placeholder ? { placeholder } : {}),
+      };
+
+      return [
+        {
+          kind: "string",
+          label: rawLabel,
+          matchesData,
+          fields: [leafField],
+          resolved,
+          c,
+        },
+      ];
     }
 
+    /*
+     * Object variant.
+     */
     const req = new Set<string>(
       Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
     );
@@ -1341,10 +1502,21 @@ function buildOneOfVariants(
     );
 
     return [
-      { kind: "object" as const, label: rawLabel, matchesData, fields: children, resolved, c },
+      {
+        kind: "object",
+        label: rawLabel,
+        matchesData,
+        fields: children,
+        resolved,
+        c,
+      },
     ];
   });
 
+  /*
+   * If RuntimeExpression exists alongside literal strings,
+   * prevent the literal branch from claiming ${...}.
+   */
   if (resolvedList.some((item) => isRuntimeExpressionSchema(item.c, item.resolved))) {
     for (const item of resolvedList) {
       if (item.kind !== "string" || isRuntimeExpressionSchema(item.c, item.resolved)) {
@@ -1356,23 +1528,81 @@ function buildOneOfVariants(
     }
   }
 
-  // Second pass: collapse consecutive plain string variants (e.g. RuntimeExpression + UriTemplate)
-  // into a single "URI" or "string" variant with URI template placeholder support.
-  //
-  // Exception: when ALL resolved variants are strings (no object/map variants exist), preserve
-  // each variant individually so that semantically distinct modes (e.g. URI Template vs
-  // RuntimeExpression for `source`, `dataschema`, `time`) are surfaced as separate selectable
-  // options in the form rather than collapsed to a single anonymous string input.
+  /*
+   * IMPORTANT:
+   *
+   * Do NOT collapse string variants when they have explicit
+   * semantic titles.
+   *
+   * This is what preserves:
+   *
+   *   Literal URI Template
+   *   Literal URI
+   *
+   * inside UriTemplate.
+   */
+  const hasExplicitVariantLabels = resolvedList.some(
+    (item) =>
+      item.resolved.title === "LiteralUriTemplate" ||
+      item.resolved.title === "LiteralUri" ||
+      item.resolved.title === "RuntimeExpression" ||
+      item.resolved.title === "ExpressionEndpointURI" ||
+      item.resolved.title === "LiteralEndpointURI",
+  );
+
   const allStrings = resolvedList.every((item) => item.kind === "string");
   if (allStrings && resolvedList.length > 1) {
     const hasExpVariant = resolvedList.some((item) =>
       isRuntimeExpressionSchema(item.c, item.resolved),
     );
+
+    if (hasExplicitVariantLabels) {
+      return resolvedList.map((item) => ({
+        label: item.label,
+        fields: item.fields,
+        matchesData: item.matchesData,
+        constWrites: {},
+      }));
+    }
+
+    /*
+     * Preserve semantically different string schemas.
+     */
+    function shouldPreserveStringVariants(variants: ResolvedVariant[]): boolean {
+      const stringVariants = variants.filter((item) => item.kind === "string");
+
+      if (stringVariants.length < 2) return false;
+
+      const signatures = stringVariants.map((item) =>
+        JSON.stringify({
+          title: item.resolved.title,
+          pattern: item.resolved.pattern,
+          format: item.resolved.format,
+          enum: item.resolved.enum,
+        }),
+      );
+
+      return new Set(signatures).size > 1;
+    }
+
+    if (shouldPreserveStringVariants(resolvedList)) {
+      return resolvedList.map((item) => ({
+        label: item.label,
+        fields: item.fields,
+        matchesData: item.matchesData,
+        constWrites: {},
+      }));
+    }
+
     return resolvedList.map((item) => {
       if (hasExpVariant && !isRuntimeExpressionSchema(item.c, item.resolved)) {
         const f = item.fields[0];
-        if (f?.kind === "string") f.hasExpressionSibling = true;
+
+        if (f?.kind === "string") {
+          f.hasExpressionSibling = true;
+        }
       }
+
       return {
         label: item.label,
         fields: item.fields,
@@ -1391,19 +1621,21 @@ function buildOneOfVariants(
 
   for (const item of resolvedList) {
     if (item.kind === "string") {
+      const isRuntimeExpression =
+        item.resolved.title === "RuntimeExpression" ||
+        isRuntimeExpressionSchema(item.c, item.resolved);
       const isUriContext =
         isApiEndpoint ||
         (typeof item.c.$ref === "string" && item.c.$ref.includes("uriTemplate")) ||
         item.resolved.title === "UriTemplate";
 
-      // Carry isRuntimeExpression / placeholder from the first-pass StringField
       const firstPassField = item.fields[0] as StringField | undefined;
-      const isRe = firstPassField?.isRuntimeExpression ?? false;
+
       const inheritedPlaceholder = firstPassField?.placeholder;
 
       // RE variants in endpoint context → "Expression"; non-RE URI context → "URI"; else keep label.
       const preferredLabel =
-        isRe && isApiEndpoint
+        isRuntimeExpression && isApiEndpoint
           ? "Expression"
           : isUriContext
             ? "URI"
@@ -1411,11 +1643,30 @@ function buildOneOfVariants(
               ? "string"
               : item.label;
 
+      /*
+       * Never rename an explicitly named URI variant to "URI".
+       */
+
+      if (
+        item.resolved.title === "LiteralUriTemplate" ||
+        item.resolved.title === "LiteralUri" ||
+        item.resolved.title === "RuntimeExpression"
+      ) {
+        collapsed.push({
+          label: item.label,
+          fields: item.fields,
+          matchesData: item.matchesData,
+          constWrites: {},
+        });
+
+        continue;
+      }
+
       // Only merge consecutive strings with matching isRuntimeExpression — distinct
       // modes (RE vs literal URI) must remain separate selectable variants.
       const mergedIsRe = (mergedStringVariant?.fields[0] as StringField | undefined)
         ?.isRuntimeExpression;
-      const canMerge = mergedStringVariant !== null && mergedIsRe === isRe;
+      const canMerge = mergedStringVariant !== null && mergedIsRe === isRuntimeExpression;
 
       if (!canMerge) {
         if (mergedStringVariant) {
@@ -1434,8 +1685,8 @@ function buildOneOfVariants(
           label: preferredLabel,
           required: false,
           multiline: false,
-          isRuntimeExpression: isRe,
-          ...(isApiEndpoint && !isRe
+          isRuntimeExpression: isRuntimeExpression,
+          ...(isApiEndpoint && !isRuntimeExpression
             ? { placeholder: API_ENDPOINT_PLACEHOLDER }
             : inheritedPlaceholder !== undefined
               ? { placeholder: inheritedPlaceholder }
@@ -1454,7 +1705,11 @@ function buildOneOfVariants(
         }
         if (isApiEndpoint) {
           merged.placeholder = API_ENDPOINT_PLACEHOLDER;
-        } else if (isRe && merged.placeholder === undefined && inheritedPlaceholder !== undefined) {
+        } else if (
+          isRuntimeExpression &&
+          merged.placeholder === undefined &&
+          inheritedPlaceholder !== undefined
+        ) {
           merged.placeholder = inheritedPlaceholder;
         }
       }

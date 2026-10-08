@@ -43,7 +43,7 @@ describe("computeSentinelDefaults", () => {
     expect(sentinels.raise).toEqual({
       error: {
         __self__: "Raise Error Definition",
-        type: { __self__: "Literal Error Type" },
+        type: { __self__: "Literal Error Type", __nested__: { __self__: "Literal URI Template" } },
         instance: { __self__: "Literal Error Instance" },
         title: { __self__: "Literal Error Title" },
         detail: { __self__: "Expression Error Details" },

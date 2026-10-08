@@ -342,7 +342,9 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 function OneOfFieldRow({ field }: { field: OneOfField }) {
   const { isReadOnly, taskData } = useTaskFormContext();
   const { control, getValues, setValue, register } = useFormContext<Record<string, unknown>>();
-  const sentinelPath = `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
+  const sentinelPath = field.sentinelPath
+    ? `${SENTINEL_PREFIX}${field.sentinelPath}${SENTINEL_SUFFIX}`
+    : `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
 
   // Watched so the row follows a reset as well as switch
   const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
@@ -578,7 +580,7 @@ function collectSentinelDefaults(
         selectedIdx = fallbackIdx >= 0 ? fallbackIdx : 0;
       }
       const selected = f.variants[selectedIdx];
-      setNestedSentinel(result, f.path, selected?.label ?? "");
+      setNestedSentinel(result, f.sentinelPath ?? f.path, selected?.label ?? "");
       // Only the selected variant's fields are mounted, so only its nested one-ofs
       // have a sentinel to match
       if (selected) {
