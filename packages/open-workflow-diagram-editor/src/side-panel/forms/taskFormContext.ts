@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import type { FormFieldDescriptor } from "../../core/schemaToFormFields";
+import type { FormFieldDescriptor, EnumField } from "../../core/schemaToFormFields";
 
 // ---------------------------------------------------------------------------
 // TaskFormContext
@@ -99,6 +99,22 @@ export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string>
   return paths;
 }
 
+export function collectValueMapFields(fields: FormFieldDescriptor[]): EnumField[] {
+  const result: EnumField[] = [];
+  for (const field of fields) {
+    if (field.kind === "enum" && field.valueMap !== undefined) {
+      result.push(field);
+    } else if (field.kind === "object") {
+      result.push(...collectValueMapFields(field.children));
+    } else if (field.kind === "one-of") {
+      for (const variant of field.variants) {
+        result.push(...collectValueMapFields(variant.fields));
+      }
+    }
+  }
+  return result;
+}
+
 /*
  * Finds paths of fields that own their whole value and rebuild it from the form's
  * reset values: key/value maps and JSON/YAML values. Their keys are user data rather
@@ -113,6 +129,8 @@ export function collectWholeValuePaths(
   const walk = (list: FormFieldDescriptor[]): void => {
     for (const field of list) {
       if (field.kind === "map" || field.kind === "json") paths.add(field.path);
+      else if (field.kind === "enum" && field.innerObjectFormat !== undefined)
+        paths.add(field.path);
       else if (field.kind === "object") walk(field.children);
       else if (field.kind === "one-of") {
         const data = field.path === "__root__" ? taskData : getNestedValue(taskData, field.path);

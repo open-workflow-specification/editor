@@ -132,4 +132,30 @@ describe("flattenTask — object flattening", () => {
   it("handles an empty nested object (produces no entries for the empty child)", () => {
     expect(flattenTask({ output: {} })).toEqual({});
   });
+
+  it("preserves a non-empty all-empty-children object as a leaf (discriminator pattern)", () => {
+    // { exponential: {} } has one key but its child is an empty object — recursing
+    // produces no scalar leaves, so the object must be kept as the leaf itself.
+    expect(flattenTask({ catch: { retry: { backoff: { exponential: {} } } } })).toEqual({
+      "catch.retry.backoff": { exponential: {} },
+    });
+  });
+
+  it("drops a truly empty nested object but preserves its non-empty siblings", () => {
+    expect(flattenTask({ backoff: { exponential: {} }, delay: { seconds: 2 } })).toEqual({
+      backoff: { exponential: {} },
+      "delay.seconds": 2,
+    });
+  });
+
+  it("handles a discriminator sibling alongside scalar fields when nested", () => {
+    // Models the shape catch.retry.backoff alongside catch.retry.delay — the
+    // discriminator must not swallow the sibling scalar path.
+    expect(flattenTask({ retry: { backoff: { exponential: {} }, delay: { seconds: 2 } } })).toEqual(
+      {
+        "retry.backoff": { exponential: {} },
+        "retry.delay.seconds": 2,
+      },
+    );
+  });
 });

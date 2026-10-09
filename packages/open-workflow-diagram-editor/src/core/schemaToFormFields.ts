@@ -17,6 +17,7 @@
 import type { DereferencedSchema } from "./schemaFilter";
 import { isPlainObject } from "./utils";
 import type { ContentFormat } from "./workflowSdk";
+export type { ContentFormat } from "./workflowSdk";
 
 /**
  * A single form field descriptor produced by walking a task's JSON Schema.
@@ -88,6 +89,8 @@ export interface EnumField extends FieldBase {
   options: string[];
   /** Schema default = what the runtime assumes when the key is absent */
   defaultValue?: string;
+  valueMap?: Record<string, unknown>;
+  innerObjectFormat?: ContentFormat;
 }
 
 /**
@@ -283,6 +286,53 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
   // Bare { type: "object" } with no structural constraints — treat as an open key-value map.
   if (schema.additionalProperties === undefined && !schema.oneOf && !schema.anyOf) return true;
   return false;
+}
+
+/**
+ * Returns the ordered variant keys if every oneOf candidate has exactly one
+ * property whose value schema is an empty-object marker.
+ */
+function isBackoffSchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): string[] | undefined {
+  if (!Array.isArray(schema.oneOf) || schema.properties) return undefined;
+  const candidates = schema.oneOf as unknown[];
+  if (candidates.length < 2) return undefined;
+
+  const keys: string[] = [];
+  for (const candidate of candidates) {
+    if (!isPlainObject(candidate)) return undefined;
+    const c = candidate as Record<string, unknown>;
+
+    const props = c.properties as Record<string, unknown> | undefined;
+    if (!props || !isPlainObject(props)) return undefined;
+    const propKeys = Object.keys(props);
+    if (propKeys.length !== 1) return undefined;
+    const key = propKeys[0]!;
+
+    let valueProp = props[key] as unknown;
+    if (
+      isPlainObject(valueProp) &&
+      typeof (valueProp as Record<string, unknown>).$ref === "string"
+    ) {
+      const ref = resolveRef((valueProp as Record<string, unknown>).$ref as string, defs);
+      if (ref) valueProp = ref;
+    }
+    if (!isPlainObject(valueProp)) return undefined;
+    const valueObj = valueProp as Record<string, unknown>;
+    // Reject if the value schema has any structural constraints.
+    const hasStructure =
+      valueObj.properties !== undefined ||
+      valueObj.oneOf !== undefined ||
+      valueObj.anyOf !== undefined ||
+      valueObj.allOf !== undefined ||
+      (valueObj.additionalProperties !== undefined && valueObj.additionalProperties !== false);
+    if (hasStructure) return undefined;
+
+    keys.push(key);
+  }
+  return keys;
 }
 
 /**
@@ -614,6 +664,28 @@ export function schemaToFormFields(
         }
         continue;
       }
+    }
+
+    // ── Backoff type selector ───────────────────────────────────────────────
+    // Emits an EnumField with valueMap so EnumControl and sets innerObjectFormat
+    // so EnumControl renders a textarea for the inner object payload beneath the combobox.
+    const backoffOptions = isBackoffSchema(resolved, localDefs);
+    if (backoffOptions) {
+      const valueMap: Record<string, unknown> = {};
+      for (const opt of backoffOptions) {
+        valueMap[opt] = { [opt]: {} };
+      }
+      fields.push({
+        kind: "enum",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+        options: backoffOptions,
+        valueMap,
+        innerObjectFormat: format,
+      });
+      continue;
     }
 
     // ── oneOf / anyOf at property level ────────────────────────────────────

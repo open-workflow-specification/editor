@@ -591,6 +591,54 @@ export const NESTED_CONTAINERS_WORKFLOW = {
  * (a string naming a key in `use.errors`).
  */
 
+/**
+ * Minimal try/catch workflow with an inline retryPolicy containing a backoff discriminator.
+ *
+ * Used to test:
+ * - backoff EnumField detection and valueMap writes
+ * - resolveTaskId delegation for Try and Catch inner nodes
+ * - inner object textarea (backoff configuration payload)
+ */
+export const TRY_CATCH_BACKOFF_WORKFLOW = {
+  document: { dsl: "1.0.3", namespace: "test", name: "try-test", version: "0.1.0" },
+  do: [
+    {
+      tryGetPet: {
+        try: [
+          { getPet: { call: "http", with: { method: "get", endpoint: "https://example.com" } } },
+        ],
+        catch: {
+          as: "error",
+          retry: {
+            delay: { seconds: 2 },
+            backoff: { exponential: {} },
+          },
+        },
+      },
+    },
+  ],
+};
+
+export const TRY_CATCH_BACKOFF_RICH_WORKFLOW = {
+  document: { dsl: "1.0.3", namespace: "test", name: "try-test-rich", version: "0.1.0" },
+  do: [
+    {
+      tryGetPet: {
+        try: [
+          { getPet: { call: "http", with: { method: "get", endpoint: "https://example.com" } } },
+        ],
+        catch: {
+          as: "error",
+          retry: {
+            delay: { seconds: 2 },
+            backoff: { exponential: { rate: 2.0, max: { seconds: 30 } } },
+          },
+        },
+      },
+    },
+  ],
+};
+
 export const RAISE_BOTH_ERROR_SHAPES_WORKFLOW = {
   document: { dsl: "1.0.3", name: "raise-shapes", version: "1.0.0", namespace: "default" },
   use: {

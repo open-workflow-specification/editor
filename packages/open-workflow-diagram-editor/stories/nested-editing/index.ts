@@ -24,3 +24,4 @@ export { default as raiseErrorShapes } from "./workflows/raise-error-shapes.yaml
 export { default as runTaskArray } from "./workflows/run-task-array.yaml?raw";
 export { default as setOpenMap } from "./workflows/set-open-map.yaml?raw";
 export { default as switchLockedCases } from "./workflows/switch-locked-cases.yaml?raw";
+export { default as tryCatchRetryInline } from "./workflows/try-catch-retry-inline.yaml?raw";

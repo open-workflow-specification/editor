@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import type * as RF from "@xyflow/react";
+import { GraphNodeType } from "@openworkflowspec/sdk";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import { useI18n } from "@openworkflowspec/i18n";
 import { SidebarFooter } from "@/components/ui/sidebar";
@@ -23,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useFormState } from "react-hook-form";
 import { updateTask } from "@/core/workflowEditing";
 import { applyDirtyValues } from "@/core/taskDraft";
-import { flattenTask, padRemovedPaths } from "@/side-panel/forms/TaskForm";
+import { flattenTask, padRemovedPaths, setNestedPath } from "@/side-panel/forms/TaskForm";
 import {
   computeSentinelDefaults,
   SENTINEL_KEY,
@@ -32,11 +33,17 @@ import {
 } from "@/side-panel/forms/FormField";
 import { getFormFieldsForNodeType } from "@/core";
 import type { FormFieldDescriptor, OneOfField, OneOfVariant } from "@/core/schemaToFormFields";
+import { getInnerObjectForPath } from "@/side-panel/forms/customFields/EnumControl";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { useEditSession } from "./EditSession";
 import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
-import { collectFormListPaths, collectWholeValuePaths } from "./forms/taskFormContext";
+import {
+  collectFormListPaths,
+  collectValueMapFields,
+  collectWholeValuePaths,
+  getNestedValue,
+} from "./forms/taskFormContext";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
@@ -137,6 +144,21 @@ function DraftStatus({ changedCount, isDirty, showApplied }: DraftStatusProps) {
   );
 }
 
+/**
+ * Returns the task id used to locate and update the task in the workflow model.
+ */
+function resolveTaskId(node: RF.Node<BaseNodeData>): string {
+  if (
+    (node.type === GraphNodeType.Try ||
+      node.type === GraphNodeType.Catch ||
+      node.type === "catch-container") &&
+    node.parentId !== undefined
+  ) {
+    return node.parentId;
+  }
+  return node.id;
+}
+
 export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
   const { t } = useI18n();
   const { form } = useEditSession();
@@ -156,10 +178,11 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
 
   const { dirtyFields, isDirty, defaultValues } = useFormState({ control: form.control });
   const task = node.data.task;
+  const taskId = resolveTaskId(node);
   const showApplied = appliedNodeId === node.id;
 
   // Guard conditions that permanently prevent display
-  if (isReadOnly || task === undefined || node.data.taskReference === undefined || model === null) {
+  if (isReadOnly || task === undefined || model === null) {
     return null;
   }
 
@@ -203,6 +226,31 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     // that are exclusive to the non-selected variants so they can be removed.
     const nodeType = node.type ?? "";
     const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
+    const flatTask = flattenTask(task as Record<string, unknown>);
+    for (const enumField of collectValueMapFields(allFields)) {
+      // Read via getValues(path) — reads _formValues directly, bypassing the
+      // defaultValues fallback that getValues() (no args) applies for absent keys.
+      const live = form.getValues(enumField.path as never) as unknown;
+      const raw =
+        typeof live === "string" || live === undefined ? live : flatValues[enumField.path];
+      if (typeof raw === "string") {
+        const key = raw;
+        if (key && enumField.innerObjectFormat !== undefined) {
+          // Read the inner object content from the module-level store populated by EnumControl.
+          const innerObj = getInnerObjectForPath(enumField.path, enumField.innerObjectFormat);
+          // Keep the draft and inline parse error intact; do not partially commit the form.
+          if (innerObj === null) return;
+          flatValues[enumField.path] = { [key]: innerObj };
+        } else {
+          flatValues[enumField.path] = key ? enumField.valueMap![key] : undefined;
+        }
+        flatDirty.add(enumField.path);
+      } else if (raw === undefined && flatTask[enumField.path] !== undefined) {
+        flatValues[enumField.path] = undefined;
+        flatDirty.add(enumField.path);
+      }
+    }
+
     const selectedVariants = collectSelectedVariants(allFields, flatValues);
     const liveSentinelPaths = new Set([...sentinelPaths].filter((p) => selectedVariants.has(p)));
     const sentinelConstWrites = new Map<string, Record<string, unknown>>();
@@ -240,7 +288,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       collectFormListPaths(allFields),
       sentinelPresenceKeys,
     ) as Specification.Task;
-    const updatedModel = updateTask(model, node.id, updated);
+    const updatedModel = updateTask(model, taskId, updated);
     commitWorkflow(updatedModel);
     // Reset to committed state; pass current sentinel labels so variant
     // selections are preserved even when the cleared field has no data match.
@@ -259,16 +307,21 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       updated as Record<string, unknown>,
       currentSentinels,
     );
-    const resetVals: Record<string, unknown> = {
+    const resetVals: Record<string, unknown> = structuredClone({
       ...(updated as Record<string, unknown>),
       ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
-    };
+    });
     padRemovedPaths(
       resetVals,
       task as Record<string, unknown>,
       updated as Record<string, unknown>,
       collectWholeValuePaths(allFields, updated as Record<string, unknown>),
     );
+    for (const enumField of collectValueMapFields(allFields)) {
+      if (getNestedValue(updated as Record<string, unknown>, enumField.path) === undefined) {
+        setNestedPath(resetVals, enumField.path, "");
+      }
+    }
     form.reset(resetVals);
     setAppliedNodeId(node.id);
 

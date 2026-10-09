@@ -22,7 +22,13 @@ import { getFormFieldsForNodeType, structuralEqual } from "@/core";
 import { FormField, SENTINEL_KEY, SENTINEL_PREFIX, computeSentinelDefaults } from "./FormField";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { TaskFormContext, collectWholeValuePaths, filterReadOnlyFields } from "./taskFormContext";
+import {
+  TaskFormContext,
+  collectWholeValuePaths,
+  filterReadOnlyFields,
+  getNestedValue,
+  collectValueMapFields,
+} from "./taskFormContext";
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
 
@@ -52,7 +58,15 @@ export function flattenTask(
       if (Array.isArray(v) || wholeValuePaths.has(fullKey)) {
         result[fullKey] = v;
       } else if (typeof v === "object" && v !== null) {
-        result = { ...result, ...flattenTask(v, fullKey, wholeValuePaths) };
+        const nested = flattenTask(v, fullKey, wholeValuePaths);
+        // If recursing into the object produced no entries but the object itself
+        // is non-empty, keep it as a leaf so it is not silently discarded.
+        // Truly empty objects ({}) are dropped as before.
+        if (Object.keys(nested).length === 0 && Object.keys(v as object).length > 0) {
+          result[fullKey] = v;
+        } else {
+          result = { ...result, ...nested };
+        }
       } else {
         result[fullKey] = v;
       }
@@ -62,7 +76,7 @@ export function flattenTask(
   return prefix ? { [prefix]: value } : {};
 }
 
-function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unknown): void {
+export function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unknown): void {
   const parts = dotPath.split(".");
   if (
     parts.some((part) => part === "__proto__" || part === "prototype" || part === "constructor")
@@ -187,16 +201,21 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
       liveSentinels,
     );
     const taskClone = structuredClone(task as Record<string, unknown>);
-    const resetVals: Record<string, unknown> = {
+    const resetVals: Record<string, unknown> = structuredClone({
       ...taskClone,
       ...(Object.keys(sentinelDefaults).length > 0 ? { [SENTINEL_KEY]: sentinelDefaults } : {}),
-    };
+    });
     padRemovedPaths(
       resetVals,
       prevTask as Record<string, unknown>,
       taskClone,
       collectWholeValuePaths(allFields, taskClone),
     );
+    for (const enumField of collectValueMapFields(allFields)) {
+      if (getNestedValue(task as Record<string, unknown>, enumField.path) === undefined) {
+        setNestedPath(resetVals, enumField.path, "");
+      }
+    }
     form.reset(resetVals);
   }, [task, nodeId, form, allFields]);
 

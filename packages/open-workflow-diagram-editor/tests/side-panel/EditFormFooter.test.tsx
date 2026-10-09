@@ -198,22 +198,21 @@ describe("EditFormFooter", () => {
     });
   });
 
-  describe("node without a taskReference", () => {
+  describe("layout-only node with no task", () => {
     it("never offers the footer", async () => {
-      const frameNode = {
+      const layoutNode = {
         id: "/do/tryTask/try",
         type: "try",
         position: { x: 0, y: 0 },
-        data: { label: "tryTask (try)", task: { try: [] } },
+        data: { label: "tryTask (try)" },
       } as RF.Node<BaseNodeData>;
 
-      renderWithProviders(
-        <>
-          <TaskForm nodeType={frameNode.type!} task={frameNode.data.task!} nodeId={frameNode.id} />
-          <EditFormFooter node={frameNode} />
-        </>,
-        { isReadOnly: false, contentFormat: "yaml", model: {} as never, commitWorkflow: vi.fn() },
-      );
+      renderWithProviders(<EditFormFooter node={layoutNode} />, {
+        isReadOnly: false,
+        contentFormat: "yaml",
+        model: {} as never,
+        commitWorkflow: vi.fn(),
+      });
 
       expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
     });

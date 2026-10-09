@@ -69,6 +69,7 @@ export const en = {
   "sidebar.form.applied": "Applied",
   "sidebar.form.selectOption": "Select an option…",
   "sidebar.form.default": "(default)",
+  "sidebar.form.innerObject.parseError": "Must be a valid YAML/JSON object",
   "aria.form.taskProperties": "Task properties",
   "sidebar.map.addProperty": "+ Add property",
   "sidebar.map.keyPlaceholder": "key",

@@ -19,8 +19,11 @@ import {
   getNestedValue,
   hasValue,
   filterReadOnlyFields,
+  collectFormListPaths,
+  collectValueMapFields,
+  collectWholeValuePaths,
 } from "../../../src/side-panel/forms/taskFormContext";
-import type { FormFieldDescriptor } from "../../../src/core/schemaToFormFields";
+import type { FormFieldDescriptor, EnumField } from "../../../src/core/schemaToFormFields";
 import { SET_EXAMPLE_WORKFLOW } from "../../fixtures/workflows";
 
 // ---------------------------------------------------------------------------
@@ -296,5 +299,211 @@ describe("filterReadOnlyFields — one-of fields", () => {
   it("excludes a property-level one-of when the task has no value at that path", () => {
     const result = filterReadOnlyFields([makeOneOf("output.as")], initializeTask);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// collectFormListPaths
+// ---------------------------------------------------------------------------
+
+describe("collectFormListPaths", () => {
+  it("collects paths for ordered-map and event-filter-list fields recursively", () => {
+    const fields: FormFieldDescriptor[] = [
+      {
+        kind: "ordered-map",
+        path: "switch.cases",
+        label: "Cases",
+        required: false,
+        itemFields: [],
+      },
+      {
+        kind: "object",
+        path: "listen",
+        label: "Listen",
+        required: false,
+        children: [
+          {
+            kind: "event-filter-list",
+            path: "listen.to",
+            label: "To",
+            required: false,
+            itemFields: [],
+          },
+        ],
+      },
+      {
+        kind: "one-of",
+        path: "choice",
+        label: "Choice",
+        required: false,
+        variants: [
+          {
+            label: "Var1",
+            matchesData: () => true,
+            constWrites: {},
+            fields: [
+              {
+                kind: "ordered-map",
+                path: "choice.nested",
+                label: "Nested Map",
+                required: false,
+                itemFields: [],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: "string",
+        path: "name",
+        label: "Name",
+        required: false,
+        multiline: false,
+        isRuntimeExpression: false,
+      },
+    ];
+
+    const result = collectFormListPaths(fields);
+    expect(result).toEqual(new Set(["switch.cases", "listen.to", "choice.nested"]));
+  });
+
+  it("returns empty set when no list fields are present", () => {
+    const fields: FormFieldDescriptor[] = [
+      {
+        kind: "string",
+        path: "name",
+        label: "Name",
+        required: false,
+        multiline: false,
+        isRuntimeExpression: false,
+      },
+    ];
+    expect(collectFormListPaths(fields)).toEqual(new Set());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// collectValueMapFields
+// ---------------------------------------------------------------------------
+
+describe("collectValueMapFields", () => {
+  it("collects EnumFields that have valueMap defined across objects and oneOfs", () => {
+    const backoffField: EnumField = {
+      kind: "enum",
+      path: "catch.retry.backoff",
+      label: "Backoff",
+      required: false,
+      options: ["constant", "exponential"],
+      valueMap: {
+        constant: { constant: {} },
+        exponential: { exponential: {} },
+      },
+    };
+    const plainEnumField: EnumField = {
+      kind: "enum",
+      path: "method",
+      label: "Method",
+      required: false,
+      options: ["get", "post"],
+    };
+
+    const fields: FormFieldDescriptor[] = [
+      plainEnumField,
+      {
+        kind: "object",
+        path: "catch",
+        label: "Catch",
+        required: false,
+        children: [
+          {
+            kind: "one-of",
+            path: "catch.retry",
+            label: "Retry",
+            required: false,
+            variants: [
+              {
+                label: "Policy",
+                matchesData: () => true,
+                constWrites: {},
+                fields: [backoffField],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const result = collectValueMapFields(fields);
+    expect(result).toEqual([backoffField]);
+  });
+
+  it("returns empty array when no valueMap fields exist", () => {
+    const fields: FormFieldDescriptor[] = [
+      { kind: "enum", path: "mode", label: "Mode", required: false, options: ["a", "b"] },
+    ];
+    expect(collectValueMapFields(fields)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// collectWholeValuePaths
+// ---------------------------------------------------------------------------
+
+describe("collectWholeValuePaths", () => {
+  it("collects paths for map and json fields", () => {
+    const fields: FormFieldDescriptor[] = [
+      { kind: "map", path: "set", label: "Set", required: false },
+      {
+        kind: "object",
+        path: "with",
+        label: "With",
+        required: false,
+        children: [
+          { kind: "json", path: "with.data", label: "Data", required: false, format: "yaml" },
+        ],
+      },
+    ];
+
+    const result = collectWholeValuePaths(fields, {});
+    expect(result).toEqual(new Set(["set", "with.data"]));
+  });
+
+  it("evaluates one-of variants using task data matching", () => {
+    const fields: FormFieldDescriptor[] = [
+      {
+        kind: "one-of",
+        path: "call",
+        label: "Call",
+        required: false,
+        variants: [
+          {
+            label: "HTTP",
+            matchesData: (data) => data === "http",
+            constWrites: {},
+            fields: [{ kind: "map", path: "with.headers", label: "Headers", required: false }],
+          },
+          {
+            label: "MCP",
+            matchesData: (data) => data === "mcp",
+            constWrites: {},
+            fields: [
+              {
+                kind: "json",
+                path: "with.params",
+                label: "Params",
+                required: false,
+                format: "json",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const resultHttp = collectWholeValuePaths(fields, { call: "http" });
+    expect(resultHttp).toEqual(new Set(["with.headers"]));
+
+    const resultMcp = collectWholeValuePaths(fields, { call: "mcp" });
+    expect(resultMcp).toEqual(new Set(["with.params"]));
   });
 });

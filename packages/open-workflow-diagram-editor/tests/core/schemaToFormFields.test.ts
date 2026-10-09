@@ -1123,11 +1123,6 @@ describe("schemaToFormFields presence keys", () => {
     ],
     ["run", "run.script", ["Inline Script→-", "External Script→source"]],
     [
-      "try",
-      "catch.retry.backoff",
-      ["Constant Backoff→constant", "Exponential Back Off→exponential", "Linear Backoff→linear"],
-    ],
-    [
       "listen",
       "listen.to",
       [
@@ -1163,5 +1158,104 @@ describe("schemaToFormFields do task", () => {
       ["then", "then", false],
       ["metadata", "map", false],
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Backoff enum detection (catch.retry.backoff in tryTask)
+// ---------------------------------------------------------------------------
+
+/** Recursively find the first field matching a predicate in the descriptor tree. */
+function findFieldDeep(
+  fields: FormFieldDescriptor[],
+  predicate: (f: FormFieldDescriptor) => boolean,
+): FormFieldDescriptor | undefined {
+  for (const f of fields) {
+    if (predicate(f)) return f;
+    if (f.kind === "object") {
+      const found = findFieldDeep(f.children, predicate);
+      if (found) return found;
+    }
+    if (f.kind === "one-of") {
+      for (const v of f.variants) {
+        const found = findFieldDeep(v.fields, predicate);
+        if (found) return found;
+      }
+    }
+  }
+  return undefined;
+}
+
+describe("backoff enum detection in tryTask", () => {
+  it("emits an EnumField (not a OneOfField) for catch.retry.backoff", () => {
+    const fields = getFormFieldsForNodeType("try");
+
+    const backoffField = findFieldDeep(fields, (f) => f.path === "catch.retry.backoff") as
+      | EnumField
+      | undefined;
+
+    expect(backoffField).toBeDefined();
+    expect(backoffField?.kind).toBe("enum");
+  });
+
+  it("catch.retry.backoff EnumField includes the three standard option keys", () => {
+    const fields = getFormFieldsForNodeType("try");
+
+    const backoffField = findFieldDeep(fields, (f) => f.path === "catch.retry.backoff") as
+      | EnumField
+      | undefined;
+
+    expect(backoffField?.options).toEqual(
+      expect.arrayContaining(["constant", "exponential", "linear"]),
+    );
+    expect(backoffField?.options).toHaveLength(3);
+  });
+
+  it("catch.retry.backoff EnumField carries a valueMap that maps each key to its discriminator object", () => {
+    const fields = getFormFieldsForNodeType("try");
+
+    const backoffField = findFieldDeep(fields, (f) => f.path === "catch.retry.backoff") as
+      | EnumField
+      | undefined;
+
+    expect(backoffField?.valueMap).toEqual({
+      constant: { constant: {} },
+      exponential: { exponential: {} },
+      linear: { linear: {} },
+    });
+  });
+
+  it("catch.retry.backoff EnumField carries innerObjectFormat so the inner object textarea is enabled", () => {
+    const fields = getFormFieldsForNodeType("try");
+
+    const backoffField = findFieldDeep(fields, (f) => f.path === "catch.retry.backoff") as
+      | EnumField
+      | undefined;
+
+    expect(backoffField?.innerObjectFormat).toBeDefined();
+  });
+
+  it("no other task type gains an unintended backoff EnumField with a valueMap", () => {
+    const taskTypes = [
+      "set",
+      "call",
+      "do",
+      "for",
+      "fork",
+      "wait",
+      "raise",
+      "emit",
+      "listen",
+      "run",
+      "switch",
+    ];
+    for (const type of taskTypes) {
+      const fields = getFormFieldsForNodeType(type);
+      const backoff = findFieldDeep(
+        fields,
+        (f) => f.kind === "enum" && (f as EnumField).valueMap !== undefined,
+      );
+      expect(backoff, `unexpected enum with valueMap in ${type} task`).toBeUndefined();
+    }
   });
 });

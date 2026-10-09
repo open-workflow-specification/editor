@@ -54,3 +54,4 @@ export const RaiseErrorShapes: Story = createWorkflowStory(workflows.raiseErrorS
 export const RunTaskArray: Story = createWorkflowStory(workflows.runTaskArray);
 export const SetOpenMap: Story = createWorkflowStory(workflows.setOpenMap);
 export const SwitchLockedCases: Story = createWorkflowStory(workflows.switchLockedCases);
+export const TryCatchRetryInline: Story = createWorkflowStory(workflows.tryCatchRetryInline);

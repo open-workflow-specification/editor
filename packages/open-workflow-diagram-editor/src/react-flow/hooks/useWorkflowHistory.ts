@@ -125,7 +125,9 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
       }
 
       // No-op if model content is unchanged.
-      if (structuralEqual(present.model, newModel)) return;
+      if (structuralEqual(present.model, newModel)) {
+        return;
+      }
 
       // Content changed externally (e.g. props.content updated by host or addon panel).
       // Preserve the current viewport so undo restores to where the user was looking,
@@ -203,16 +205,12 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
     setPendingViewportRestore(null);
   }, []);
 
-  const resetHistory = React.useCallback(() => {
-    reset();
-  }, [reset]);
-
   return {
     model: getPresent(state)?.model ?? null,
     selectedNodeId: getPresent(state)?.selectedNodeId ?? null,
     seedModel,
     submitModel,
-    resetHistory,
+    resetHistory: reset,
     undo,
     redo,
     canUndo,
