@@ -49,6 +49,36 @@ export function variantSnapshotKey(field: OneOfField): string {
   return [field.path, ...field.variants.map((v) => v.label)].join("\u0000");
 }
 
+/**
+ * Returns the index of the currently displayed one-of variant.
+ * Priority: sentinel selection > data match > first variant. Used by both form and drill navigation.
+ */
+export function selectedVariantIndex(
+  field: OneOfField,
+  sentinelLabel: unknown,
+  taskData: Record<string, unknown>,
+): number {
+  if (typeof sentinelLabel === "string" && sentinelLabel !== "") {
+    const chosen = field.variants.findIndex((v) => v.label === sentinelLabel);
+    if (chosen !== -1) return chosen;
+  }
+  // The root one-of's data is the whole task; a property-level one-of's is the value at its path.
+  const dataAtPath =
+    field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
+  const matched = field.variants.findIndex((v) => v.matchesData(dataAtPath));
+  return matched === -1 ? 0 : matched;
+}
+
+/**
+ * TEMPORARY: revisit when one-ofs drill. The one-of then becomes the drill target (and owns the
+ * breadcrumb label), so the map is no longer named on its own
+ */
+export function variantFieldsOf(field: OneOfField, variant: OneOfVariant): FormFieldDescriptor[] {
+  return variant.fields.map((child) =>
+    child.path === field.path && child.kind === "map" ? { ...child, label: field.label } : child,
+  );
+}
+
 export const TaskFormContext = React.createContext<TaskFormContextType>({
   isReadOnly: false,
   siblingTaskNames: [],
@@ -302,8 +332,8 @@ export function prefixFields(fields: FormFieldDescriptor[], prefix: string): For
  * Recursively filters a field list for read-only display.
  *
  * Rules:
- * - Object groups: hidden if the parent key is absent from task data; collapsed
- *   if present but all children have no values.
+ * - Object groups: hidden if the parent key is absent from task data or none of
+ *   the children has a value; otherwise kept whole (children unfiltered).
  * - one-of fields: hidden unless the task has a value at the field's path.
  *   The ROOT_ONE_OF_PATH one-of (top-level task variant) is always shown.
  * - Scalar fields (string/number/boolean/enum/…): hidden unless the task has a
@@ -322,9 +352,9 @@ export function filterReadOnlyFields(
     if (field.kind === "object") {
       // Never show the object group if the parent key doesn't exist in the task data.
       if (!hasObjectAtPath(task, field.path)) return [];
-      const children = filterReadOnlyFields(field.children, task);
-      if (children.length === 0) return [];
-      return [{ ...field, children }];
+      // Kept whole, like a section: its drill row counts "n of m set" against every child, and
+      // whatever renders the children filters them itself.
+      return filterReadOnlyFields(field.children, task).length === 0 ? [] : [field];
     }
 
     if (field.kind === "one-of") {

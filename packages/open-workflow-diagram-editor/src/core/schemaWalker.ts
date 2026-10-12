@@ -119,7 +119,13 @@ export function partitionTaskBaseFields(
   return [
     ...own,
     ...flow,
-    { kind: "section", path: COMMON_FIELDS_PATH, label: "", required: false, children: common },
+    {
+      kind: "section",
+      path: COMMON_FIELDS_PATH,
+      label: "Common fields",
+      required: false,
+      children: common,
+    },
   ];
 }
 

@@ -18,21 +18,21 @@ import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
-import type { SectionField } from "../../../core/schemaToFormFields";
 import { changedPaths, countChangedUnder, countFieldErrors, hasDraftValue } from "../draftChanges";
-import { drillLabel } from "./drill";
+import { isObjectNotArray } from "../../../core/utils";
+import { drillLabel, type DrillTarget } from "./drill";
 import { useDrill } from "./DrillContext";
 import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
 
 /**
- * Displays a clickable row showing:
- *  - Section label + required indicator
- *  - Summary(e.g "3 of 6 set")
+ * Displays a clickable row for a section, object or map, showing:
+ *  - Label + required indicator
+ *  - Summary: "3 of 6 set" (section, object) or "2 entries" (map)
  *  - Changed pill, if changes exist
  *  - Error pill, if validation errors exist
  */
 
-export function DrillRow({ field }: { field: SectionField }) {
+export function DrillRow({ field }: { field: DrillTarget }) {
   const { t } = useI18n();
   const { open } = useDrill();
   const { isReadOnly, taskData } = useTaskFormContext();
@@ -40,8 +40,8 @@ export function DrillRow({ field }: { field: SectionField }) {
 
   /** Prevents recreating array on every render, which would break useWatch subscription */
   const childPaths = React.useMemo(
-    () => field.children.map((child) => child.path),
-    [field.children],
+    () => (field.kind === "map" ? [field.path] : field.children.map((child) => child.path)),
+    [field],
   );
 
   /** Only re-renders when values change, not on every keystroke */
@@ -50,10 +50,6 @@ export function DrillRow({ field }: { field: SectionField }) {
     control,
     name: childPaths as never,
   });
-
-  const setCount = isReadOnly
-    ? field.children.filter((child) => filterReadOnlyFields([child], taskData).length > 0).length
-    : values.filter(hasDraftValue).length;
 
   const changed = changedPaths(
     dirtyFields,
@@ -64,7 +60,20 @@ export function DrillRow({ field }: { field: SectionField }) {
   const errorCount = childPaths.reduce((sum, path) => sum + countFieldErrors(get(errors, path)), 0);
 
   const label = drillLabel(field, t);
-  const summary = `${setCount} ${t("sidebar.drill.of")} ${field.children.length} ${t("sidebar.drill.set")}`;
+  let summary: string;
+  if (field.kind === "map") {
+    // A removed entry stays in the draft as `undefined` until Apply drops it.
+    const map = values[0];
+    const entries = isObjectNotArray(map)
+      ? Object.values(map).filter((value) => value !== undefined).length
+      : 0;
+    summary = `${entries} ${t(entries === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+  } else {
+    const setCount = isReadOnly
+      ? field.children.filter((child) => filterReadOnlyFields([child], taskData).length > 0).length
+      : values.filter(hasDraftValue).length;
+    summary = `${setCount} ${t("sidebar.drill.of")} ${field.children.length} ${t("sidebar.drill.set")}`;
+  }
   const changedText = `${changedCount} ${t("sidebar.form.changed")}`;
   const errorText = `${errorCount} ${t(errorCount === 1 ? "sidebar.drill.error" : "sidebar.drill.errors")}`;
   const ariaLabel = [

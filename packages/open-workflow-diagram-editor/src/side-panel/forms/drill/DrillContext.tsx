@@ -31,3 +31,10 @@ export const DrillContext = React.createContext<DrillContextValue>({ open: () =>
 export function useDrill(): DrillContextValue {
   return React.useContext(DrillContext);
 }
+
+/**
+ * Controls whether objects/maps render inline or as drill rows.
+ * True at top level and for single-child objects (avoids unnecessary nesting).
+ * False for sections and drilled levels (unless showing a single field).
+ */
+export const InlineLevelsContext = React.createContext(true);

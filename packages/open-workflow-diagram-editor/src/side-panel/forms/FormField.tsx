@@ -20,8 +20,8 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ROOT_ONE_OF_PATH,
   type FormFieldDescriptor,
+  type MapField,
   type ObjectField,
   type OneOfField,
   type OrderedMapField,
@@ -33,6 +33,8 @@ import {
   getNestedValue,
   prefixFields,
   collectLeafKinds,
+  selectedVariantIndex,
+  variantFieldsOf,
   VariantSnapshotsContext,
   variantSnapshotKey,
   type VariantSnapshots,
@@ -45,8 +47,10 @@ import {
   ComboboxList,
 } from "./ui/combobox";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
-import { SENTINEL_PREFIX, SENTINEL_SUFFIX } from "./sentinels";
+import { sentinelPath as toSentinelPath } from "./sentinels";
 import { DrillRow } from "./drill/DrillRow";
+import { InlineLevelsContext } from "./drill/DrillContext";
+import { isInlineLevel } from "./drill/drill";
 
 /* useFieldArry's per entry key, not 'id': (an entry name could be 'id') */
 export const RHF_ENTRY_KEY = "__rhfEntryKey";
@@ -70,7 +74,7 @@ export function FormField({ field }: FormFieldProps) {
     return <OneOfFieldRow field={field} />;
   }
   if (field.kind === "map") {
-    return <KeyValueMapField field={field} />;
+    return <MapFieldRow field={field} />;
   }
   if (field.kind === "ordered-map") {
     return <OrderedMapRow field={field} />;
@@ -252,9 +256,11 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
                 <span className="dec-form-ordered-map-index">{row.index + 1}</span>
                 <span className="dec-form-ordered-map-name">{row.name}</span>
               </legend>
-              {row.fields.map((child) => (
-                <FormField key={child.path} field={child} />
-              ))}
+              <InlineLevelsContext.Provider value={true}>
+                {row.fields.map((child) => (
+                  <FormField key={child.path} field={child} />
+                ))}
+              </InlineLevelsContext.Provider>
             </fieldset>
           ))}
         </div>
@@ -263,11 +269,27 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// ObjectFieldRow — collapsible group for object fields with sub-properties
-// ---------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// ObjectFieldRow / MapFieldRow — renders as drill row or inline based on context
+// ------------------------------------------------------------------------------
 
+// Renders an object field as either a drill row or inline collapsible group.
 function ObjectFieldRow({ field }: { field: ObjectField }) {
+  const inline = React.useContext(InlineLevelsContext);
+  if (!inline) return <DrillRow field={field} />;
+  return <InlineObjectGroup field={field} />;
+}
+
+// Renders a map field as either a drill row or inline key-value editor.
+function MapFieldRow({ field }: { field: MapField }) {
+  const inline = React.useContext(InlineLevelsContext);
+  if (!inline) return <DrillRow field={field} />;
+  return <KeyValueMapField field={field} />;
+}
+
+// TEMPORARY: the inline group is replaced by a plain group heading
+// when headings land in the drill-in follow-up PR.
+function InlineObjectGroup({ field }: { field: ObjectField }) {
   const [expanded, setExpanded] = React.useState(true);
   const { isReadOnly, taskData } = useTaskFormContext();
   const { t } = useI18n();
@@ -327,9 +349,12 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 
       {expanded && (
         <div className="dec-form-object-children">
-          {visibleChildren.map((child) => (
-            <FormField key={child.path} field={child} />
-          ))}
+          {/* Below an inline object, objects drill, unless one is its only child. */}
+          <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
+            {visibleChildren.map((child) => (
+              <FormField key={child.path} field={child} />
+            ))}
+          </InlineLevelsContext.Provider>
         </div>
       )}
     </div>
@@ -343,25 +368,15 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 function OneOfFieldRow({ field }: { field: OneOfField }) {
   const { isReadOnly, taskData } = useTaskFormContext();
   const { control, getValues, setValue, register } = useFormContext<Record<string, unknown>>();
-  const sentinelPath = `${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`;
+  const sentinelPath = toSentinelPath(field.path);
 
   // Watched so the row follows a reset as well as switch
   const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
 
-  const derivedIdx = React.useMemo(() => {
-    if (typeof sentinelLabel === "string" && sentinelLabel !== "") {
-      const chosen = field.variants.findIndex((v) => v.label === sentinelLabel);
-      if (chosen !== -1) {
-        return chosen;
-      }
-    }
-    // For the root one-of the relevant data is the whole task object;
-    // for property-level one-ofs it's the value at the field's path.
-    const dataAtPath =
-      field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
-    const idx = field.variants.findIndex((v) => v.matchesData(dataAtPath));
-    return idx === -1 ? 0 : idx;
-  }, [field.path, field.variants, taskData, sentinelLabel]);
+  const derivedIdx = React.useMemo(
+    () => selectedVariantIndex(field, sentinelLabel, taskData),
+    [field, taskData, sentinelLabel],
+  );
 
   const [selectedVariantIdx, setSelectedVariantIdx] = React.useState(derivedIdx);
 
@@ -460,9 +475,9 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
 
   const visibleVariantFields = React.useMemo(() => {
     if (!currentVariant) return [];
-    if (!isReadOnly) return currentVariant.fields;
-    return filterReadOnlyFields(currentVariant.fields, taskData);
-  }, [currentVariant, isReadOnly, taskData]);
+    const fields = variantFieldsOf(field, currentVariant);
+    return isReadOnly ? filterReadOnlyFields(fields, taskData) : fields;
+  }, [currentVariant, isReadOnly, taskData, field]);
 
   // If there is only 1 variant or no variants, render child fields without a combo selector
   if (field.variants.length <= 1) {

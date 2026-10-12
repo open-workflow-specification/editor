@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import { useWatch } from "react-hook-form";
 import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
@@ -30,15 +31,17 @@ import {
   getNestedValue,
   collectValueMapFields,
   padRemovedPaths,
+  selectedVariantIndex,
   VariantSnapshotsContext,
   type VariantSnapshots,
 } from "./taskFormContext";
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
 import { flattenTask, setNestedPath } from "@/core/taskDraft";
-import { SENTINEL_KEY } from "./sentinels";
+import { SENTINEL_KEY, SENTINEL_SUFFIX } from "./sentinels";
 import { useDrillNavigation } from "./drill/useDrillNavigation";
-import { DrillContext } from "./drill/DrillContext";
+import { DrillContext, InlineLevelsContext } from "./drill/DrillContext";
+import type { VariantSelector } from "./drill/drill";
 import { DrillBreadcrumb } from "./drill/DrillBreadcrumb";
 
 // ---------------------------------------------------------------------------
@@ -169,11 +172,30 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   }, [allFields, isReadOnly, task]);
 
   //  ── Drill-in navigation  ────────────────────
+  // Flattened via `compute` to create a new object reference on each change.
+  // Ensures re-render when variant switches, even though RHF mutates the sentinel object.
+  const sentinels = useWatch({
+    control: form.control,
+    name: SENTINEL_KEY,
+    compute: (value: unknown) => flattenTask((value ?? {}) as Record<string, unknown>),
+  }) as Record<string, unknown>;
+  const selectVariant = React.useCallback<VariantSelector>(
+    (field) =>
+      field.variants[
+        selectedVariantIndex(
+          field,
+          sentinels[`${field.path}${SENTINEL_SUFFIX}`],
+          task as Record<string, unknown>,
+        )
+      ],
+    [sentinels, task],
+  );
   const navigation = useDrillNavigation({
     fields: visibleFields,
     nodeId,
     isReadOnly,
     task: task as Record<string, unknown>,
+    selectVariant,
   });
 
   if (allFields.length === 0 || visibleFields.length === 0) return null;
@@ -200,11 +222,13 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
                 onNavigate={navigation.goTo}
               />
             )}
-            <div className="dec-task-form-fields">
-              {navigation.levelFields.map((field) => (
-                <FormField key={field.path} field={field} />
-              ))}
-            </div>
+            <InlineLevelsContext.Provider value={navigation.inlineLevels}>
+              <div className="dec-task-form-fields">
+                {navigation.levelFields.map((field) => (
+                  <FormField key={field.path} field={field} />
+                ))}
+              </div>
+            </InlineLevelsContext.Provider>
           </form>
         </DrillContext.Provider>
       </VariantSnapshotsContext.Provider>

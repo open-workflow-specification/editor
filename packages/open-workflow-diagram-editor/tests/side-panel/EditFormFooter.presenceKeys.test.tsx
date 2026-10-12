@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
-import { openCommonFields } from "../test-utils/drill-helpers";
+import { openCommonFields, openLevel } from "../test-utils/drill-helpers";
 import { getTaskBaseKeys } from "../../src/core";
 
 vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
@@ -90,7 +90,12 @@ describe("switching a presence-keyed selector and applying with nothing filled i
     const { commitWorkflow, user } = renderFooter(nodeId);
     await act(async () => {});
 
-    if (getTaskBaseKeys().has(path.split(".")[0]!)) await openCommonFields(user);
+    const [key] = path.split(".");
+    // A taskBase object (`input`) is a drill row inside Common fields.
+    if (getTaskBaseKeys().has(key!)) {
+      await openCommonFields(user);
+      await openLevel(user, key!);
+    }
 
     await user.click(screen.getAllByRole("button", { name: option })[0]!);
     await user.click(screen.getByRole("button", { name: "Apply" }));

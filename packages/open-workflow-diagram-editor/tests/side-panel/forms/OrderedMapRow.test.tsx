@@ -32,6 +32,7 @@ import { FormField, RHF_ENTRY_KEY } from "../../../src/side-panel/forms/FormFiel
 import { TaskFormContext } from "../../../src/side-panel/forms/taskFormContext";
 import { getFormFieldsForNodeType } from "../../../src/core/schemaWalker";
 import type { OrderedMapField } from "../../../src/core/schemaToFormFields";
+import { InlineLevelsContext } from "../../../src/side-panel/forms/drill/DrillContext";
 import { MANAGING_GITHUB_ISSUES_WORKFLOW } from "../../fixtures/workflows";
 import { nodeAt, parseFixture, switchCase, t } from "../../test-utils";
 
@@ -71,7 +72,18 @@ const casesField = getFormFieldsForNodeType("switch").find(
 // Harness
 // ---------------------------------------------------------------------------
 
-function renderCases({ isReadOnly = false, task = switchTask } = {}) {
+function renderCases({
+  isReadOnly = false,
+  task = switchTask,
+  field = casesField,
+  inline = true,
+}: {
+  isReadOnly?: boolean;
+  task?: Record<string, unknown>;
+  field?: OrderedMapField;
+  /** `false` renders the cases as if on a drilled level, where objects become drill rows. */
+  inline?: boolean;
+} = {}) {
   const captured = { form: undefined as UseFormReturn<Record<string, unknown>> | undefined };
 
   function Harness() {
@@ -90,7 +102,9 @@ function renderCases({ isReadOnly = false, task = switchTask } = {}) {
             }}
           >
             <FormProvider {...form}>
-              <FormField field={casesField} />
+              <InlineLevelsContext.Provider value={inline}>
+                <FormField field={field} />
+              </InlineLevelsContext.Provider>
             </FormProvider>
           </TaskFormContext.Provider>
         </TooltipProvider>
@@ -219,5 +233,36 @@ describe("switch cases row", () => {
     expect(screen.queryByRole("group", { name: /closeIssue/ })).toBeNull();
     expect(screen.getByRole("group", { name: /review/ })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /requestDetails/ })).toBeInTheDocument();
+  });
+
+  // Drill-in cannot resolve a level inside an entry, so a row there would open nothing.
+  it("keeps an object inside a case inline, even on a drilled level", () => {
+    const withObject: OrderedMapField = {
+      ...casesField,
+      itemFields: [
+        ...casesField.itemFields,
+        {
+          kind: "object",
+          path: "meta",
+          label: "meta",
+          required: false,
+          children: [
+            {
+              kind: "string",
+              path: "meta.note",
+              label: "note",
+              required: false,
+              multiline: false,
+              isRuntimeExpression: false,
+            },
+          ],
+        },
+      ],
+    };
+    const task = { switch: [{ closeIssue: { ...closeIssueCase, meta: { note: "kept inline" } } }] };
+    renderCases({ field: withObject, task, inline: false });
+
+    expect(screen.queryByRole("button", { name: /^Open meta/ })).toBeNull();
+    expect(screen.getByDisplayValue("kept inline")).toBeInTheDocument();
   });
 });

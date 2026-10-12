@@ -19,7 +19,13 @@ import { useI18n } from "@openworkflowspec/i18n";
 import type { FormFieldDescriptor } from "../../../core/schemaToFormFields";
 import { filterReadOnlyFields } from "../taskFormContext";
 import type { DrillContextValue } from "./DrillContext";
-import { drillLabel, resolveDrillStack } from "./drill";
+import {
+  drillLabel,
+  isInlineLevel,
+  levelFieldsOf,
+  resolveDrillStack,
+  type VariantSelector,
+} from "./drill";
 
 /**
  * Custom hook managing drill-in navigation state and behavior.
@@ -35,6 +41,8 @@ export type DrillNavigationOptions = {
   isReadOnly: boolean;
   /** The committed task, which read-only filters an opened level against. */
   task: Record<string, unknown>;
+  /** The variant each one-of shows, so an object inside one resolves to the one on screen. */
+  selectVariant: VariantSelector;
 };
 
 export type DrillNavigation = {
@@ -52,6 +60,8 @@ export type DrillNavigation = {
   levelFields: FormFieldDescriptor[];
   /** The task's name, for the breadcrumb's top-level button. */
   taskName: string;
+  /** Whether objects and maps directly on the open level render inline (see `InlineLevelsContext`). */
+  inlineLevels: boolean;
 };
 
 /**
@@ -64,6 +74,7 @@ export function useDrillNavigation({
   nodeId,
   isReadOnly,
   task,
+  selectVariant,
 }: DrillNavigationOptions): DrillNavigation {
   const { t } = useI18n();
   const [drillStack, setDrillStack] = React.useState<string[]>([]);
@@ -79,7 +90,10 @@ export function useDrillNavigation({
   const formRef = React.useRef<HTMLFormElement>(null);
   const pendingFocus = React.useRef<PendingFocus | null>(null);
 
-  const levels = React.useMemo(() => resolveDrillStack(fields, drillStack), [fields, drillStack]);
+  const levels = React.useMemo(
+    () => resolveDrillStack(fields, drillStack, selectVariant),
+    [fields, drillStack, selectVariant],
+  );
   const taskName = nodeId?.split("/").pop() ?? "";
 
   const drill = React.useMemo<DrillContextValue>(
@@ -120,14 +134,19 @@ export function useDrillNavigation({
   });
 
   const current = levels[levels.length - 1];
-  // Read-only keeps a section whole (for its "n of 6 set"), so the opened level filters its own.
+  // Read-only keeps a section or object whole (for its "n of m set"), so the level filters its own.
   const levelFields = React.useMemo(() => {
     if (current === undefined) return fields;
-    if (!isReadOnly) return current.children;
-    return filterReadOnlyFields(current.children, task);
+    if (!isReadOnly) return levelFieldsOf(current);
+    return filterReadOnlyFields(levelFieldsOf(current), task);
   }, [current, fields, isReadOnly, task]);
 
   const trail = levels.map((level) => drillLabel(level, t));
 
-  return { formRef, drill, announcement, trail, goTo, levelFields, taskName };
+  // The top level, and a level with a single field (a lone object, or a map's own editor), show
+  // their objects and maps inline.
+  // Counted on the fields shown, so read-only's filtered level follows the same rule.
+  const inlineLevels = current === undefined || isInlineLevel(levelFields);
+
+  return { formRef, drill, announcement, trail, goTo, levelFields, taskName, inlineLevels };
 }

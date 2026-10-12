@@ -19,3 +19,8 @@ export const SENTINEL_KEY = "__oneof__";
 export const SENTINEL_SELF_KEY = "__self__";
 export const SENTINEL_PREFIX = `${SENTINEL_KEY}.`;
 export const SENTINEL_SUFFIX = `.${SENTINEL_SELF_KEY}`;
+
+/** Where the one-of at `path` records its selected variant's label. */
+export function sentinelPath(path: string): string {
+  return `${SENTINEL_PREFIX}${path}${SENTINEL_SUFFIX}`;
+}

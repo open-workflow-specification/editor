@@ -820,11 +820,16 @@ export const COMMON_FIELDS_WORKFLOW = {
     {
       fetch: {
         call: "http",
-        with: { method: "get", endpoint: "https://example.com/orders" },
+        with: {
+          method: "get",
+          endpoint: "https://example.com/orders",
+          headers: { accept: "application/json", "x-trace": "on" },
+        },
         input: { from: "${ .orders }" },
       },
     },
     { bare: { set: { done: true } } },
     { emptyMetadata: { set: { done: true }, metadata: {} } },
+    { shape: { set: { done: true }, output: { as: { id: "${ .id }" } } } },
   ],
 };

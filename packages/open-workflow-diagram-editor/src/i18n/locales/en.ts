@@ -101,6 +101,8 @@ export const en = {
   "sidebar.drill.set": "set",
   "sidebar.drill.error": "error",
   "sidebar.drill.errors": "errors",
+  "sidebar.drill.entry": "entry",
+  "sidebar.drill.entries": "entries",
   "sidebar.drill.fieldPath": "Field path",
   "sidebar.drill.up": "Up one level",
   "sidebar.drill.top": "Top level of",

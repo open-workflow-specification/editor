@@ -203,17 +203,11 @@ describe("filterReadOnlyFields — object groups", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("includes the group and filters its children when the parent key exists", () => {
+  it("includes the group whole when the parent key exists and a child has a value", () => {
     const task = { set: { startEvent: "${ $workflow.input[0] }", extra: "" } };
-    const result = filterReadOnlyFields(
-      [makeObject("set", [makeString("set.startEvent"), makeString("set.extra")])],
-      task,
-    );
-    expect(result).toHaveLength(1);
-    const group = result[0] as Extract<FormFieldDescriptor, { kind: "object" }>;
-    // Only the child with a real value survives
-    expect(group.children).toHaveLength(1);
-    expect(group.children[0]!.path).toBe("set.startEvent");
+    const object = makeObject("set", [makeString("set.startEvent"), makeString("set.extra")]);
+    // Whole, so its drill row can count "1 of 2 set"; the renderer filters the children.
+    expect(filterReadOnlyFields([object], task)).toEqual([object]);
   });
 
   it("excludes the group when the parent key exists but all children are empty", () => {

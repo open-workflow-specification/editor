@@ -17,9 +17,18 @@
 import { screen } from "@testing-library/react";
 import type { UserEvent } from "@testing-library/user-event";
 
+/** Opens the level behind the drill row labelled `label` on the current level. */
+export async function openLevel(user: UserEvent, label: string): Promise<void> {
+  // A drill row's accessible name is "Open <label>, <summary>…". Matched as a prefix, not a regex,
+  // so a label like "Timeout (ISO 8601)" is taken literally.
+  await user.click(
+    screen.getByRole("button", { name: (name) => name.startsWith(`Open ${label},`) }),
+  );
+}
+
 /** Opens the task's Common fields level, where the taskBase fields live. */
 export async function openCommonFields(user: UserEvent): Promise<void> {
-  await user.click(screen.getByRole("button", { name: /^Open Common fields/ }));
+  await openLevel(user, "Common fields");
 }
 
 /** Leaves the open level with the breadcrumb's back button. */
