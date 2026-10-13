@@ -256,6 +256,9 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
                 <span className="dec-form-ordered-map-index">{row.index + 1}</span>
                 <span className="dec-form-ordered-map-name">{row.name}</span>
               </legend>
+              {/* TEMPORARY: objects and maps in an entry stay inline because `findDrillTarget`
+                  cannot resolve a level inside an entry. Remove when navigation can, and apply
+                  the usual `isInlineLevel` rule here. No-op today: switch cases are scalars. */}
               <InlineLevelsContext.Provider value={true}>
                 {row.fields.map((child) => (
                   <FormField key={child.path} field={child} />
@@ -462,6 +465,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
     },
     [
       selectedVariantIdx,
+      setSelectedVariantIdx,
       field.variants,
       getValues,
       setValue,

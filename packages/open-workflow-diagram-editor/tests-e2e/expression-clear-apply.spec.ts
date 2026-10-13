@@ -32,6 +32,15 @@ async function waitForSidebar(page: Page) {
   await expect(sidebar).toHaveAttribute("data-state", "expanded");
 }
 
+// Objects below a task's top level drill: open one by its row ("Open <label>, <summary>").
+async function openLevel(page: Page, label: string) {
+  // Escaped so a label like "Timeout (ISO 8601)" is matched literally.
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const row = page.getByRole("button", { name: new RegExp(`^Open ${escaped},`) });
+  await expect(row).toBeVisible();
+  await row.click();
+}
+
 async function getContentYaml(page: Page): Promise<string> {
   await page.getByRole("button", { name: "Get Content" }).click();
   const textarea = page.locator("textarea[readonly]");
@@ -105,6 +114,8 @@ test("clearing an expression field and clicking Apply does not restore the old v
   await expect(methodOption).toBeVisible();
   await methodOption.click();
 
+  await openLevel(page, "Mcp Http Transport");
+
   // Find the Endpoint variant combobox and select Expression if needed
   const allCombos = form.locator('[data-slot="combobox-input"]');
   const comboCount = await allCombos.count();
@@ -147,6 +158,8 @@ test("clearing an expression field and clicking Apply does not restore the old v
   await clickNode(page, "call-node-/do/getPet");
   await waitForSidebar(page);
   await expect(form).toBeVisible();
+
+  await openLevel(page, "Mcp Http Transport");
 
   // Verify expression shows the committed value
   const exprInputAfterReselect = form.locator("input.dec-form-expression-input").last();
