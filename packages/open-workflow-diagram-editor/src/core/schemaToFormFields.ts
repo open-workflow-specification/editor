@@ -181,6 +181,11 @@ export interface StringListField extends FieldBase {
 export interface JsonField extends FieldBase {
   kind: "json";
   format: ContentFormat;
+  /**
+   * True when this data variant coexists in a oneOf with an expression variant. Only then is an
+   * expression string a stale value from a variant switch; elsewhere it is the field's value.
+   */
+  hasExpressionSibling?: boolean;
 }
 
 export interface OneOfField extends FieldBase {
@@ -236,9 +241,10 @@ const STRUCTURED_PAYLOAD_KEYS = new Set([
   "payload",
   "body",
   "data",
-  // `output.as` and `export.as` accept any JSON/YAML value (not just a flat
-  // key-value map), so render them as a YAML/JSON textarea like payload/body.
+  // `input.from`, `output.as` and `export.as` accept any JSON/YAML value (not just a
+  // flat key-value map), so render them as a YAML/JSON textarea like payload/body.
   "as",
+  "from",
 ]);
 
 /**
@@ -280,6 +286,31 @@ function resolveRef(
   const name = ref.slice("#/$defs/".length);
   const def = defs[name];
   return isObjectNotArray(def) ? def : null;
+}
+
+/**
+ * Combines a resolved `$ref` target with the keywords written beside the `$ref`. Both apply, so
+ * `properties` and `required` are unioned rather than overwritten
+ */
+function mergeRef(
+  target: Record<string, unknown>,
+  local: Record<string, unknown>,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...target, ...local, $ref: undefined };
+  if (isObjectNotArray(target.properties) && isObjectNotArray(local.properties)) {
+    merged.properties = { ...target.properties, ...local.properties };
+  }
+  if (Array.isArray(target.required) && Array.isArray(local.required)) {
+    merged.required = [...new Set([...target.required, ...local.required])];
+  }
+  return merged;
+}
+
+/** True when a schema carries only descriptive keywords, so it accepts any JSON value. */
+function isUnconstrainedSchema(schema: Record<string, unknown>): boolean {
+  return Object.entries(schema).every(
+    ([key, value]) => value === undefined || SCHEMA_META_KEYS.has(key),
+  );
 }
 
 /**
@@ -588,7 +619,7 @@ export function schemaToFormFields(
     if (typeof prop.$ref === "string") {
       const ref = resolveRef(prop.$ref, localDefs);
       if (ref) {
-        resolved = { ...ref, ...prop, $ref: undefined };
+        resolved = mergeRef(ref, prop);
       }
     }
 
@@ -749,7 +780,7 @@ export function schemaToFormFields(
             let subResolved: Record<string, unknown> = subSchema;
             if (typeof subSchema.$ref === "string") {
               const ref = resolveRef(subSchema.$ref, localDefs);
-              if (ref) subResolved = { ...ref, ...subSchema, $ref: undefined };
+              if (ref) subResolved = mergeRef(ref, subSchema);
             }
             const rawTitle = typeof subResolved.title === "string" ? subResolved.title : undefined;
             const label =
@@ -1060,8 +1091,9 @@ export function schemaToFormFields(
       continue;
     }
 
-    // ── Fallback: unconstrained structured-payload key → JSON/YAML textarea ─
-    if (isStructuredPayload(key, fieldPath)) {
+    // ── Fallback: structured payload or untyped value > JSON/YAML textarea ─
+    // An untyped property accepts any value — `schema.document` is usually an object.
+    if (isStructuredPayload(key, fieldPath) || isUnconstrainedSchema(resolved)) {
       fields.push({
         kind: "json",
         format,
@@ -1072,14 +1104,13 @@ export function schemaToFormFields(
       });
       continue;
     }
-    const fallbackMultiline = key === "document";
     fields.push({
       kind: "string",
       path: fieldPath,
       label: deriveLabel(prop, key),
       ...withDesc(description),
       required: isRequired,
-      multiline: fallbackMultiline,
+      multiline: false,
       isRuntimeExpression: false,
     });
   }
@@ -1233,7 +1264,7 @@ function buildOneOfVariants(
     let resolved: Record<string, unknown> = c;
     if (typeof c.$ref === "string") {
       const ref = resolveRef(c.$ref, defs);
-      if (ref) resolved = { ...ref, ...c, $ref: undefined };
+      if (ref) resolved = mergeRef(ref, c);
     }
 
     const titleCandidate =
@@ -1261,8 +1292,7 @@ function buildOneOfVariants(
       isUriTemplateAnyOf
     ) {
       // ── Truly-empty schema {} — treat as unconstrained JSON value ─────────
-      const isEmptySchema = Object.keys(resolved).every((k) => SCHEMA_META_KEYS.has(k));
-      if (isEmptySchema) {
+      if (isUnconstrainedSchema(resolved)) {
         // Use the schema title when available, otherwise derive from the last
         // segment of the parent path (e.g. "emit.event.with.data" → "data"),
         // capitalised. Generic fallback labels like "Option N" are replaced.
@@ -1574,15 +1604,15 @@ function buildOneOfVariants(
     });
   }
 
-  // Mark literal string fields whose sibling variants include an expression variant.
+  // Mark literal string and data fields whose sibling variants include an expression variant.
   const hasExpVariantInCollapsed = collapsed.some(
     (v) => v.fields[0]?.kind === "string" && (v.fields[0] as StringField).isRuntimeExpression,
   );
   if (hasExpVariantInCollapsed) {
     for (const v of collapsed) {
       const f = v.fields[0];
-      if (f?.kind === "string" && !(f as StringField).isRuntimeExpression) {
-        (f as StringField).hasExpressionSibling = true;
+      if ((f?.kind === "string" && !f.isRuntimeExpression) || f?.kind === "json") {
+        f.hasExpressionSibling = true;
       }
     }
   }

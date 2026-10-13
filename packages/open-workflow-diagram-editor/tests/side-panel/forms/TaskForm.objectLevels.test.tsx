@@ -80,6 +80,22 @@ describe("TaskForm inline objects", () => {
   });
 });
 
+describe("TaskForm structured common fields", () => {
+  it("shows an inline schema document and a nested input.from as YAML", async () => {
+    const user = renderTask(COMMON_FIELDS_WORKFLOW, "/do/validated");
+    await openCommonFields(user);
+    await openLevel(user, "input");
+
+    // Exact match: the default normalizer collapses the YAML's newlines and indentation.
+    const exact = { normalizer: (text: string) => text };
+    expect(screen.getByDisplayValue("customer:\n  name: ${ .name }", exact)).toBeVisible();
+
+    // `schema` is a one-of with a multi-value option (resource), so it is its own level.
+    await openLevel(user, "Schema");
+    expect(screen.getByDisplayValue("type: object\nrequired:\n  - id", exact)).toBeVisible();
+  });
+});
+
 describe("TaskForm object levels", () => {
   it("keeps text that does not parse yet when its level is left and reopened", async () => {
     const user = renderTask(COMMON_FIELDS_WORKFLOW, "/do/shape");

@@ -60,6 +60,7 @@ const dataField: JsonField = {
   path: "emit.event.with.data",
   label: "Data",
   required: false,
+  hasExpressionSibling: true,
 };
 
 const taskFormContextValue: TaskFormContextType = {

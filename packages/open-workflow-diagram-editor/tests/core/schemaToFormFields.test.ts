@@ -15,6 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { workflowSchema } from "@openworkflowspec/sdk";
 import {
   COMMON_FIELDS_PATH,
   ROOT_ONE_OF_PATH,
@@ -1367,5 +1368,74 @@ describe("schemaToFormFields same-path one-ofs", () => {
       label,
     ]);
     expect(variants.find((variant) => variant.label === label)?.presenceKey).toBe(presenceKey);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Common fields — structured values
+// ---------------------------------------------------------------------------
+
+describe("schemaToFormFields structured common fields", () => {
+  // An untyped schema accepts any value; a string control would show an object as blank.
+  it.each(["input.schema.document", "output.schema.document", "export.schema.document"])(
+    "edits the untyped %s as json",
+    (path) => {
+      expect(kindsByPath(commonFields("set")).get(path)).toBe("json");
+    },
+  );
+
+  // Same `oneOf [string, object]` schema, so the same editors.
+  it.each(["input.from", "output.as", "export.as"])("offers %s as a string or json", (path) => {
+    const field = commonFields("set")
+      .flatMap((f) => (f.kind === "object" ? f.children : []))
+      .find((f) => f.path === path) as OneOfField;
+
+    expect(field.variants.map((v) => [v.label, v.fields.map((f) => f.kind)])).toEqual([
+      ["string", ["string"]],
+      ["object", ["json"]],
+    ]);
+  });
+});
+
+describe("schemaToFormFields $ref with sibling properties", () => {
+  // The OAuth2 inline variant declares only `endpoints` beside its `$ref`; both apply.
+  it("keeps the referenced OAuth2 properties beside the variant's own", () => {
+    const oauth2 = findFieldDeep(
+      getFormFieldsForNodeType("call"),
+      (f) => f.kind === "one-of" && f.path === "with.authentication.oauth2",
+    ) as OneOfField;
+    const defs = workflowSchema.$defs as Record<string, { properties: object }>;
+    const expected = [
+      ...Object.keys(defs["oauth2AuthenticationProperties"]!.properties),
+      "endpoints",
+    ];
+
+    expect(oauth2.variants[0]!.fields.map((f) => f.path.split(".").pop())).toEqual(
+      expect.arrayContaining(expected),
+    );
+  });
+});
+
+describe("schemaToFormFields json expression siblings", () => {
+  // Only a Data variant beside an Expression variant can hold a stale expression string; any
+  // other json field shows an expression string as its value.
+  const jsonAt = (fields: FormFieldDescriptor[], path: string) =>
+    findFieldDeep(fields, (f) => f.kind === "json" && f.path === path) as JsonField | undefined;
+
+  it.each([
+    ["emit", "emit.event.with.data", true],
+    ["call", "with.body", undefined],
+  ])("marks %s %s hasExpressionSibling: %s", (nodeType, path, expected) => {
+    const field = jsonAt(getFormFieldsForNodeType(nodeType), path);
+
+    expect(field).toBeDefined();
+    expect(field?.hasExpressionSibling).toBe(expected);
+  });
+
+  it("does not mark the untyped schema.document", () => {
+    const field = jsonAt(commonFields("set"), "input.schema.document");
+
+    expect(field).toBeDefined();
+    expect(field?.hasExpressionSibling).toBeUndefined();
   });
 });

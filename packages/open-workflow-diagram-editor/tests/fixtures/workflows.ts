@@ -909,5 +909,14 @@ export const COMMON_FIELDS_WORKFLOW = {
         },
       },
     },
+    {
+      validated: {
+        set: { done: true },
+        input: {
+          schema: { format: "json", document: { type: "object", required: ["id"] } },
+          from: { customer: { name: "${ .name }" } },
+        },
+      },
+    },
   ],
 };

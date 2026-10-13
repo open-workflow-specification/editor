@@ -56,6 +56,12 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
   const { control, getValues, getFieldState } = useFormContext<Record<string, unknown>>();
   const { isReadOnly, validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
+  // An expression string is stale only when an Expression variant beside this one holds it;
+  // elsewhere (an HTTP `body`, `schema.document`) it is the field's own value.
+  const isStaleExpression = (value: unknown): boolean =>
+    field.hasExpressionSibling === true &&
+    typeof value === "string" &&
+    RUNTIME_EXPRESSION_PATTERN.test(value);
 
   // Watch defaultValues identity: it changes on every form.reset()
   const { defaultValues } = useFormState({ control });
@@ -65,7 +71,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
     const wasDirtied = getFieldState(field.path as never).isDirty;
 
     // Stale expression string after Expression→Data kind-boundary switch
-    if (typeof live === "string" && !wasDirtied && RUNTIME_EXPRESSION_PATTERN.test(live)) {
+    if (!wasDirtied && isStaleExpression(live)) {
       return "";
     }
 
@@ -81,7 +87,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
 
     // Fall back to defaultValues
     const fromDefault = defaultValues ? getNestedValue(defaultValues, field.path) : undefined;
-    if (typeof fromDefault === "string" && RUNTIME_EXPRESSION_PATTERN.test(fromDefault)) {
+    if (isStaleExpression(fromDefault)) {
       return "";
     }
     return valueToText(fromDefault, field.format);
@@ -100,7 +106,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
     prevPathRef.current = field.path;
 
     const fromDefault = defaultValues ? getNestedValue(defaultValues, field.path) : undefined;
-    if (typeof fromDefault === "string" && RUNTIME_EXPRESSION_PATTERN.test(fromDefault)) {
+    if (isStaleExpression(fromDefault)) {
       setText("");
       return;
     }

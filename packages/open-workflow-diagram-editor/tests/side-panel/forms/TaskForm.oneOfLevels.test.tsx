@@ -157,7 +157,10 @@ describe("TaskForm one-of levels", () => {
     await openLevel(user, "Authentication");
 
     await user.click(screen.getByRole("button", { name: "O Auth2 Authentication Policy" }));
-    expect(picker("Authentication")).toHaveValue("O Auth2 Authentication Policy");
+    // OAuth2's own `client.authentication` shares the label; the level's picker comes first.
+    expect(screen.getAllByRole("textbox", { name: "Authentication" })[0]).toHaveValue(
+      "O Auth2 Authentication Policy",
+    );
     expect(trail()).toHaveTextContent("Authentication");
 
     await leaveLevel(user);

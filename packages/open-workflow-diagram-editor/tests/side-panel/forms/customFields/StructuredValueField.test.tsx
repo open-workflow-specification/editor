@@ -29,12 +29,14 @@ import type { JsonField } from "../../../../src/core/schemaToFormFields";
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Emit `data` is the Data variant of a one-of beside an Expression variant.
 const yamlField: JsonField = {
   kind: "json",
   format: "yaml",
   path: "emit.event.with.data",
   label: "Data",
   required: false,
+  hasExpressionSibling: true,
 };
 
 const jsonField: JsonField = {
@@ -42,6 +44,16 @@ const jsonField: JsonField = {
   format: "json",
   path: "emit.event.with.data",
   label: "Data",
+  required: false,
+  hasExpressionSibling: true,
+};
+
+// An HTTP `body` has no Expression variant: an expression string is its value.
+const bodyField: JsonField = {
+  kind: "json",
+  format: "yaml",
+  path: "with.body",
+  label: "Body",
   required: false,
 };
 
@@ -134,15 +146,14 @@ describe("StructuredValueField — initial render", () => {
 
   it("shows plain string content when defaultValues has a plain non-expression string (e.g. HTTP body)", () => {
     const defaults = { with: { body: "hello world" } };
-    const bodyField: JsonField = {
-      kind: "json",
-      format: "yaml",
-      path: "with.body",
-      label: "Body",
-      required: false,
-    };
     render(<Wrapper field={bodyField} defaultValues={defaults} />);
     expect(getTextarea().value).toBe("hello world");
+  });
+
+  it("shows an expression string when the field has no Expression variant (e.g. HTTP body)", () => {
+    const defaults = { with: { body: "${ .order }" } };
+    render(<Wrapper field={bodyField} defaultValues={defaults} />);
+    expect(getTextarea().value).toBe("${ .order }");
   });
 });
 
@@ -201,7 +212,13 @@ describe("StructuredValueField — defaultValues reset", () => {
    * defaultValues must be in nested form (the shape react-hook-form stores)
    * because `getNestedValue` walks the object by path segments.
    */
-  function ResettableWrapper({ defaults }: { defaults: Record<string, unknown> }) {
+  function ResettableWrapper({
+    defaults,
+    field = yamlField,
+  }: {
+    defaults: Record<string, unknown>;
+    field?: JsonField;
+  }) {
     const form = useForm<Record<string, unknown>>({ defaultValues: defaults });
     React.useEffect(() => {
       form.reset(defaults);
@@ -210,7 +227,7 @@ describe("StructuredValueField — defaultValues reset", () => {
       <I18nProvider locale="en" dictionaries={{ en }}>
         <TaskFormContext.Provider value={{ isReadOnly: false, siblingTaskNames: [], taskData: {} }}>
           <FormProvider {...form}>
-            <StructuredValueField field={yamlField} />
+            <StructuredValueField field={field} />
           </FormProvider>
         </TaskFormContext.Provider>
       </I18nProvider>
@@ -257,6 +274,19 @@ describe("StructuredValueField — defaultValues reset", () => {
     await act(async () => {});
 
     expect(getTextarea().value).toBe("");
+  });
+
+  it("shows an expression string after form.reset() when the field has no Expression variant", async () => {
+    const { rerender } = render(
+      <ResettableWrapper defaults={{ with: { body: { key: "val" } } }} field={bodyField} />,
+    );
+    await act(async () => {});
+
+    // Reopening a task whose committed body is an expression.
+    rerender(<ResettableWrapper defaults={{ with: { body: "${ .order }" } }} field={bodyField} />);
+    await act(async () => {});
+
+    expect(getTextarea().value).toBe("${ .order }");
   });
 });
 
