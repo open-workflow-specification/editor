@@ -103,11 +103,14 @@ function extractEntries(taskData: Record<string, unknown>, prefix: string): MapE
  * Used when the object is already resolved (e.g. from `getValues()`).
  */
 function extractEntriesFromObject(obj: Record<string, unknown>): MapEntry[] {
-  return Object.entries(obj).map(([k, v]) => ({
-    id: newId(),
-    key: k,
-    value: v == null ? "" : v,
-  }));
+  // `undefined` is how this field removes a key (`clearKey`), including every key rename leaves behind while typing. Without the filter they come back as empty rows whenever the field remounts e.g. after visiting a drill-in level.
+  return Object.entries(obj)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => ({
+      id: newId(),
+      key: k,
+      value: v === null ? "" : v,
+    }));
 }
 
 // ---------------------------------------------------------------------------

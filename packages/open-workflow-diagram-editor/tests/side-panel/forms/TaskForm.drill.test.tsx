@@ -160,4 +160,18 @@ describe("TaskForm drill-in", () => {
     renderPanel(BARE, true);
     expect(row()).not.toBeInTheDocument();
   });
+
+  it("rebuilds a map on return without the keys a rename left behind", async () => {
+    const { user } = renderPanel();
+    await user.click(screen.getByRole("button", { name: "+ Add property" }));
+    const keys = () => screen.getAllByRole("textbox", { name: "Entry key" });
+    // Typed one character at a time, so the key is renamed h > he > … > hello.
+    await user.type(keys().at(-1)!, "hello");
+    await user.type(screen.getAllByRole("textbox", { name: "Entry value" }).at(-1)!, "bob");
+
+    await openCommonFields(user);
+    await leaveLevel(user);
+
+    expect(keys().map((input) => (input as HTMLInputElement).value)).toEqual(["greeting", "hello"]);
+  });
 });
