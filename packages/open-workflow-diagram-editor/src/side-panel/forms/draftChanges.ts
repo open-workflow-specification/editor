@@ -30,15 +30,17 @@ const isEmpty = (value: unknown) => value === undefined || value === null || val
  * Returns paths with real changes (excludes sentinels and empty-to-empty transitions).
  * The footer and every drill row read this, so their counts cannot disagree.
  * Example: User switches variant (sentinel dirty) but doesn't edit fields > returns []
+ * A path in `jsonPaths` (see `collectJsonPaths`) is one change however many keys it edits.
  */
 export function changedPaths(
   dirtyFields: object,
   values: Record<string, unknown>,
   defaultValues: Record<string, unknown> | undefined,
+  jsonPaths: ReadonlySet<string> = new Set(),
 ): string[] {
-  const flatValues = flattenTask(values);
-  const flatDefaults = flattenTask(defaultValues ?? {});
-  return Object.keys(flattenTask(dirtyFields))
+  const flatValues = flattenTask(values, "", jsonPaths);
+  const flatDefaults = flattenTask(defaultValues ?? {}, "", jsonPaths);
+  return Object.keys(flattenTask(dirtyFields, "", jsonPaths))
     .filter((path) => !path.startsWith(SENTINEL_PREFIX))
     .filter((path) => !(isEmpty(flatValues[path]) && isEmpty(flatDefaults[path])));
 }

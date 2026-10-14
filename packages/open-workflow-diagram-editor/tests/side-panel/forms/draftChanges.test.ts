@@ -32,6 +32,13 @@ describe("changedPaths", () => {
     const defaults = { with: { method: "post" } };
     expect(changedPaths(dirty, values, defaults)).toEqual(["with.method"]);
   });
+
+  it("counts a JSON value as one change however many keys it edits", () => {
+    const dirty = { output: { as: { id: true, name: true } } };
+    const values = { output: { as: { name: "x" } } };
+    const defaults = { output: { as: { id: "y" } } };
+    expect(changedPaths(dirty, values, defaults, new Set(["output.as"]))).toEqual(["output.as"]);
+  });
 });
 
 describe("countChangedUnder", () => {

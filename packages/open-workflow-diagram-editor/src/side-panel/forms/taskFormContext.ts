@@ -166,6 +166,25 @@ export function collectFormListPaths(fields: FormFieldDescriptor[]): Set<string>
   return paths;
 }
 
+/*
+ * Finds paths of JSON/YAML fields, in every variant. 
+ * Apply writes it whole and it counts as one change.
+ */
+export function collectJsonPaths(fields: FormFieldDescriptor[]): Set<string> {
+  const paths = new Set<string>();
+
+  const walk = (list: FormFieldDescriptor[]): void => {
+    for (const field of list) {
+      if (field.kind === "json") paths.add(field.path);
+      else if (field.kind === "object" || field.kind === "section") walk(field.children);
+      else if (field.kind === "one-of") for (const v of field.variants) walk(v.fields);
+    }
+  };
+  walk(fields);
+
+  return paths;
+}
+
 // ---------------------------------------------------------------------------
 // Descriptor walkers
 //

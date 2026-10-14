@@ -32,6 +32,7 @@ import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
 import {
   collectFormListPaths,
+  collectJsonPaths,
   collectSelectedVariants,
   collectValueMapFields,
   collectVariantFieldPaths,
@@ -106,6 +107,12 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
   );
 
   const { dirtyFields, isDirty, defaultValues } = useFormState({ control: form.control });
+  const nodeType = node.type ?? "";
+  const allFields = React.useMemo(
+    () => (nodeType ? getFormFieldsForNodeType(nodeType) : []),
+    [nodeType],
+  );
+  const jsonPaths = React.useMemo(() => collectJsonPaths(allFields), [allFields]);
   const task = node.data.task;
   const taskId = resolveTaskId(node);
   const showApplied = appliedNodeId === node.id;
@@ -119,11 +126,10 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     dirtyFields,
     form.getValues(),
     defaultValues as Record<string, unknown> | undefined,
+    jsonPaths,
   ).length;
 
   const handleCancel = () => {
-    const nodeType = node.type ?? "";
-    const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
     const sentinelDefaults = computeSentinelDefaults(allFields, task as Record<string, unknown>);
     form.reset({
       ...(task as Record<string, unknown>),
@@ -134,8 +140,9 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
 
   const handleApply = () => {
     // TODO: add error handling once we decide how to surface apply failures.
-    const flatValues = flattenTask(form.getValues());
-    const rawFlatDirty = Object.keys(flattenTask(dirtyFields));
+    // A JSON/YAML value is written whole, else a key deleted from its text would survive Apply.
+    const flatValues = flattenTask(form.getValues(), "", jsonPaths);
+    const rawFlatDirty = Object.keys(flattenTask(dirtyFields, "", jsonPaths));
     const flatDirty = new Set<string>();
     const sentinelPaths = new Set<string>();
     for (const path of rawFlatDirty) {
@@ -149,8 +156,6 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     // Build constWrites and stalePaths: find each sentinel-dirty path's selected
     // variant, collect its const discriminator properties, and compute the paths
     // that are exclusive to the non-selected variants so they can be removed.
-    const nodeType = node.type ?? "";
-    const allFields = nodeType ? getFormFieldsForNodeType(nodeType) : [];
     const flatTask = flattenTask(task as Record<string, unknown>);
     for (const enumField of collectValueMapFields(allFields)) {
       // Read via getValues(path) — reads _formValues directly, bypassing the

@@ -22,7 +22,7 @@ import { changedPaths, countChangedUnder, countFieldErrors, hasDraftValue } from
 import { isObjectNotArray } from "../../../core/utils";
 import { drillLabel, type DrillTarget } from "./drill";
 import { useDrill } from "./DrillContext";
-import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
+import { collectJsonPaths, filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
 
 /**
  * Displays a clickable row for a section, object, map or one-of, showing:
@@ -51,7 +51,7 @@ export function DrillRow({
   const { open } = useDrill();
   const { isReadOnly, taskData } = useTaskFormContext();
   const { control, getValues } = useFormContext<Record<string, unknown>>();
-  
+
   const variantValue = useWatch({
     control,
     name: (variantValuePath ?? field.path) as never,
@@ -63,6 +63,13 @@ export function DrillRow({
       field.kind === "map" || field.kind === "one-of"
         ? [field.path]
         : field.children.map((child) => child.path),
+    [field],
+  );
+  const jsonPaths = React.useMemo(
+    () =>
+      collectJsonPaths(
+        field.kind === "map" ? [] : field.kind === "one-of" ? [field] : field.children,
+      ),
     [field],
   );
 
@@ -77,6 +84,7 @@ export function DrillRow({
     dirtyFields,
     getValues(),
     defaultValues as Record<string, unknown> | undefined,
+    jsonPaths,
   );
   const changedCount = childPaths.reduce((sum, path) => sum + countChangedUnder(changed, path), 0);
   const errorCount = childPaths.reduce((sum, path) => sum + countFieldErrors(get(errors, path)), 0);

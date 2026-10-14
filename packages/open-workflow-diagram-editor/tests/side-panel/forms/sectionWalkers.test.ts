@@ -21,6 +21,7 @@ import { flattenTask } from "../../../src/core/taskDraft";
 import { TASK_TYPE_KEYS } from "../../../src/core/taskTypes";
 import {
   collectFormListPaths,
+  collectJsonPaths,
   collectLeafKinds,
   collectSelectedVariants,
   collectValueMapFields,
@@ -49,6 +50,7 @@ const WALKERS: [string, Walker][] = [
   ["computeSentinelDefaults", (fields) => computeSentinelDefaults(fields, {})],
   // No taskBase field is a form list or a valueMap enum today; these rows guard the future.
   ["collectFormListPaths", (fields) => [...collectFormListPaths(fields)]],
+  ["collectJsonPaths", (fields) => [...collectJsonPaths(fields)]],
   ["collectValueMapFields", (fields) => collectValueMapFields(fields)],
   ["collectWholeValuePaths", (fields) => [...collectWholeValuePaths(fields, {})]],
   [

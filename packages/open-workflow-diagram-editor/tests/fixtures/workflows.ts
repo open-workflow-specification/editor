@@ -899,5 +899,15 @@ export const COMMON_FIELDS_WORKFLOW = {
     { bare: { set: { done: true } } },
     { emptyMetadata: { set: { done: true }, metadata: {} } },
     { shape: { set: { done: true }, output: { as: { id: "${ .id }" } } } },
+    {
+      post: {
+        call: "http",
+        with: {
+          method: "post",
+          endpoint: "https://example.com/orders",
+          body: { order: { id: "${ .id }", note: "rush" } },
+        },
+      },
+    },
   ],
 };
