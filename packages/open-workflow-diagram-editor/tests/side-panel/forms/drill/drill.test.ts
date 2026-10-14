@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import {
   drillLabel,
   levelFieldsOf,
+  oneOfDrills,
   resolveDrillStack,
   type VariantSelector,
 } from "../../../../src/side-panel/forms/drill/drill";
@@ -126,18 +127,74 @@ describe("resolveDrillStack", () => {
     });
 
     it("shows the map's own editor as its level", () => {
-      expect(levelFieldsOf(headers)).toEqual([headers]);
+      expect(levelFieldsOf(headers, firstVariant)).toEqual([headers]);
+    });
+  });
+
+  describe("one-ofs", () => {
+    const auth = object("with.endpoint.authentication", [str("with.endpoint.authentication.x")]);
+    const configured = [str("with.endpoint.uri"), auth];
+    const endpoint: OneOfField = {
+      kind: "one-of",
+      path: "with.endpoint",
+      label: "Endpoint",
+      required: true,
+      variants: [
+        { label: "URI", fields: [str("with.endpoint")], matchesData: () => false, constWrites: {} },
+        { label: "Configured", fields: configured, matchesData: () => false, constWrites: {} },
+      ],
+    };
+    const pick =
+      (label: string): VariantSelector =>
+      (field) =>
+        field.variants.find((variant) => variant.label === label);
+
+    it("opens a one-of as a level showing its chosen variant's fields", () => {
+      expect(resolveDrillStack([endpoint], ["with.endpoint"], pick("Configured"))).toEqual([
+        endpoint,
+      ]);
+      expect(levelFieldsOf(endpoint, pick("Configured"))).toEqual(configured);
+      expect(levelFieldsOf(endpoint, pick("URI"))).toEqual([str("with.endpoint")]);
+    });
+
+    it.each([
+      ["the chosen variant has it", "Configured", [endpoint, auth]],
+      ["another variant is chosen", "URI", [endpoint]],
+    ])("opens a level below an opened one-of when %s", (_name, label, expected) => {
+      const stack = ["with.endpoint", "with.endpoint.authentication"];
+      expect(resolveDrillStack([endpoint], stack, pick(label))).toEqual(expected);
+    });
+
+    it("drills a one-of any of whose options holds more than one value, whichever is chosen", () => {
+      const literalOrExpression: OneOfField = {
+        ...endpoint,
+        path: "with.endpoint.uri",
+        variants: endpoint.variants.map((variant) => ({
+          ...variant,
+          fields: [str("with.endpoint.uri")],
+        })),
+      };
+      expect(oneOfDrills(endpoint)).toBe(true);
+      expect(oneOfDrills(literalOrExpression)).toBe(false);
     });
   });
 });
 
 describe("drillLabel", () => {
   const t = (key: string) => `t(${key})`;
+  const endpoint: OneOfField = {
+    kind: "one-of",
+    path: "with.endpoint",
+    label: "Endpoint",
+    required: false,
+    variants: [],
+  };
 
   it.each([
     ["Common fields, translated", section("__common__", []), "t(sidebar.drill.commonFields)"],
     ["any other section, by its own label", { ...section("other", []), label: "Other" }, "Other"],
     ["an object, by its label", object("output", []), "output"],
+    ["a one-of, by its label rather than its variant's", endpoint, "Endpoint"],
   ] as const)("names %s", (_name, field, expected) => {
     expect(drillLabel(field, t)).toBe(expected);
   });

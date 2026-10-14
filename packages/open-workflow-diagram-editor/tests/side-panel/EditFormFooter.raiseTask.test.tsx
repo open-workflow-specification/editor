@@ -99,7 +99,7 @@ describe("raise task error variant switch", () => {
     await act(async () => {});
 
     await choose(user, "Raise Error Definition");
-    await user.type(screen.getByLabelText("Literal Error Type"), "https://example.com/errors/nope");
+    await user.type(screen.getByLabelText("Type"), "https://example.com/errors/nope");
     await user.type(screen.getByLabelText("Status"), "418");
     await user.click(apply());
 
@@ -113,7 +113,7 @@ describe("raise task error variant switch", () => {
     await act(async () => {});
 
     await choose(user, "Raise Error Reference");
-    await user.type(screen.getByLabelText("Raise Error Reference"), "serviceUnavailable");
+    await user.type(screen.getByLabelText("Error"), "serviceUnavailable");
     await user.click(apply());
 
     expect(committedRaise(commitWorkflow, INLINE_NODE_ID)).toEqual({
@@ -130,7 +130,7 @@ describe("raise task error variant switch", () => {
     await choose(user, "Raise Error Definition");
     await choose(user, "Raise Error Reference");
 
-    expect(fieldValue("Raise Error Reference")).toBe("notImplemented");
+    expect(fieldValue("Error")).toBe("notImplemented");
   });
 
   it("keeps the inline fields when the variant is switched away and back", async () => {
@@ -140,9 +140,7 @@ describe("raise task error variant switch", () => {
     await choose(user, "Raise Error Reference");
     await choose(user, "Raise Error Definition");
 
-    expect(fieldValue("Literal Error Type")).toBe(
-      "https://open-workflow-specification.org/errors/validation",
-    );
+    expect(fieldValue("Type")).toBe("https://open-workflow-specification.org/errors/validation");
     expect(fieldValue("Status")).toBe("400");
   });
 
@@ -167,14 +165,14 @@ describe("raise task error variant switch", () => {
     await act(async () => {});
 
     await choose(user, "Expression Error Type");
-    await user.clear(screen.getByLabelText("Expression Error Type"));
-    await user.type(screen.getByLabelText("Expression Error Type"), "${{ .boom }");
+    await user.clear(screen.getByLabelText("Type"));
+    await user.type(screen.getByLabelText("Type"), "${{ .boom }");
 
     await choose(user, "Raise Error Reference");
     await choose(user, "Raise Error Definition");
 
-    expect(selector("Type")).toBe("Expression Error Type");
-    expect(fieldValue("Expression Error Type")).toBe("${ .boom }");
+    expect(selector("Type option")).toBe("Expression Error Type");
+    expect(fieldValue("Type")).toBe("${ .boom }");
 
     await user.click(apply());
     expect(committedRaise(commitWorkflow, INLINE_NODE_ID)).toMatchObject({

@@ -15,30 +15,12 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-
-async function waitForDiagram(page: Page) {
-  await expect(page.getByTestId("diagram-container")).toBeVisible();
-  await expect(page.locator('[data-testid^="rf__node-"]').first()).toBeVisible();
-}
+import { openLevel, waitForDiagram, waitForSidebar } from "./helpers";
 
 async function clickNode(page: Page, testId: string) {
   const node = page.getByTestId(testId);
   await expect(node).toBeVisible();
   await node.click();
-}
-
-async function waitForSidebar(page: Page) {
-  const sidebar = page.locator('[data-slot="sidebar"]');
-  await expect(sidebar).toHaveAttribute("data-state", "expanded");
-}
-
-// Objects below a task's top level drill: open one by its row ("Open <label>, <summary>").
-async function openLevel(page: Page, label: string) {
-  // Escaped so a label like "Timeout (ISO 8601)" is matched literally.
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const row = page.getByRole("button", { name: new RegExp(`^Open ${escaped},`) });
-  await expect(row).toBeVisible();
-  await row.click();
 }
 
 async function getContentYaml(page: Page): Promise<string> {
@@ -114,7 +96,10 @@ test("clearing an expression field and clicking Apply does not restore the old v
   await expect(methodOption).toBeVisible();
   await methodOption.click();
 
+  await openLevel(page, "Transport");
   await openLevel(page, "Mcp Http Transport");
+  // An endpoint can be a whole configuration, so it is always a level of its own.
+  await openLevel(page, "Endpoint");
 
   // Find the Endpoint variant combobox and select Expression if needed
   const allCombos = form.locator('[data-slot="combobox-input"]');
@@ -159,7 +144,10 @@ test("clearing an expression field and clicking Apply does not restore the old v
   await waitForSidebar(page);
   await expect(form).toBeVisible();
 
+  await openLevel(page, "Transport");
   await openLevel(page, "Mcp Http Transport");
+  // An endpoint can be a whole configuration, so it is always a level of its own.
+  await openLevel(page, "Endpoint");
 
   // Verify expression shows the committed value
   const exprInputAfterReselect = form.locator("input.dec-form-expression-input").last();

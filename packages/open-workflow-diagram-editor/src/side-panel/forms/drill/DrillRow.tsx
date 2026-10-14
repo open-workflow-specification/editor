@@ -25,22 +25,44 @@ import { useDrill } from "./DrillContext";
 import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
 
 /**
- * Displays a clickable row for a section, object or map, showing:
+ * Displays a clickable row for a section, object, map or one-of, showing:
  *  - Label + required indicator
- *  - Summary: "3 of 6 set" (section, object) or "2 entries" (map)
+ *  - Summary: "3 of 6 set" (section, object), "2 entries" (map, or a one-of whose value is a
+ *    map), or the chosen variant (one-of), followed by its value when that is a single one
  *  - Changed pill, if changes exist
  *  - Error pill, if validation errors exist
  */
 
-export function DrillRow({ field }: { field: DrillTarget }) {
+export function DrillRow({
+  field,
+  variantLabel,
+  countEntries = false,
+  variantValuePath,
+}: {
+  field: DrillTarget;
+  /** A one-of's chosen variant, its summary. */
+  variantLabel?: string;
+  /** A one-of whose chosen variant is a map at its own path: summarised by that map's entries. */
+  countEntries?: boolean;
+  /** A one-of whose chosen variant is a single value: that value's path, shown after its label. */
+  variantValuePath?: string;
+}) {
   const { t } = useI18n();
   const { open } = useDrill();
   const { isReadOnly, taskData } = useTaskFormContext();
   const { control, getValues } = useFormContext<Record<string, unknown>>();
+  
+  const variantValue = useWatch({
+    control,
+    name: (variantValuePath ?? field.path) as never,
+  }) as unknown;
 
   /** Prevents recreating array on every render, which would break useWatch subscription */
   const childPaths = React.useMemo(
-    () => (field.kind === "map" ? [field.path] : field.children.map((child) => child.path)),
+    () =>
+      field.kind === "map" || field.kind === "one-of"
+        ? [field.path]
+        : field.children.map((child) => child.path),
     [field],
   );
 
@@ -61,13 +83,20 @@ export function DrillRow({ field }: { field: DrillTarget }) {
 
   const label = drillLabel(field, t);
   let summary: string;
-  if (field.kind === "map") {
+  if (field.kind === "map" || (field.kind === "one-of" && countEntries)) {
     // A removed entry stays in the draft as `undefined` until Apply drops it.
     const map = values[0];
     const entries = isObjectNotArray(map)
       ? Object.values(map).filter((value) => value !== undefined).length
       : 0;
     summary = `${entries} ${t(entries === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+  } else if (field.kind === "one-of") {
+    const value = variantValuePath === undefined ? undefined : variantValue;
+    const shown =
+      typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+        ? String(value)
+        : "";
+    summary = shown === "" ? (variantLabel ?? "") : `${variantLabel ?? ""} · ${shown}`;
   } else {
     const setCount = isReadOnly
       ? field.children.filter((child) => filterReadOnlyFields([child], taskData).length > 0).length

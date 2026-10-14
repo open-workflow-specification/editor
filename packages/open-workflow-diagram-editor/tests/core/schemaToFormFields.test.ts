@@ -1298,3 +1298,74 @@ describe("schemaToFormFields fork task", () => {
    `);
   });
 });
+
+describe("schemaToFormFields same-path one-ofs", () => {
+  const TASK_TYPES = [
+    "call",
+    "do",
+    "emit",
+    "for",
+    "fork",
+    "listen",
+    "raise",
+    "run",
+    "set",
+    "switch",
+    "try-catch",
+    "wait",
+  ];
+
+  /** Every one-of in a descriptor tree, through sections, objects and every variant. */
+  function allOneOfs(fields: FormFieldDescriptor[]): OneOfField[] {
+    return fields.flatMap((field): OneOfField[] => {
+      if (field.kind === "section" || field.kind === "object") return allOneOfs(field.children);
+      if (field.kind !== "one-of") return [];
+      return [field, ...field.variants.flatMap((variant) => allOneOfs(variant.fields))];
+    });
+  }
+
+  function authenticationOneOf(): OneOfField {
+    const found = allOneOfs(getFormFieldsForNodeType("call")).find(
+      (field) => field.path === "with.endpoint.authentication",
+    );
+    if (found === undefined) throw new Error("no with.endpoint.authentication one-of");
+    return found;
+  }
+
+  // Two one-ofs at one path would share one sentinel, so picking in the inner one changes the
+  // outer one's selection too.
+  it.each(TASK_TYPES)("%s has no one-of nested at its own path", (nodeType) => {
+    const nested = allOneOfs(getFormFieldsForNodeType(nodeType)).filter((field) =>
+      field.variants.some((variant) =>
+        variant.fields.some((child) => child.kind === "one-of" && child.path === field.path),
+      ),
+    );
+    expect(nested.map((field) => field.path)).toEqual([]);
+  });
+
+  it("offers every authentication policy as one choice", () => {
+    expect(authenticationOneOf().variants.map((variant) => variant.label)).toEqual([
+      "Authentication Policy Reference",
+      "Basic Authentication Policy",
+      "Bearer Authentication Policy",
+      "Digest Authentication Policy",
+      "O Auth2 Authentication Policy",
+      "Open Id Connect Authentication Policy",
+    ]);
+  });
+
+  it.each([
+    ["Authentication Policy Reference", { use: "petStoreAuth" }, undefined],
+    ["Basic Authentication Policy", { basic: { username: "u" } }, "basic"],
+    ["Bearer Authentication Policy", { bearer: { token: "t" } }, "bearer"],
+    ["Digest Authentication Policy", { digest: { username: "u" } }, "digest"],
+    ["O Auth2 Authentication Policy", { oauth2: { authority: "a" } }, "oauth2"],
+    ["Open Id Connect Authentication Policy", { oidc: { authority: "a" } }, "oidc"],
+  ])("keeps how %s is recognised and written", (label, data, presenceKey) => {
+    const { variants } = authenticationOneOf();
+    expect(variants.filter((variant) => variant.matchesData(data)).map((v) => v.label)).toEqual([
+      label,
+    ]);
+    expect(variants.find((variant) => variant.label === label)?.presenceKey).toBe(presenceKey);
+  });
+});

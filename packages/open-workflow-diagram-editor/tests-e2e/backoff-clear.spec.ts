@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-import { test, expect, type Page } from "@playwright/test";
-
-async function waitForDiagram(page: Page) {
-  await expect(page.getByTestId("diagram-container")).toBeVisible();
-  await expect(page.locator('[data-testid^="rf__node-"]').first()).toBeVisible();
-}
-
-async function waitForSidebar(page: Page) {
-  const sidebar = page.locator('[data-slot="sidebar"]');
-  await expect(sidebar).toHaveAttribute("data-state", "expanded");
-}
+import { test, expect } from "@playwright/test";
+import { openLevel, waitForDiagram, waitForSidebar } from "./helpers";
 
 test("clearing backoff to '—' and applying keeps it cleared after re-render", async ({ page }) => {
   await page.goto("/iframe.html?id=nested-editing-workflows--try-catch-retry-inline");
@@ -39,6 +30,9 @@ test("clearing backoff to '—' and applying keeps it cleared after re-render", 
 
   const form = page.locator(".dec-task-form");
   await expect(form).toBeVisible();
+
+  // `catch.retry` is a one-of below the top level: its definition is a level of its own.
+  await openLevel(page, "retry");
 
   // Find the backoff combobox — it should show "exponential"
   const allCombos = form.locator('[data-slot="combobox-input"]');
@@ -88,6 +82,9 @@ test("editing backoff inner object replaces old content completely after apply",
 
   const form = page.locator(".dec-task-form");
   await expect(form).toBeVisible();
+
+  // `catch.retry` is a one-of below the top level: its definition is a level of its own.
+  await openLevel(page, "retry");
 
   // Find the backoff textarea (inner object editor) — it has aria-label matching the selected key
   const textarea = form.getByRole("textbox", { name: "exponential" });

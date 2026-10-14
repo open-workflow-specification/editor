@@ -40,7 +40,7 @@ const { TaskForm } = await import("../../src/side-panel/forms/TaskForm");
 const { renderWithProviders, createMockContextValue } =
   await import("../test-utils/render-helpers");
 const { parseFixture, nodeAt } = await import("../test-utils");
-const { leaveLevel, openCommonFields } = await import("../test-utils/drill-helpers");
+const { leaveLevel, openLevel } = await import("../test-utils/drill-helpers");
 
 const { render: rtlRender } = await import("@testing-library/react");
 const { I18nProvider } = await import("@openworkflowspec/i18n");
@@ -57,6 +57,11 @@ const CATCH_NODE_ID = "/do/tryGetPet/catch";
 const TRY_CATCH_CONTAINER_ID = "/do/tryGetPet";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** `catch.retry` is a one-of below the top level: its chosen definition is a level of its own. */
+async function openRetry(user: ReturnType<typeof userEvent.setup>) {
+  await openLevel(user, "retry");
+}
 
 function renderTryFooter() {
   const model = parseFixture(TRY_CATCH_BACKOFF_WORKFLOW);
@@ -101,8 +106,9 @@ function getBackoffTextarea(key = "exponential"): HTMLTextAreaElement {
 
 describe("try task — backoff enum field", () => {
   it("the Retry Policy Definition variant is active and its fields are visible", async () => {
-    renderTryFooter();
+    const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     // The catch.retry one-of has "Retry Policy Definition" selected
     expect(screen.getAllByDisplayValue("Retry Policy Definition").length).toBeGreaterThan(0);
@@ -115,6 +121,7 @@ describe("try task — backoff enum field", () => {
   it("selecting a different backoff option enables Apply", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     await user.click(screen.getByRole("button", { name: "constant" }));
 
@@ -124,6 +131,7 @@ describe("try task — backoff enum field", () => {
   it("committing a backoff change writes the discriminator object to the model", async () => {
     const { commitWorkflow, user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     await user.click(screen.getByRole("button", { name: "constant" }));
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -141,6 +149,7 @@ describe("try task — backoff enum field", () => {
   it("backoff input still shows the chosen value after Apply", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     await user.click(screen.getByRole("button", { name: "constant" }));
     await user.click(screen.getByRole("button", { name: "Apply" }));
@@ -150,8 +159,9 @@ describe("try task — backoff enum field", () => {
   });
 
   it("shows a textarea for the inner backoff object when a backoff type is selected", async () => {
-    renderTryFooter();
+    const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     // The fixture has backoff: { exponential: {} } — the textarea should be visible
     expect(getBackoffTextarea()).toBeInTheDocument();
@@ -160,6 +170,7 @@ describe("try task — backoff enum field", () => {
   it("typing in the inner backoff textarea and applying merges the content into the model", async () => {
     const { commitWorkflow, user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     const textarea = getBackoffTextarea();
 
@@ -183,6 +194,7 @@ describe("try task — backoff enum field", () => {
   it("inner backoff textarea retains its content after Apply", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     const textarea = getBackoffTextarea();
     await user.clear(textarea);
@@ -197,6 +209,7 @@ describe("try task — backoff enum field", () => {
   it("switching backoff type hides the old inner textarea and shows a new one", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     // Initially exponential is selected — textarea is visible
     expect(getBackoffTextarea("exponential")).toBeInTheDocument();
@@ -209,6 +222,7 @@ describe("try task — backoff enum field", () => {
   it("switching backoff type and back preserves the inner textarea content", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     const textarea = getBackoffTextarea();
     await user.clear(textarea);
@@ -224,6 +238,7 @@ describe("try task — backoff enum field", () => {
   it("stashed inner text is cleared after Apply so stale data is not restored", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     const textarea = getBackoffTextarea();
     await user.clear(textarea);
@@ -240,17 +255,18 @@ describe("try task — backoff enum field", () => {
     expect(getBackoffTextarea("exponential").value).toBe("");
   });
 
-  // Opening Common fields unmounts the backoff row and remounts it on the way back.
-  describe("across a drill into Common fields", () => {
+  // Leaving the retry level unmounts the backoff row; reopening it remounts it.
+  describe("across leaving and reopening the retry level", () => {
     it("switching backoff type and back still restores the inner text", async () => {
       const { user } = renderTryFooter();
       await act(async () => {});
+      await openRetry(user);
 
       await user.clear(getBackoffTextarea());
       await user.type(getBackoffTextarea(), "multiplier: 2");
       await user.click(screen.getByRole("button", { name: "constant" }));
-      await openCommonFields(user);
       await leaveLevel(user);
+      await openRetry(user);
       await user.click(screen.getByRole("button", { name: "exponential" }));
 
       expect(getBackoffTextarea().value).toBe("multiplier: 2");
@@ -259,11 +275,12 @@ describe("try task — backoff enum field", () => {
     it("still shows the parse error for malformed inner text", async () => {
       const { user } = renderTryFooter();
       await act(async () => {});
+      await openRetry(user);
 
       await user.clear(getBackoffTextarea());
       await user.type(getBackoffTextarea(), "[[unclosed");
-      await openCommonFields(user);
       await leaveLevel(user);
+      await openRetry(user);
 
       expect(getBackoffTextarea()).toHaveAttribute("aria-invalid", "true");
       expect(screen.getByRole("alert")).toHaveTextContent("Must be a valid YAML/JSON object");
@@ -273,6 +290,7 @@ describe("try task — backoff enum field", () => {
   it("selecting '—' clears the backoff field and Apply removes it from the model", async () => {
     const { commitWorkflow, user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     // In the combobox stub, ComboboxInput renders as <input> and ComboboxItems render
     // as <button> siblings immediately after it. The backoff input has aria-label="backoff";
@@ -297,6 +315,7 @@ describe("try task — backoff enum field", () => {
   it("after clearing backoff and applying, the combobox input shows '—'", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
+    await openRetry(user);
 
     const backoffInput = screen.getAllByLabelText(/backoff/i)[0]!;
     const backoffClear = backoffInput.nextElementSibling as HTMLButtonElement;
@@ -340,6 +359,7 @@ describe("try task — backoff clear with live re-render", () => {
     const user = userEvent.setup();
     rtlRender(<LiveTryFooter />);
     await act(async () => {});
+    await openRetry(user);
 
     const backoffInput = screen.getAllByLabelText(/backoff/i)[0]!;
     const backoffClear = backoffInput.nextElementSibling as HTMLButtonElement;
@@ -383,6 +403,7 @@ describe("try task — backoff clear with live re-render", () => {
     const user = userEvent.setup();
     rtlRender(<LiveTryFooterRich />);
     await act(async () => {});
+    await openRetry(user);
 
     const backoffInput = screen.getAllByLabelText(/backoff/i)[0]!;
     const backoffClear = backoffInput.nextElementSibling as HTMLButtonElement;
@@ -407,6 +428,7 @@ describe("resolveTaskId — Catch node delegates to parent container id", () => 
     // tryTask schema as the Try node) and changes are reliably visible.
     const { commitWorkflow, user } = renderCatchFooter();
     await act(async () => {});
+    await openRetry(user);
 
     await user.click(screen.getByRole("button", { name: "constant" }));
     await user.click(screen.getByRole("button", { name: "Apply" }));

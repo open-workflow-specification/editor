@@ -14,19 +14,10 @@
  * limitations under the License.
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { openLevel, waitForDiagram, waitForSidebar } from "./helpers";
 
-async function waitForDiagram(page: Page) {
-  await expect(page.getByTestId("diagram-container")).toBeVisible();
-  await expect(page.locator('[data-testid^="rf__node-"]').first()).toBeVisible();
-}
-
-async function waitForSidebar(page: Page) {
-  const sidebar = page.locator('[data-slot="sidebar"]');
-  await expect(sidebar).toHaveAttribute("data-state", "expanded");
-}
-
-test("backoff inner text survives Catch section collapse/expand", async ({ page }) => {
+test("backoff inner text survives leaving and reopening the retry level", async ({ page }) => {
   await page.goto("/iframe.html?id=nested-editing-workflows--try-catch-retry-inline");
   await waitForDiagram(page);
 
@@ -39,6 +30,9 @@ test("backoff inner text survives Catch section collapse/expand", async ({ page 
 
   const form = page.locator(".dec-task-form");
   await expect(form).toBeVisible();
+
+  // `catch.retry` is a one-of below the top level: its definition is a level of its own.
+  await openLevel(page, "retry");
 
   // The backoff combobox should show "exponential" (from the workflow)
   const allCombos = form.locator('[data-slot="combobox-input"]');
@@ -67,17 +61,9 @@ test("backoff inner text survives Catch section collapse/expand", async ({ page 
   await textarea.fill("limit: 2");
   await expect(textarea).toHaveValue("limit: 2");
 
-  // Find the Catch section toggle — scroll up first to make it visible
-  const catchToggle = form.getByRole("button", { name: "Catch", exact: true });
-  await catchToggle.scrollIntoViewIfNeeded();
-
-  // Collapse the Catch section
-  await catchToggle.click();
-  await expect(catchToggle).toHaveAttribute("aria-expanded", "false");
-
-  // Re-expand the Catch section
-  await catchToggle.click();
-  await expect(catchToggle).toHaveAttribute("aria-expanded", "true");
+  // Leave the retry level (unmounting the backoff row) and open it again
+  await form.getByRole("button", { name: "Up one level" }).click();
+  await openLevel(page, "retry");
 
   // The combobox and textarea should still have their values
   const restoredCombos = form.locator('[data-slot="combobox-input"]');

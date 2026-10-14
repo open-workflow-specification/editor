@@ -24,9 +24,14 @@ import * as React from "react";
 
 export type DrillContextValue = {
   open: (path: string, label: string) => void;
+  /** The open level's path; undefined at the task's top level. */
+  levelPath: string | undefined;
 };
 
-export const DrillContext = React.createContext<DrillContextValue>({ open: () => {} });
+export const DrillContext = React.createContext<DrillContextValue>({
+  open: () => {},
+  levelPath: undefined,
+});
 
 export function useDrill(): DrillContextValue {
   return React.useContext(DrillContext);

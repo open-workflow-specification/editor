@@ -232,6 +232,11 @@ describe("filterReadOnlyFields — map fields", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("excludes a map field whose object has no entries", () => {
+    const result = filterReadOnlyFields([makeMap("with.arguments")], { with: { arguments: {} } });
+    expect(result).toHaveLength(0);
+  });
+
   it("excludes a map field when the path holds an array (not an object)", () => {
     const result = filterReadOnlyFields([makeMap("items")], { items: [1, 2, 3] });
     expect(result).toHaveLength(0);

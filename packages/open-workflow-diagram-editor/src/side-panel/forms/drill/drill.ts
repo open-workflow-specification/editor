@@ -28,34 +28,70 @@ import { variantFieldsOf } from "../taskFormContext";
 /**
  * Core types and utilities for drill-in navigation.
  *
- * Drill-in navigation allows users to "drill into" a section ("Common fields"), an object or a
- * map to edit it as its own level.
+ * Drill-in navigation allows users to "drill into" a section ("Common fields"), an object, a
+ * map or a one-of to edit it as its own level.
  */
 
-export type DrillTarget = SectionField | ObjectField | MapField;
+export type DrillTarget = SectionField | ObjectField | MapField | OneOfField;
 
 /**
- * Type guard checking if a field can be drilled into (section, object, or map).
- * Note: Objects/maps may render inline based on context, but are still valid targets.
- * TODO: Will expand to one-ofs in a future PR
+ * Type guard checking if a field can be drilled into (section, object, map or one-of).
+ * Note: these may render inline based on context, but are still valid targets.
  */
 export function isDrillTarget(field: FormFieldDescriptor): field is DrillTarget {
-  return field.kind === "section" || field.kind === "object" || field.kind === "map";
+  return (
+    field.kind === "section" ||
+    field.kind === "object" ||
+    field.kind === "map" ||
+    field.kind === "one-of"
+  );
 }
 
 /**
  * The fields an opened level shows. A map has no child fields: its level is the map's own
- * editor, so it lists itself (rendered inline there, never as its own drill row again).
+ * editor, so it lists itself (rendered inline there, never as its own drill row again). 
+ * A one-of's fields are those of its selected variant, below its picker.
  */
-export function levelFieldsOf(target: DrillTarget): FormFieldDescriptor[] {
-  return target.kind === "map" ? [target] : target.children;
+export function levelFieldsOf(
+  target: DrillTarget,
+  selectVariant: VariantSelector,
+): FormFieldDescriptor[] {
+  if (target.kind === "map") return [target];
+  if (target.kind === "one-of") {
+    const variant = selectVariant(target);
+    return variant ? variantFieldsOf(target, variant) : [];
+  }
+  return target.children;
 }
 
 /**
  * Whether objects and maps among `fields` (the fields a level or inline object actually shows)
+ * render inline: only when there is just the one.
  */
 export function isInlineLevel(fields: readonly FormFieldDescriptor[]): boolean {
   return fields.length === 1;
+}
+
+/** Kinds that hold more than one value; anything else is a single plain value. */
+export const STRUCTURED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<
+  FormFieldDescriptor["kind"]
+>(["object", "map", "one-of", "section", "ordered-map", "event-filter-list"]);
+
+/** Whether a one-of variant's fields are one plain value, or none. */
+export function isSingleValue(fields: readonly FormFieldDescriptor[]): boolean {
+  const [only, ...rest] = fields;
+  return only === undefined || (rest.length === 0 && !STRUCTURED_KINDS.has(only.kind));
+}
+
+/**
+ * Whether a one-of is a drill row: when any of its options holds more than a single value. 
+ * Decided by the schema, never by the option chosen.
+ */
+export function oneOfDrills(field: OneOfField): boolean {
+  return (
+    field.variants.length > 1 &&
+    field.variants.some((variant) => !isSingleValue(variantFieldsOf(field, variant)))
+  );
 }
 
 /**
@@ -104,7 +140,7 @@ export function resolveDrillStack(
     const target = findDrillTarget(fields, path, selectVariant);
     if (target === undefined) break;
     levels.push(target);
-    fields = levelFieldsOf(target);
+    fields = levelFieldsOf(target, selectVariant);
   }
   return levels;
 }

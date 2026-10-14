@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import {
   ROOT_ONE_OF_PATH,
   type EnumField,
@@ -23,7 +24,7 @@ import {
   type OneOfVariant,
 } from "../../core/schemaToFormFields";
 import { flattenTask, setNestedPath } from "../../core/taskDraft";
-import { SENTINEL_PREFIX, SENTINEL_SELF_KEY, SENTINEL_SUFFIX } from "./sentinels";
+import { SENTINEL_PREFIX, SENTINEL_SELF_KEY, sentinelPath } from "./sentinels";
 
 // ---------------------------------------------------------------------------
 // TaskFormContext
@@ -70,8 +71,18 @@ export function selectedVariantIndex(
 }
 
 /**
- * TEMPORARY: revisit when one-ofs drill. The one-of then becomes the drill target (and owns the
- * breadcrumb label), so the map is no longer named on its own
+ * The index of the variant a one-of shows, read from its sentinel (see `selectedVariantIndex`).
+ * The one source for its inline picker, its drill row and its level, so they cannot disagree.
+ */
+export function useSelectedVariant(field: OneOfField): number {
+  const { taskData } = useTaskFormContext();
+  const { control } = useFormContext<Record<string, unknown>>();
+  const label = useWatch({ control, name: sentinelPath(field.path) as never }) as unknown;
+  return selectedVariantIndex(field, label, taskData);
+}
+
+/**
+ * Variant fields. Maps at one-of's path use the one-of's label (variant names the shape)
  */
 export function variantFieldsOf(field: OneOfField, variant: OneOfVariant): FormFieldDescriptor[] {
   return variant.fields.map((child) =>
@@ -205,7 +216,7 @@ export function collectSelectedVariants(
     if (field.kind === "object" || field.kind === "section") {
       collectSelectedVariants(field.children, values, result);
     } else if (field.kind === "one-of") {
-      const label = values[`${SENTINEL_PREFIX}${field.path}${SENTINEL_SUFFIX}`];
+      const label = values[sentinelPath(field.path)];
       const variant = field.variants.find((v) => v.label === label);
       if (variant) {
         result.set(field.path, { field, variant });
@@ -360,14 +371,23 @@ export function filterReadOnlyFields(
     if (field.kind === "one-of") {
       // Root-level one-of (path=ROOT_ONE_OF_PATH) represents the whole task variant — always show
       if (field.path === ROOT_ONE_OF_PATH) return [field];
-      // Property-level one-of: show only if the task has a value at that path
-      if (hasValue(task, field.path)) return [field];
-      return [];
+      // Property-level one-of: show only if the task has a value at that path, and its option
+      // has something to show (`headers: {}` has a map option with no entries).
+      if (!hasValue(task, field.path)) return [];
+      const variant = field.variants[selectedVariantIndex(field, undefined, task)];
+      const variantFields = variant === undefined ? [] : variantFieldsOf(field, variant);
+      const nothingToShow =
+        variantFields.length > 0 && filterReadOnlyFields(variantFields, task).length === 0;
+      return nothingToShow ? [] : [field];
     }
 
     if (field.kind === "map") {
-      // Show the map group only when the task contains a non-empty object at this path.
-      return hasObjectAtPath(task, field.path) ? [field] : [];
+      // Show the map group only when the task contains a non-empty object at this path: an empty
+      // one has no entries to list, and its drill row would open onto nothing.
+      const value = getNestedValue(task, field.path);
+      return hasObjectAtPath(task, field.path) && Object.keys(value as object).length > 0
+        ? [field]
+        : [];
     }
 
     if (field.kind === "event-filter-list" || field.kind === "ordered-map") {

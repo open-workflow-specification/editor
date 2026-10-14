@@ -215,9 +215,9 @@ describe("SidePanel", () => {
       expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
 
       // The set task's `set` field renders as a key-value map editor.
-      // Clicking "+ Add property" adds a new row; typing into the key input
+      // Clicking "Add property" adds a new row; typing into the key input
       // marks the form as dirty.
-      // Use getAllByRole because `metadata` also renders an "+ Add property" button.
+      // Use getAllByRole because `metadata` also renders an "Add property" button.
       await user.click(screen.getAllByRole("button", { name: /add property/i })[0]!);
       const keyInput = screen.getAllByLabelText(/entry key/i)[0]!;
       await user.type(keyInput, "myKey");

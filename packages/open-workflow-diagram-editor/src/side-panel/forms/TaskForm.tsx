@@ -20,7 +20,9 @@ import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
 import { getFormFieldsForNodeType, structuralEqual } from "@/core";
-import { FormField } from "./FormField";
+import { COMMON_FIELDS_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
+import { FormField, GroupHeading } from "./FormField";
+import { VariantPicker } from "./VariantPicker";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import {
@@ -38,7 +40,7 @@ import {
 import { useWorkflowErrorsForForm } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
 import { flattenTask, setNestedPath } from "@/core/taskDraft";
-import { SENTINEL_KEY, SENTINEL_SUFFIX } from "./sentinels";
+import { SENTINEL_KEY, sentinelPath } from "./sentinels";
 import { useDrillNavigation } from "./drill/useDrillNavigation";
 import { DrillContext, InlineLevelsContext } from "./drill/DrillContext";
 import type { VariantSelector } from "./drill/drill";
@@ -174,17 +176,18 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   //  ── Drill-in navigation  ────────────────────
   // Flattened via `compute` to create a new object reference on each change.
   // Ensures re-render when variant switches, even though RHF mutates the sentinel object.
+  // Keyed by full sentinel path (`sentinelPath`), like every other sentinel lookup.
   const sentinels = useWatch({
     control: form.control,
     name: SENTINEL_KEY,
-    compute: (value: unknown) => flattenTask((value ?? {}) as Record<string, unknown>),
+    compute: (value: unknown) => flattenTask({ [SENTINEL_KEY]: value ?? {} }),
   }) as Record<string, unknown>;
   const selectVariant = React.useCallback<VariantSelector>(
     (field) =>
       field.variants[
         selectedVariantIndex(
           field,
-          sentinels[`${field.path}${SENTINEL_SUFFIX}`],
+          sentinels[sentinelPath(field.path)],
           task as Record<string, unknown>,
         )
       ],
@@ -224,8 +227,14 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
             )}
             <InlineLevelsContext.Provider value={navigation.inlineLevels}>
               <div className="dec-task-form-fields">
+                {navigation.levelOneOf !== undefined && (
+                  <VariantPicker field={navigation.levelOneOf} />
+                )}
                 {navigation.levelFields.map((field) => (
-                  <FormField key={field.path} field={field} />
+                  <React.Fragment key={field.path}>
+                    {navigation.trail.length === 0 && <TopLevelHeading field={field} />}
+                    <FormField field={field} />
+                  </React.Fragment>
                 ))}
               </div>
             </InlineLevelsContext.Provider>
@@ -234,4 +243,14 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
       </VariantSnapshotsContext.Provider>
     </TaskFormContext.Provider>
   );
+}
+
+/** The top level's groups after the task's own fields: Flow (`then`), then Task settings. */
+function TopLevelHeading({ field }: { field: FormFieldDescriptor }) {
+  const { t } = useI18n();
+  if (field.kind === "then") return <GroupHeading label={t("sidebar.group.flow")} />;
+  if (field.path === COMMON_FIELDS_PATH) {
+    return <GroupHeading label={t("sidebar.group.taskSettings")} />;
+  }
+  return null;
 }

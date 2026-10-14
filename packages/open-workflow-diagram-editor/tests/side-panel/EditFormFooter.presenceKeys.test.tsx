@@ -24,8 +24,7 @@ import { describe, it, expect, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
-import { openCommonFields, openLevel } from "../test-utils/drill-helpers";
-import { getTaskBaseKeys } from "../../src/core";
+import { openLevel } from "../test-utils/drill-helpers";
 
 vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
   const { createComboboxStub } = await import("../test-utils/combobox-stub");
@@ -70,32 +69,37 @@ function committedAt(commitWorkflow: ReturnType<typeof vi.fn>, nodeId: string, p
 }
 
 describe("switching a presence-keyed selector and applying with nothing filled in", () => {
+  // Each selector's one-of is a level of its own, opened through the rows on the way to it.
   it.each([
     [
       "an event-consumption strategy",
       "/do/listenAny",
+      ["To"],
       "One Event Consumption Strategy",
       "listen.to",
       { one: {} },
     ],
-    ["an input schema", "/do/validateInput", "Schema External", "input.schema", { resource: {} }],
+    [
+      "an input schema",
+      "/do/validateInput",
+      ["Common fields", "input", "Schema"],
+      "Schema External",
+      "input.schema",
+      { resource: {} },
+    ],
     [
       "an authentication policy",
       "/do/getPet",
+      ["Authentication"],
       "Bearer Authentication Policy",
       "with.authentication",
       { bearer: {} },
     ],
-  ])("keeps the chosen key for %s", async (_label, nodeId, option, path, expected) => {
+  ])("keeps the chosen key for %s", async (_label, nodeId, levels, option, path, expected) => {
     const { commitWorkflow, user } = renderFooter(nodeId);
     await act(async () => {});
 
-    const [key] = path.split(".");
-    // A taskBase object (`input`) is a drill row inside Common fields.
-    if (getTaskBaseKeys().has(key!)) {
-      await openCommonFields(user);
-      await openLevel(user, key!);
-    }
+    for (const level of levels) await openLevel(user, level);
 
     await user.click(screen.getAllByRole("button", { name: option })[0]!);
     await user.click(screen.getByRole("button", { name: "Apply" }));

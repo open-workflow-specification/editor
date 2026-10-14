@@ -1587,7 +1587,22 @@ function buildOneOfVariants(
     }
   }
 
-  return collapsed;
+  return collapsed.flatMap((variant) => {
+    const nested = samePathOneOf(variant, parentPath);
+    return nested === undefined ? [variant] : nested.variants;
+  });
+}
+
+/**
+ * Nested one-ofs at same path are flattened (would share sentinel, causing conflicts).
+ */
+function samePathOneOf(variant: OneOfVariant, path: string): OneOfField | undefined {
+  const [only, ...rest] = variant.fields;
+  if (only?.kind !== "one-of" || only.path !== path || rest.length > 0) return undefined;
+  if (Object.keys(variant.constWrites).length > 0 || variant.presenceKey !== undefined) {
+    return undefined;
+  }
+  return only;
 }
 
 /**

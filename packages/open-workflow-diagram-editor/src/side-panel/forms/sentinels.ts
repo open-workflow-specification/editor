@@ -15,6 +15,7 @@
  */
 
 // Variant sentinels — where a one-of records its selected variant in the form values.
+
 export const SENTINEL_KEY = "__oneof__";
 export const SENTINEL_SELF_KEY = "__self__";
 export const SENTINEL_PREFIX = `${SENTINEL_KEY}.`;

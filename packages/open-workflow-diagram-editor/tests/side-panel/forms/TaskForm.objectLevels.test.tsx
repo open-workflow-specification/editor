@@ -63,7 +63,8 @@ describe("TaskForm inline objects", () => {
     await openLevel(user, "Lifetime");
 
     expect(screen.queryByDisplayValue("nginx:latest")).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue("PT10M")).toBeInTheDocument();
+    // `after` is a duration, a one-of with an inline-object option: a row showing its value.
+    expect(screen.getByRole("button", { name: /^Open after, .* · PT10M$/i })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Field path" })).toHaveTextContent("Lifetime");
 
     await leaveLevel(user);

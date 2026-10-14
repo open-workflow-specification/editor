@@ -82,7 +82,7 @@ const deleteRow = (user: User, index: number) =>
 
 /** The environment map's own add button — `metadata` renders a second one below it. */
 async function addRow(user: User, key: string, value: string) {
-  await user.click(screen.getAllByRole("button", { name: "+ Add property" })[0]!);
+  await user.click(screen.getAllByRole("button", { name: "Add property" })[0]!);
   await user.type(screen.getAllByLabelText("Entry key").at(-1)!, key);
   await user.type(screen.getAllByLabelText("Entry value").at(-1)!, value);
 }

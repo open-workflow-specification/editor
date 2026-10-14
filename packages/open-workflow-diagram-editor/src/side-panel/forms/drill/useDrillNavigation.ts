@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
-import type { FormFieldDescriptor } from "../../../core/schemaToFormFields";
+import type { FormFieldDescriptor, OneOfField } from "../../../core/schemaToFormFields";
 import { filterReadOnlyFields } from "../taskFormContext";
 import type { DrillContextValue } from "./DrillContext";
 import {
@@ -62,6 +62,8 @@ export type DrillNavigation = {
   taskName: string;
   /** Whether objects and maps directly on the open level render inline (see `InlineLevelsContext`). */
   inlineLevels: boolean;
+  /** The open level when it is a one-of, whose picker goes above `levelFields`. */
+  levelOneOf: OneOfField | undefined;
 };
 
 /**
@@ -103,6 +105,7 @@ export function useDrillNavigation({
         setDrillStack([...levels.map((level) => level.path), path]);
         setAnnouncement(label);
       },
+      levelPath: levels[levels.length - 1]?.path,
     }),
     [levels],
   );
@@ -137,9 +140,9 @@ export function useDrillNavigation({
   // Read-only keeps a section or object whole (for its "n of m set"), so the level filters its own.
   const levelFields = React.useMemo(() => {
     if (current === undefined) return fields;
-    if (!isReadOnly) return levelFieldsOf(current);
-    return filterReadOnlyFields(levelFieldsOf(current), task);
-  }, [current, fields, isReadOnly, task]);
+    if (!isReadOnly) return levelFieldsOf(current, selectVariant);
+    return filterReadOnlyFields(levelFieldsOf(current, selectVariant), task);
+  }, [current, fields, isReadOnly, task, selectVariant]);
 
   const trail = levels.map((level) => drillLabel(level, t));
 
@@ -148,5 +151,17 @@ export function useDrillNavigation({
   // Counted on the fields shown, so read-only's filtered level follows the same rule.
   const inlineLevels = current === undefined || isInlineLevel(levelFields);
 
-  return { formRef, drill, announcement, trail, goTo, levelFields, taskName, inlineLevels };
+  const levelOneOf = current?.kind === "one-of" ? current : undefined;
+
+  return {
+    formRef,
+    drill,
+    announcement,
+    trail,
+    goTo,
+    levelFields,
+    taskName,
+    inlineLevels,
+    levelOneOf,
+  };
 }

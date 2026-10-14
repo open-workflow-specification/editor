@@ -15,10 +15,9 @@
  */
 
 import * as React from "react";
-import { HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { useFieldArray, useFormContext } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   type FormFieldDescriptor,
   type MapField,
@@ -26,31 +25,20 @@ import {
   type OneOfField,
   type OrderedMapField,
 } from "../../core/schemaToFormFields";
-import { FieldControl } from "./FieldControl";
+import { FieldControl, type FieldControlProps } from "./FieldControl";
 import {
   useTaskFormContext,
   filterReadOnlyFields,
-  getNestedValue,
   prefixFields,
-  collectLeafKinds,
-  selectedVariantIndex,
+  useSelectedVariant,
   variantFieldsOf,
-  VariantSnapshotsContext,
-  variantSnapshotKey,
-  type VariantSnapshots,
 } from "./taskFormContext";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "./ui/combobox";
+import { FieldLabel, HelpTooltip } from "./FieldLabel";
+import { VariantPicker } from "./VariantPicker";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
-import { sentinelPath as toSentinelPath } from "./sentinels";
 import { DrillRow } from "./drill/DrillRow";
-import { InlineLevelsContext } from "./drill/DrillContext";
-import { isInlineLevel } from "./drill/drill";
+import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
+import { isInlineLevel, oneOfDrills, STRUCTURED_KINDS } from "./drill/drill";
 
 /* useFieldArry's per entry key, not 'id': (an entry name could be 'id') */
 export const RHF_ENTRY_KEY = "__rhfEntryKey";
@@ -80,11 +68,14 @@ export function FormField({ field }: FormFieldProps) {
     return <OrderedMapRow field={field} />;
   }
 
+  return <PlainFieldRow field={field} />;
+}
+
+function PlainFieldRow({ field }: { field: PlainField }) {
   // Boolean controls render as <button role="switch"> — htmlFor→<button> is
   // not a valid DOM association. Skip the id linkage for booleans.
   const controlId =
     field.kind === "boolean" ? undefined : `field-${field.path.replace(/\./g, "-")}`;
-
   return (
     <div className="dec-form-field">
       <FieldLabel
@@ -96,52 +87,6 @@ export function FormField({ field }: FormFieldProps) {
       <div className="dec-form-field-control">
         <FieldControl field={field} {...(controlId !== undefined ? { id: controlId } : {})} />
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// FieldLabel — label text + optional description tooltip
-// ---------------------------------------------------------------------------
-
-function FieldLabel({
-  htmlFor,
-  label,
-  required,
-  description,
-}: {
-  htmlFor?: string;
-  label: string;
-  required: boolean;
-  description?: string;
-}) {
-  const { t } = useI18n();
-  return (
-    <div className="dec-form-field-label-row">
-      <label htmlFor={htmlFor} className="dec-form-field-label">
-        {label}
-      </label>
-      {/* Required indicator sits outside the <label> so it is excluded from
-          the accessible name computation (getByLabelText matches label text only). */}
-      {required && (
-        <span className="dec-form-field-required" aria-hidden="true">
-          *
-        </span>
-      )}
-      {description && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="dec-form-field-help"
-              aria-label={`${t("aria.help")}: ${label}`}
-            >
-              <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{description}</TooltipContent>
-        </Tooltip>
-      )}
     </div>
   );
 }
@@ -233,18 +178,7 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
           </span>
         </button>
         {field.description !== undefined && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="dec-form-field-help"
-                aria-label={`${t("aria.help")}: ${field.label}`}
-              >
-                <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{field.description}</TooltipContent>
-          </Tooltip>
+          <HelpTooltip label={field.label} description={field.description} />
         )}
       </div>
 
@@ -256,9 +190,6 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
                 <span className="dec-form-ordered-map-index">{row.index + 1}</span>
                 <span className="dec-form-ordered-map-name">{row.name}</span>
               </legend>
-              {/* TEMPORARY: objects and maps in an entry stay inline because `findDrillTarget`
-                  cannot resolve a level inside an entry. Remove when navigation can, and apply
-                  the usual `isInlineLevel` rule here. No-op today: switch cases are scalars. */}
               <InlineLevelsContext.Provider value={true}>
                 {row.fields.map((child) => (
                   <FormField key={child.path} field={child} />
@@ -276,7 +207,7 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
 // ObjectFieldRow / MapFieldRow — renders as drill row or inline based on context
 // ------------------------------------------------------------------------------
 
-// Renders an object field as either a drill row or inline collapsible group.
+// Renders an object field as either a drill row or, inline, a group under a heading.
 function ObjectFieldRow({ field }: { field: ObjectField }) {
   const inline = React.useContext(InlineLevelsContext);
   if (!inline) return <DrillRow field={field} />;
@@ -286,259 +217,154 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 // Renders a map field as either a drill row or inline key-value editor.
 function MapFieldRow({ field }: { field: MapField }) {
   const inline = React.useContext(InlineLevelsContext);
+  const { levelPath } = useDrill();
   if (!inline) return <DrillRow field={field} />;
-  return <KeyValueMapField field={field} />;
+  // A map opened as its own level is already named by the breadcrumb.
+  return <KeyValueMapField field={field} showLabel={levelPath !== field.path} />;
 }
 
-// TEMPORARY: the inline group is replaced by a plain group heading
-// when headings land in the drill-in follow-up PR.
+// An object shown in place: a plain group heading naming it, then its fields.
 function InlineObjectGroup({ field }: { field: ObjectField }) {
-  const [expanded, setExpanded] = React.useState(true);
   const { isReadOnly, taskData } = useTaskFormContext();
-  const { t } = useI18n();
+  const headingId = React.useId();
 
   const visibleChildren = isReadOnly
     ? filterReadOnlyFields(field.children, taskData)
     : field.children;
 
-  // In read-only mode collapse the whole group if nothing inside has a value
+  // In read-only mode drop the whole group if nothing inside has a value
   if (isReadOnly && visibleChildren.length === 0) return null;
 
   return (
-    <div className="dec-form-object-group">
-      {/* Header row: expand/collapse button and optional help button are siblings
-          so that no interactive element is nested inside another. */}
-      <div className="dec-form-object-header">
-        <button
-          type="button"
-          className="dec-form-object-toggle"
-          onClick={() => setExpanded((v) => !v)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              setExpanded((v) => !v);
-            }
-          }}
-          aria-expanded={expanded}
-        >
-          {expanded ? (
-            <ChevronDown className="dec-form-object-chevron" aria-hidden="true" />
-          ) : (
-            <ChevronRight className="dec-form-object-chevron" aria-hidden="true" />
-          )}
-          <span className="dec-form-object-label">{field.label}</span>
-          {field.required && (
-            <span className="dec-form-field-required" aria-hidden="true">
-              {" "}
-              *
-            </span>
-          )}
-        </button>
-        {field.description !== undefined && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className="dec-form-field-help"
-                aria-label={`${t("aria.help")}: ${field.label}`}
-              >
-                <HelpCircle className="dec-form-field-help-icon" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{field.description}</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+    <section className="dec-form-group" aria-labelledby={headingId}>
+      <GroupHeading
+        id={headingId}
+        label={field.label}
+        required={field.required}
+        {...(field.description !== undefined ? { description: field.description } : {})}
+      />
+      {/* Below an inline object, objects drill, unless one is its only child. */}
+      <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
+        {visibleChildren.map((child) => (
+          <FormField key={child.path} field={child} />
+        ))}
+      </InlineLevelsContext.Provider>
+    </section>
+  );
+}
 
-      {expanded && (
-        <div className="dec-form-object-children">
-          {/* Below an inline object, objects drill, unless one is its only child. */}
-          <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
-            {visibleChildren.map((child) => (
-              <FormField key={child.path} field={child} />
-            ))}
-          </InlineLevelsContext.Provider>
-        </div>
+/** A plain heading over a group of fields: an inline object's, or the top level's Flow and Task settings. */
+export function GroupHeading({
+  id,
+  label,
+  required = false,
+  description,
+}: {
+  id?: string;
+  label: string;
+  required?: boolean;
+  description?: string;
+}) {
+  return (
+    <h4 id={id} className="dec-form-group-heading">
+      {label}
+      {required && (
+        <span className="dec-form-field-required" aria-hidden="true">
+          *
+        </span>
       )}
-    </div>
+      {description !== undefined && <HelpTooltip label={label} description={description} />}
+    </h4>
   );
 }
 
 // ---------------------------------------------------------------------------
-// OneOfFieldRow — type-selector combobox + sub-fields for selected variant
+// OneOfFieldRow — inline (picker + the chosen variant's fields) or a drill row
 // ---------------------------------------------------------------------------
 
+type PlainField = FieldControlProps["field"];
+
+function isPlainField(field: FormFieldDescriptor): field is PlainField {
+  return !STRUCTURED_KINDS.has(field.kind);
+}
+
+/**
+ * A one-of whose chosen variant is one value, shown in place: a single field under the one-of's
+ * label, its type picker above the value.
+ */
+function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainField | undefined }) {
+  const controlId =
+    value === undefined || value.kind === "boolean"
+      ? undefined
+      : `field-${value.path.replace(/\./g, "-")}`;
+
+  return (
+    <div className="dec-form-field">
+      <FieldLabel
+        {...(controlId !== undefined ? { htmlFor: controlId } : {})}
+        label={field.label}
+        required={field.required}
+        {...(field.description !== undefined ? { description: field.description } : {})}
+      />
+      <div className="dec-form-field-control dec-form-single-value-oneof">
+        <VariantPicker field={field} compact />
+        {value !== undefined && (
+          <FieldControl field={value} {...(controlId !== undefined ? { id: controlId } : {})} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OneOfFieldRow({ field }: { field: OneOfField }) {
+  const inline = React.useContext(InlineLevelsContext);
   const { isReadOnly, taskData } = useTaskFormContext();
-  const { control, getValues, setValue, register } = useFormContext<Record<string, unknown>>();
-  const sentinelPath = toSentinelPath(field.path);
-
-  // Watched so the row follows a reset as well as switch
-  const sentinelLabel = useWatch({ control, name: sentinelPath as never }) as unknown;
-
-  const derivedIdx = React.useMemo(
-    () => selectedVariantIndex(field, sentinelLabel, taskData),
-    [field, taskData, sentinelLabel],
-  );
-
-  const [selectedVariantIdx, setSelectedVariantIdx] = React.useState(derivedIdx);
-
-  // Re-sync when the selected task changes (taskData identity changes)
-  const [prevDerivedIdx, setPrevDerivedIdx] = React.useState(derivedIdx);
-  if (derivedIdx !== prevDerivedIdx) {
-    setSelectedVariantIdx(derivedIdx);
-    setPrevDerivedIdx(derivedIdx);
-  }
-
-  // Variant snapshots: owned by TaskForm (survives drill unmount), cleared on task change.
-  const sharedSnapshots = React.useContext(VariantSnapshotsContext);
-  const [ownSnapshots] = React.useState<VariantSnapshots>(() => new Map());
-  const variantSnapshots = sharedSnapshots ?? ownSnapshots;
-  const variantSnapshotsForField = React.useCallback(() => {
-    const key = variantSnapshotKey(field);
-    const saved = variantSnapshots.get(key) ?? new Map<number, Record<string, unknown>>();
-    variantSnapshots.set(key, saved);
-    return saved;
-  }, [field, variantSnapshots]);
-
-  const sentinelRef = register(sentinelPath as never);
-
-  // Sentinel default: the committed variant label. Switching back to it clears dirty.
-  const commitedVariantLabel = field.variants[derivedIdx]?.label ?? "";
-
-  const handleVariantChange = React.useCallback(
-    (newIdx: number) => {
-      if (newIdx === selectedVariantIdx) return;
-
-      // Save current variant's field values before switching
-      const currentVariant = field.variants[selectedVariantIdx];
-      if (currentVariant) {
-        const snapshot: Record<string, unknown> = {};
-        const allValues = getValues();
-        for (const p of collectLeafKinds(currentVariant.fields).keys()) {
-          snapshot[p] = getNestedValue(allValues as Record<string, unknown>, p);
-        }
-        variantSnapshotsForField().set(selectedVariantIdx, snapshot);
-      }
-
-      setSelectedVariantIdx(newIdx);
-
-      const newLabel = field.variants[newIdx]?.label ?? "";
-      // Always mark sentinel dirty — the default is the committed label, so switching back clears it.
-      setValue(sentinelPath as never, newLabel as never, { shouldDirty: true });
-
-      // Restore saved values for the new variant if available; otherwise clear
-      // leaf paths, keeping shared paths whose field kind is unchanged.
-      const saved = variantSnapshotsForField().get(newIdx);
-      const newVariant = field.variants[newIdx];
-      const currentKindByPath = currentVariant
-        ? collectLeafKinds(currentVariant.fields)
-        : new Map<string, string>();
-      const newKindByPath = newVariant
-        ? collectLeafKinds(newVariant.fields)
-        : new Map<string, string>();
-
-      if (saved) {
-        for (const [path, value] of Object.entries(saved)) {
-          setValue(path, value, { shouldDirty: true });
-        }
-      } else if (newVariant) {
-        for (const [path, newKind] of newKindByPath) {
-          const currentKind = currentKindByPath.get(path);
-          if (currentKind !== newKind) {
-            setValue(path, "" as never, { shouldDirty: true });
-          }
-        }
-      }
-
-      // Paths exclusive to the old variant: clear them silently (no dirty
-      // needed — dirty is tracked via the sentinel).
-      const newPaths = [...newKindByPath.keys()];
-      for (const path of currentKindByPath.keys()) {
-        const overlapsNewVariant =
-          newKindByPath.has(path) ||
-          newPaths.some((p) => p.startsWith(`${path}.`) || path.startsWith(`${p}.`));
-        if (!overlapsNewVariant) {
-          setValue(path, undefined, { shouldDirty: false });
-        }
-      }
-    },
-    [
-      selectedVariantIdx,
-      setSelectedVariantIdx,
-      field.variants,
-      getValues,
-      setValue,
-      sentinelPath,
-      variantSnapshotsForField,
-    ],
-  );
-
-  const variantLabels = React.useMemo(() => field.variants.map((v) => v.label), [field.variants]);
-  const currentVariant = field.variants[selectedVariantIdx];
-
-  const visibleVariantFields = React.useMemo(() => {
-    if (!currentVariant) return [];
-    const fields = variantFieldsOf(field, currentVariant);
+  const variant = field.variants[useSelectedVariant(field)];
+  // The chosen variant's fields as shown: read-only keeps only those with a value.
+  const shownFields = React.useMemo(() => {
+    if (!variant) return [];
+    const fields = variantFieldsOf(field, variant);
     return isReadOnly ? filterReadOnlyFields(fields, taskData) : fields;
-  }, [currentVariant, isReadOnly, taskData, field]);
+  }, [field, variant, isReadOnly, taskData]);
 
-  // If there is only 1 variant or no variants, render child fields without a combo selector
+  // A single-variant one-of has nothing to pick, so its fields stand in for it.
   if (field.variants.length <= 1) {
     return (
       <div className="dec-form-oneof-children">
-        {visibleVariantFields.map((child) => (
+        {shownFields.map((child) => (
           <FormField key={child.path} field={child} />
         ))}
       </div>
     );
   }
 
+  const [only, ...rest] = shownFields;
+  if (!inline && oneOfDrills(field)) {
+    // Map variants show entry count; single values show after variant name
+    const isOwnMap = rest.length === 0 && only?.kind === "map" && only.path === field.path;
+    const valuePath =
+      rest.length === 0 && only !== undefined && isPlainField(only) ? only.path : undefined;
+    return (
+      <DrillRow
+        field={field}
+        variantLabel={variant?.label ?? ""}
+        countEntries={isOwnMap}
+        {...(valuePath !== undefined ? { variantValuePath: valuePath } : {})}
+      />
+    );
+  }
+  // A single value is edited in place, under the one-of's own label.
+  if (only === undefined || (rest.length === 0 && isPlainField(only))) {
+    return <SingleValueOneOf field={field} value={only} />;
+  }
+
+  // Inline: variant fields replace one-of position
   return (
     <div className="dec-form-oneof-group">
-      {/* Hidden sentinel input — keeps the variant selection dirty state in RHF.
-          Only rendered in edit mode; read-only forms never switch variants. */}
-      {!isReadOnly && <input {...sentinelRef} type="hidden" defaultValue={commitedVariantLabel} />}
-      <div className="dec-form-field">
-        <FieldLabel
-          label={field.label}
-          required={field.required}
-          {...(field.description !== undefined ? { description: field.description } : {})}
-        />
-        <div className="dec-form-field-control">
-          <Combobox
-            value={variantLabels[selectedVariantIdx] ?? ""}
-            onValueChange={(val) => {
-              if (!val) return;
-              const idx = variantLabels.indexOf(val);
-              if (idx !== -1) handleVariantChange(idx);
-            }}
-            disabled={isReadOnly}
-          >
-            <ComboboxInput
-              readOnly
-              disabled={isReadOnly}
-              value={variantLabels[selectedVariantIdx] ?? ""}
-              aria-label={field.label}
-              showClear={false}
-              className="dec:h-7 dec:text-xs"
-            />
-            <ComboboxContent>
-              <ComboboxList>
-                {variantLabels.map((label) => (
-                  <ComboboxItem key={label} value={label}>
-                    {label}
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </div>
-      </div>
-
-      {visibleVariantFields.length > 0 && (
+      <VariantPicker field={field} />
+      {shownFields.length > 0 && (
         <div className="dec-form-oneof-children">
-          {visibleVariantFields.map((child) => (
+          {shownFields.map((child) => (
             <FormField key={child.path} field={child} />
           ))}
         </div>

@@ -186,8 +186,9 @@ describe("TaskForm drill-in", () => {
   });
 
   it("counts in read-only exactly what the opened level will show", () => {
+    // `metadata: {}` has no entries to show, so nothing is set and there is no level to open.
     renderPanel(EMPTY_METADATA, true);
-    expect(row()).toHaveAccessibleName("Open Common fields, 1 of 6 set");
+    expect(row()).not.toBeInTheDocument();
   });
 
   it("renders no row in read-only when none of the common fields is set", () => {
@@ -261,7 +262,7 @@ describe("TaskForm drill-in", () => {
     // Typed one character at a time, so the key is renamed h > he > … > hello, each rename
     // leaving the previous key behind as `undefined`.
     async function addEntry(user: UserEvent) {
-      await user.click(screen.getByRole("button", { name: "+ Add property" }));
+      await user.click(screen.getByRole("button", { name: "Add property" }));
       await user.type(keyInputs().at(-1)!, "hello");
       await user.type(screen.getAllByRole("textbox", { name: "Entry value" }).at(-1)!, "bob");
     }

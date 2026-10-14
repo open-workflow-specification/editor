@@ -119,6 +119,8 @@ function extractEntriesFromObject(obj: Record<string, unknown>): MapEntry[] {
 
 export type KeyValueMapFieldProps = {
   field: MapField;
+  /** Off where something else already names the map (its own drill level's breadcrumb). */
+  showLabel?: boolean;
 };
 
 /**
@@ -132,7 +134,7 @@ export type KeyValueMapFieldProps = {
  * `set`, `with`, `headers`, `query`, `environment`, and any future map-shaped
  * schema property.
  */
-export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
+export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldProps) {
   const { t } = useI18n();
   const { isReadOnly, taskData } = useTaskFormContext();
   // Cast to untyped form to allow dynamic dot-notation path writes.
@@ -242,10 +244,8 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
 
   // ── Count badge ───────────────────────────────────────────────────────────
   const filledCount = rows.filter((r) => r.key !== "").length;
-  const countLabel =
-    filledCount === 1
-      ? `1 ${t("sidebar.field.item")}`
-      : `${filledCount} ${t("sidebar.field.items")}`;
+  const countLabel = `${filledCount} ${t(filledCount === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+  const label = showLabel ? <span className="dec-map-label">{field.label}</span> : null;
 
   // ── Read-only mode ────────────────────────────────────────────────────────
   if (isReadOnly) {
@@ -253,7 +253,7 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
     return (
       <div className="dec-map-group">
         <div className="dec-map-header">
-          <span className="dec-map-label">{field.label}</span>
+          {label}
           <span className="dec-map-count">{countLabel}</span>
         </div>
         <div className="dec-map-rows">
@@ -273,10 +273,12 @@ export function KeyValueMapField({ field }: KeyValueMapFieldProps) {
   // ── Edit mode ─────────────────────────────────────────────────────────────
   return (
     <div className="dec-map-group">
-      <div className="dec-map-header">
-        <span className="dec-map-label">{field.label}</span>
-        {filledCount > 0 && <span className="dec-map-count">{countLabel}</span>}
-      </div>
+      {(label !== null || filledCount > 0) && (
+        <div className="dec-map-header">
+          {label}
+          {filledCount > 0 && <span className="dec-map-count">{countLabel}</span>}
+        </div>
+      )}
 
       {rows.length > 0 && (
         <div className="dec-map-rows">

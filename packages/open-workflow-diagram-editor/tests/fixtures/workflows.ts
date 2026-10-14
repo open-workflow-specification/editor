@@ -763,6 +763,74 @@ export const PRESENCE_KEY_SELECTORS_WORKFLOW = {
 };
 
 /*
+ * One-of levels: `endpoint` as a bare URI (a single value, inline) and as an endpoint
+ * configuration (a level of its own), with authentication as a reference and as a policy.
+ */
+export const ONE_OF_LEVELS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "one-of-levels", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      callUri: {
+        call: "http",
+        with: {
+          method: "get",
+          endpoint: "https://example.com/pets",
+          headers: { accept: "application/json", "x-trace": "on" },
+        },
+      },
+    },
+    {
+      callBearer: {
+        call: "http",
+        with: {
+          method: "get",
+          endpoint: {
+            uri: "https://example.com/pets",
+            authentication: { bearer: { token: "${ .token }" } },
+          },
+        },
+      },
+    },
+    {
+      callReference: {
+        call: "http",
+        with: {
+          method: "get",
+          endpoint: { uri: "https://example.com/pets", authentication: { use: "petStoreAuth" } },
+        },
+      },
+    },
+  ],
+};
+
+/*
+ * Maps written as `{}`: gRPC's plain `arguments` map, and http `headers`, a one-of whose chosen
+ * option is a map. Read-only has nothing to show for either.
+ */
+export const EMPTY_MAPS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "empty-maps", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      greet: {
+        call: "grpc",
+        with: {
+          proto: { endpoint: "file://app/greet.proto" },
+          service: { name: "GreeterApi.Greeter", host: "localhost", port: 5011 },
+          method: "SayHello",
+          arguments: {},
+        },
+      },
+    },
+    {
+      getPets: {
+        call: "http",
+        with: { method: "get", endpoint: "https://example.com/pets", headers: {} },
+      },
+    },
+  ],
+};
+
+/*
  * A fork inside a fork: the outer one races its branches (`compete: true`), the inner one
  * leaves `compete` unset, so both states of the flag are present.
  */

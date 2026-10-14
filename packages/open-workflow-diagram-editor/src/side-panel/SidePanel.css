@@ -592,15 +592,6 @@
 
   /* ── Object group (collapsible) ──────────────────────────────────────── */
 
-  .dec-root .dec-form-object-group {
-    @apply dec:flex dec:flex-col dec:rounded-md
-      dec:border dec:border-gray-200 dec:overflow-hidden;
-  }
-
-  .dec-root.dark .dec-form-object-group {
-    @apply dec:border-gray-700;
-  }
-
   .dec-root .dec-form-object-header {
     @apply dec:flex dec:items-center dec:gap-1.5
       dec:bg-gray-50 dec:transition-colors;
@@ -658,22 +649,38 @@
 
   /* ── One-of group (variant selector + sub-fields) ────────────────────── */
 
-  .dec-root .dec-form-oneof-group {
-    @apply dec:flex dec:flex-col dec:gap-2 dec:rounded-md
-      dec:border dec:border-gray-200 dec:p-2;
-  }
-
-  .dec-root.dark .dec-form-oneof-group {
-    @apply dec:border-gray-700;
-  }
-
+  /* Inline by position: the picker, then the chosen variant's fields in the same flow. */
+  .dec-root .dec-form-oneof-group,
   .dec-root .dec-form-oneof-children {
-    @apply dec:flex dec:flex-col dec:gap-2
-      dec:border-t dec:border-gray-100 dec:pt-2;
+    @apply dec:flex dec:flex-col dec:gap-2;
   }
 
-  .dec-root.dark .dec-form-oneof-children {
-    @apply dec:border-gray-700/60;
+  /* ── Group heading (an inline object, Flow, Task settings) ──────────── */
+
+  .dec-root .dec-form-group {
+    @apply dec:flex dec:flex-col dec:gap-2;
+  }
+
+  .dec-root .dec-form-group-heading {
+    @apply dec:m-0 dec:mt-1 dec:flex dec:items-center dec:gap-1 dec:text-[11px] dec:font-semibold
+      dec:uppercase dec:tracking-wider dec:text-gray-500;
+  }
+
+  .dec-root .dec-form-group-heading::after {
+    @apply dec:h-px dec:flex-1 dec:bg-gray-200;
+    content: "";
+  }
+
+  .dec-root.dark .dec-form-group-heading {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root.dark .dec-form-group-heading::after {
+    @apply dec:bg-gray-700;
+  }
+
+  .dec-root .dec-form-single-value-oneof {
+    @apply dec:flex dec:flex-col dec:gap-1;
   }
 
   /* ── Task list display (TaskListDisplay) ────────────────────────────── */
