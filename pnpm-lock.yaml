@@ -207,9 +207,9 @@ importers:
 
   examples/vanilla-web-component:
     dependencies:
-      '@openworkflowspec/diagram-editor':
+      '@openworkflowspec/text-editor':
         specifier: workspace:*
-        version: link:../../packages/open-workflow-diagram-editor
+        version: link:../../packages/text-editor
       react:
         specifier: 'catalog:'
         version: 19.3.0

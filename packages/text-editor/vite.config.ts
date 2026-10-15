@@ -22,6 +22,7 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     sourcemap: true,
+    minify: false,
     lib: {
       entry: {
         index: "src/index.ts",

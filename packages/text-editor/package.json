@@ -26,7 +26,8 @@
     },
     "./worker": {
       "import": "./dist/worker.js"
-    }
+    },
+    "./styles.css": "./dist/text-editor.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
