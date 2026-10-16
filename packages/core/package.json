@@ -1,0 +1,71 @@
+{
+  "name": "@openworkflowspec/core",
+  "version": "1.1.0",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --config .oxlintrc.json src/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "clean": "rimraf ./dist",
+    "clean:storybook": "rimraf ./dist-storybook",
+    "build:dev": "pnpm typecheck && pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm typecheck && pnpm clean && tsc -p tsconfig.json && vite build"
+  },
+  "dependencies": {
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "elkjs": "catalog:",
+    "fast-equals": "catalog:",
+    "html-to-image": "catalog:",
+    "js-yaml": "catalog:",
+    "radix-ui": "catalog:",
+    "use-sync-external-store": "catalog:"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "catalog:",
+    "@playwright/test": "catalog:",
+    "@storybook/addon-a11y": "catalog:",
+    "@storybook/addon-docs": "catalog:",
+    "@storybook/addon-vitest": "catalog:",
+    "@storybook/react-vite": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/js-yaml": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
+    "jsdom": "catalog:",
+    "lucide-react": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "rimraf": "catalog:",
+    "storybook": "catalog:",
+    "tailwindcss": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

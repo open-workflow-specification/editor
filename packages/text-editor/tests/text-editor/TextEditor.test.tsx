@@ -17,7 +17,7 @@
 import { render, renderHook, act } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 
 import {
   mockCreateModel,

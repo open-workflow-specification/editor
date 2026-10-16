@@ -207,6 +207,9 @@ importers:
 
   examples/vanilla-web-component:
     dependencies:
+      '@openworkflowspec/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@openworkflowspec/diagram-editor':
         specifier: workspace:*
         version: link:../../packages/open-workflow-diagram-editor
@@ -244,6 +247,124 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@types/node@26.6.5)(@vitest/browser-playwright@5.0.3)(@vitest/coverage-v8@5.0.3)(@vitest/ui@5.0.3)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/core:
+    dependencies:
+      class-variance-authority:
+        specifier: 'catalog:'
+        version: 0.7.1
+      clsx:
+        specifier: 'catalog:'
+        version: 2.1.1
+      elkjs:
+        specifier: 'catalog:'
+        version: 0.12.0
+      fast-equals:
+        specifier: 'catalog:'
+        version: 6.1.1
+      html-to-image:
+        specifier: 'catalog:'
+        version: 1.11.13
+      js-yaml:
+        specifier: 'catalog:'
+        version: 5.4.3
+      radix-ui:
+        specifier: 'catalog:'
+        version: 1.8.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      react:
+        specifier: ^19.0.0
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.3.0(react@19.3.0)
+      use-sync-external-store:
+        specifier: 'catalog:'
+        version: 1.7.0(react@19.3.0)
+    devDependencies:
+      '@chromatic-com/storybook':
+        specifier: 'catalog:'
+        version: 5.4.0(storybook@10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0))
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.64.0
+      '@storybook/addon-a11y':
+        specifier: 'catalog:'
+        version: 10.6.1(storybook@10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0))
+      '@storybook/addon-docs':
+        specifier: 'catalog:'
+        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0))
+      '@storybook/addon-vitest':
+        specifier: 'catalog:'
+        version: 10.6.1(@vitest/browser-playwright@5.0.3)(@vitest/browser@5.0.3)(@vitest/runner@4.1.11)(react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0))(vitest@5.0.3)
+      '@storybook/react-vite':
+        specifier: 'catalog:'
+        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0))(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.3(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+      '@testing-library/dom':
+        specifier: 'catalog:'
+        version: 10.4.2
+      '@testing-library/jest-dom':
+        specifier: 'catalog:'
+        version: 7.0.1(@testing-library/dom@10.4.2)(vitest@5.0.3)
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@testing-library/user-event':
+        specifier: 'catalog:'
+        version: 14.6.7(@testing-library/dom@10.4.2)
+      '@types/js-yaml':
+        specifier: 'catalog:'
+        version: 4.0.9
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.3.0(@types/react@19.3.0)
+      '@vitest/browser':
+        specifier: 'catalog:'
+        version: 5.0.3(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.0.3)
+      '@vitest/browser-playwright':
+        specifier: 'catalog:'
+        version: 5.0.3(playwright@1.64.0)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.0.3)
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(@vitest/browser@5.0.3)(vitest@5.0.3)
+      '@vitest/ui':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      jsdom:
+        specifier: 'catalog:'
+        version: 30.1.2
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.55.0(@types/react@19.3.0)(react@19.3.0)
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.72.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.87.0
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      storybook:
+        specifier: 'catalog:'
+        version: 10.6.1(@types/react@19.3.0)(prettier@2.8.8)(react@19.3.0)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.3
       vite:
         specifier: 'catalog:'
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)
@@ -335,6 +456,9 @@ importers:
       '@base-ui/react':
         specifier: 'catalog:'
         version: 1.9.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@openworkflowspec/core':
+        specifier: workspace:*
+        version: link:../core
       '@openworkflowspec/i18n':
         specifier: workspace:*
         version: link:../i18n
@@ -462,6 +586,9 @@ importers:
 
   packages/text-editor:
     dependencies:
+      '@openworkflowspec/core':
+        specifier: workspace:*
+        version: link:../core
       '@openworkflowspec/language-service':
         specifier: workspace:*
         version: link:../language-service
@@ -3271,10 +3398,6 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@5.4.2:
-    resolution: {integrity: sha512-m+aqu+LwO1O6sIopafj8HUVl5aawITwZQe/yHpMCKjaWBaA/d07B/QdMb3529REftiU+RMMHL3Vlsw3hON7vWg==}
-    hasBin: true
-
   js-yaml@5.4.3:
     resolution: {integrity: sha512-yzzNtgczwgoVHNigCyKTXcQJU4Y8t/ikU4UxXW0BvrLfHTGWZhsNcOT2s/a7vn81/4KqVnNmHjaUEPlvWnNwVw==}
     hasBin: true
@@ -4683,7 +4806,7 @@ snapshots:
     dependencies:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
-      js-yaml: 5.4.2
+      js-yaml: 5.4.3
       semver: 7.8.5
 
   '@oxc-parser/binding-android-arm-eabi@0.127.0':
@@ -6601,10 +6724,6 @@ snapshots:
   js-tokens@10.0.0: {}
 
   js-tokens@4.0.0: {}
-
-  js-yaml@5.4.2:
-    dependencies:
-      argparse: 2.0.1
 
   js-yaml@5.4.3:
     dependencies:

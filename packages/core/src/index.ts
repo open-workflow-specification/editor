@@ -14,5 +14,6 @@
  * limitations under the License.
  */
 
-export type ColorMode = "light" | "dark" | "system";
-export type ResolvedColorMode = "light" | "dark";
+export type { ColorMode } from "./types/colorMode";
+export type { ResolvedColorMode } from "./types/colorMode";
+export { useResolvedColorMode } from "./hooks/useResolvedColorMode";

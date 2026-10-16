@@ -15,7 +15,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 import { act, renderHook } from "@testing-library/react";
 
 describe("useResolvedColorMode", () => {

@@ -17,8 +17,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ErrorPage } from "../../src/diagram-editor/error-pages/ErrorPage";
 import { PropsWithChildren } from "react";
-import { ColorMode } from "../../src/types/colorMode";
-import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { ColorMode } from "@openworkflowspec/core";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 
 type ErrorPageProps = {
   title: string;

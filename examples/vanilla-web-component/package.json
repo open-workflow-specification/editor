@@ -29,6 +29,7 @@
     "test-e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@openworkflowspec/core": "workspace:*",
     "@openworkflowspec/diagram-editor": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"

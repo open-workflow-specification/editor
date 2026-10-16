@@ -16,8 +16,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { DiagramEditorErrorBoundary } from "../../src/diagram-editor/error-pages/DiagramEditorErrorBoundary";
-import { ColorMode } from "../../src/types/colorMode";
-import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { ColorMode } from "@openworkflowspec/core";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 import { spyOn } from "storybook/test";
 
 type DiagramEditorErrorBoundaryProps = {
@@ -44,7 +44,10 @@ const meta = {
     const consoleErrorSpy = spyOn(console, "error").mockImplementation((...args) => {
       const error = args[1];
 
-      if (error instanceof Error && (error.message===DEFAULT_ERROR_MESSAGE || error.message===CUSTOM_ERROR_MESSAGE)) {
+      if (
+        error instanceof Error &&
+        (error.message === DEFAULT_ERROR_MESSAGE || error.message === CUSTOM_ERROR_MESSAGE)
+      ) {
         return;
       }
 
