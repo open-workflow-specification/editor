@@ -22,6 +22,10 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     sourcemap: true,
+    // Using Oxc here can break JSON Schema diagnostics when consumers
+    // re-bundle and minify the language service worker.
+    // See: https://github.com/open-workflow-specification/editor/issues/489
+    minify: "esbuild",
     lib: {
       entry: {
         index: "src/index.ts",
