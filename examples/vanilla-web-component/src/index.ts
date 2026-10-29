@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import "@openworkflowspec/diagram-editor/styles.css";
-import { DiagramEditorElement } from "./diagram-editor-element";
+import "@openworkflowspec/text-editor/styles.css";
+import { TextEditorElement } from "./text-editor-element";
 
-if (!customElements.get("openworkflowspec-diagram-editor")) {
-  customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+if (!customElements.get("openworkflowspec-text-editor")) {
+  customElements.define("openworkflowspec-text-editor", TextEditorElement);
 }

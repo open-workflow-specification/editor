@@ -18,10 +18,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Diagram Editor — Web Component Example</title>
+    <title>Text Editor — Web Component Example</title>
     <style>
       body {
         height: 100vh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
       }
 
       h1 {
@@ -31,10 +34,10 @@
         text-align: center;
       }
 
-      openworkflowspec-diagram-editor {
+      openworkflowspec-text-editor {
         display: block;
         width: 80%;
-        height: 80%;
+        height: 80vh;
         border: 1px solid black;
         border-radius: 8px;
         overflow: hidden;
@@ -43,15 +46,21 @@
     </style>
   </head>
   <body>
-    <h1>Diagram Editor — Web Component Example</h1>
-    <openworkflowspec-diagram-editor locale="en" read-only></openworkflowspec-diagram-editor>
+    <h1>Text Editor — Web Component Example</h1>
+    <openworkflowspec-text-editor></openworkflowspec-text-editor>
 
     <script type="module">
       import "./src/index.ts";
+      import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
       import { sampleWorkflow } from "./src/sample-workflow.ts";
 
-      const editor = document.querySelector("openworkflowspec-diagram-editor");
+      const editor = document.querySelector("openworkflowspec-text-editor");
+      editor.createLanguageServiceWorker = () => new LanguageServiceWorker();
       editor.content = sampleWorkflow;
+
+      editor.addEventListener("change", (e) => {
+        console.log("Workflow content changed:", e.detail.content);
+      });
     </script>
   </body>
 </html>
