@@ -9,6 +9,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # Volar 2.x does not support TypeScript 7.
+      # TODO: Remove this restriction when #508 is resolved.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
     groups:
       all-dependencies:
         applies-to: version-updates
