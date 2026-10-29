@@ -27,7 +27,11 @@
     "./styles.css": "./dist/text-editor.css",
     "./worker": {
       "import": "./dist/worker.js"
-    }
+    },
+    "./editor-worker": {
+      "import": "./dist/editor-worker.js"
+    },
+    "./styles.css": "./dist/text-editor.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
