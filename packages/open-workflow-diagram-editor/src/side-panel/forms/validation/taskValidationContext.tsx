@@ -21,6 +21,8 @@ import { countErrors } from "./footerValidationState";
 export interface TaskValidationState {
   /** True after the first Apply click attempted validation (the "latch"). */
   attempted: boolean;
+  /** True while the errors come from workflow-level validation rather than an Apply run. */
+  hasWorkflowErrors: boolean;
   /** Form-field paths with schema errors. */
   fieldErrors: Record<string, string>;
   /** Container paths with level errors ("" = task root). */
@@ -33,6 +35,7 @@ export interface TaskValidationState {
 
 export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
   attempted: false,
+  hasWorkflowErrors: false,
   fieldErrors: {},
   levelErrors: {},
   unplacedErrors: {},
@@ -43,8 +46,15 @@ export interface TaskValidationContextValue {
   taskValidation: TaskValidationState;
   /** Total number of unique error paths (field errors + level errors). */
   errorCount: number;
-  /** Records a validation result into state, optionally updating the attempted flag. */
-  recordValidationResult: (result: TaskValidationResult, attempted?: boolean) => void;
+  /**
+   * Records a validation result into state, optionally updating the attempted flag.
+   * `hasWorkflowErrors` marks a result seeded from workflow validation; it is cleared otherwise.
+   */
+  recordValidationResult: (
+    result: TaskValidationResult,
+    attempted?: boolean,
+    hasWorkflowErrors?: boolean,
+  ) => void;
   /** Resets validation state to initial clean state. */
   resetValidation: () => void;
 }
@@ -61,9 +71,10 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
   }, []);
 
   const recordValidationResult = React.useCallback(
-    (result: TaskValidationResult, attempted?: boolean) => {
+    (result: TaskValidationResult, attempted?: boolean, hasWorkflowErrors = false) => {
       setState((prev) => ({
         attempted: attempted !== undefined ? attempted : prev.attempted,
+        hasWorkflowErrors,
         fieldErrors: result.fieldErrors,
         levelErrors: result.levelErrors,
         unplacedErrors: result.unplacedErrors,

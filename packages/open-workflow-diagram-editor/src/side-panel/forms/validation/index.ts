@@ -16,15 +16,11 @@
 
 export { useWorkflowErrorsForForm } from "./useWorkflowErrorsForForm";
 export { useFieldLevelValidation, type FieldValidationHandler } from "./useFieldLevelValidation";
-export {
-  getTaskSchemaValidator,
-  validateTaskData,
-  getDefinitionNameForNodeType,
-} from "./schemaValidator";
 export { collectSchemaFieldErrors, collectTaskErrors } from "./collectSchemaFieldErrors";
 export { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 export { collapseBranchGroups, GROUP_KEYWORD } from "./branchGroups";
 export { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
+export { classifyWorkflowErrors } from "./workflowErrorClassifier";
 export {
   validateTaskForm,
   collectSchemaErrorPaths,

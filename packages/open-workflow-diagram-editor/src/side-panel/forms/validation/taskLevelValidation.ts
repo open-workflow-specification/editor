@@ -34,6 +34,16 @@ export interface TaskValidationResult {
   hasUnparseableValueMapPayload: boolean;
 }
 
+/** A result with no errors. A fresh object each call, as results are stored in state. */
+export function emptyValidationResult(): TaskValidationResult {
+  return {
+    fieldErrors: {},
+    levelErrors: {},
+    unplacedErrors: {},
+    hasUnparseableValueMapPayload: false,
+  };
+}
+
 export interface ValidateTaskFormOptions {
   /** If true, validation is a no-op. */
   isReadOnly?: boolean;
@@ -78,12 +88,7 @@ export function validateTaskForm(
   options: ValidateTaskFormOptions = {},
 ): TaskValidationResult {
   if (options.isReadOnly) {
-    return {
-      fieldErrors: {},
-      levelErrors: {},
-      unplacedErrors: {},
-      hasUnparseableValueMapPayload: false,
-    };
+    return emptyValidationResult();
   }
 
   const formValues = form.getValues();

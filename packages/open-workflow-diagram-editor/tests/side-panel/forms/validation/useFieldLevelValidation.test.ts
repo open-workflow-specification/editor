@@ -19,13 +19,13 @@ import { renderHook, act } from "@testing-library/react";
 import type { UseFormReturn } from "react-hook-form";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { useFieldLevelValidation } from "../../../../src/side-panel/forms/validation/useFieldLevelValidation";
-import { validateTaskData } from "../../../../src/side-panel/forms/validation/schemaValidator";
+import { validateTaskData } from "../../../../src/core/schemaValidator";
 import {
   TaskValidationProvider,
   useTaskValidation,
 } from "../../../../src/side-panel/forms/validation/taskValidationContext";
 
-vi.mock("../../../../src/side-panel/forms/validation/schemaValidator", () => ({
+vi.mock("../../../../src/core/schemaValidator", () => ({
   validateTaskData: vi.fn().mockReturnValue(null),
 }));
 
@@ -382,6 +382,78 @@ describe("useFieldLevelValidation", () => {
         result.current.fieldValidation.revalidateIfAttempted();
       });
       expect(result.current.validation.errorCount).toBe(1);
+    });
+  });
+
+  describe("with workflow-seeded errors (attempted === false)", () => {
+    const seeded = {
+      ...EMPTY_RESULT,
+      fieldErrors: { wait: "Workflow err" },
+    };
+
+    function setup() {
+      const clearErrors = vi.fn();
+      const form = {
+        getValues: vi.fn().mockReturnValue({ wait: "PT5S" }),
+        formState: { errors: { wait: { type: "workflow", message: "Workflow err" } } },
+        setError: vi.fn(),
+        clearErrors,
+      } as unknown as UseFormReturn<Record<string, unknown>>;
+
+      const { result } = renderHook(
+        () => ({
+          validation: useTaskValidation(),
+          fieldValidation: useFieldLevelValidation("wait", form, false, fields),
+        }),
+        { wrapper: TaskValidationProvider },
+      );
+      act(() => {
+        result.current.validation.recordValidationResult(seeded, undefined, true);
+      });
+      return { result, clearErrors };
+    }
+
+    it("runs task-level validation on blur so the counter follows the fixed field", () => {
+      const { result, clearErrors } = setup();
+      expect(result.current.validation.errorCount).toBe(1);
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(clearErrors).toHaveBeenCalledWith("wait");
+      expect(result.current.validation.errorCount).toBe(0);
+    });
+
+    it("keeps the workflow flag and does not latch attempted", () => {
+      vi.mocked(validateTaskData).mockReturnValue([
+        {
+          keyword: "pattern",
+          instancePath: "/wait",
+          schemaPath: "#/properties/wait/pattern",
+          params: { pattern: "^P" },
+          message: 'must match pattern "^P"',
+        },
+      ]);
+      const { result } = setup();
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.taskValidation.hasWorkflowErrors).toBe(true);
+      expect(result.current.validation.taskValidation.attempted).toBe(false);
+      expect(result.current.validation.errorCount).toBe(1);
+    });
+
+    it("revalidateIfAttempted also re-runs whole task validation", () => {
+      const { result } = setup();
+
+      act(() => {
+        result.current.fieldValidation.revalidateIfAttempted();
+      });
+
+      expect(result.current.validation.errorCount).toBe(0);
     });
   });
 });

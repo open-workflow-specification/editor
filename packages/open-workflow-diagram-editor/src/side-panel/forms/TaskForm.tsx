@@ -68,7 +68,7 @@ export type TaskFormProps = {
 export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProps) {
   const { t } = useI18n();
   const { isReadOnly, model, errors, taskReferences, contentFormat } = useDiagramEditorContext();
-  const { form, resetDraft } = useEditSession();
+  const { form, resetDraft, draftVersion } = useEditSession();
   const siblingTaskNames = useSiblingTaskNames(model, nodeId);
 
   // ── Resolve form fields from schema ───────────────────────────────────────
@@ -77,7 +77,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     [nodeType, contentFormat],
   );
 
-  const { resetValidation } = useTaskValidation();
+  const { resetValidation, recordValidationResult } = useTaskValidation();
 
   // ── Reset form on node change ─────────────────────────────────────────────
   // Runs whenever nodeId changes — covers initial mount and switching nodes.
@@ -132,15 +132,32 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     variantSnapshots.clear();
   }, [task, variantSnapshots]);
 
-  // ── Seed SDK errors into form field slots ─────────────────────────────────
+  // ── Seed SDK errors into the form and the validation context ──────────────
+  // Declared after the reset effects above: effects run in declaration order, so the
+  // seed lands after `resetValidation()` and `resetDraft()`. `draftVersion` re-seeds after
+  // every draft reset (Cancel, Apply, undo/redo), which wipes the form's errors.
   useWorkflowErrorsForForm(
     errors,
     taskReference,
     taskReferences,
     form.setError,
     form.clearErrors,
-    nodeId,
+    `${nodeId ?? ""}:${draftVersion}`,
+    allFields,
+    form.getValues,
+    recordValidationResult,
+    isReadOnly,
+    nodeType,
   );
+
+  // ── Read-only: errors are listed only at the top of the panel ─────────────
+  // Edit mode seeds its own copy of the errors (level + field errors) that the form renders
+  // inline. They survive a switch to read-only, where they would repeat the top list.
+  React.useEffect(() => {
+    if (!isReadOnly) return;
+    resetValidation();
+    form.clearErrors();
+  }, [isReadOnly, form, resetValidation]);
 
   // ── Field-level schema validation on blur / edit ─────────────────────────
   const { validateField, revalidateIfAttempted } = useFieldLevelValidation(

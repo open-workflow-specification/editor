@@ -16,8 +16,8 @@
 
 import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
-import { getSchemaForDefinition } from "@/core/schemaFilter";
-import { NODE_TYPE_TO_DEF } from "@/core/schemaWalker";
+import { getSchemaForDefinition } from "./schemaFilter";
+import { NODE_TYPE_TO_DEF } from "./schemaWalker";
 
 // ---------------------------------------------------------------------------
 // Node-type to schema definition name mapping

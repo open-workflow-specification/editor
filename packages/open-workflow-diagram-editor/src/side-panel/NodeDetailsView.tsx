@@ -22,8 +22,9 @@ import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import { YamlField, SectionHeader } from "./Fields";
 import { TaskForm } from "./forms/TaskForm";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { getNodeErrorField, getNodeErrors } from "@/core";
-import { ErrorSection } from "./ErrorsSection";
+import { getNodeErrors } from "@/core";
+import { ErrorSection, type ErrorItem } from "./ErrorsSection";
+import { useTaskValidation } from "./forms/validation";
 
 type NodeDetailsViewProps = {
   node: RF.Node<BaseNodeData>;
@@ -32,15 +33,22 @@ type NodeDetailsViewProps = {
 export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const { t } = useI18n();
   const { errors, taskReferences, isReadOnly } = useDiagramEditorContext();
+  const { taskValidation } = useTaskValidation();
   const task = node.data.task;
   const taskReference = node.data.taskReference;
 
-  /* Layout-only nodes (entry/exit/start/end) have no taskReference */
-  const nodeErrors = taskReference ? getNodeErrors(errors, taskReference, taskReferences) : [];
-  const errorItems = nodeErrors.map((error) => {
-    const field = taskReference ? getNodeErrorField(error, taskReference) : undefined;
-    return field !== undefined ? { message: error.message, field } : { message: error.message };
-  });
+  /* Layout-only nodes (entry/exit/start/end) have no taskReference. Only read-only mode lists them all */
+  const nodeErrors =
+    isReadOnly && taskReference ? getNodeErrors(errors, taskReference, taskReferences) : [];
+  /* The list shows messages only, so errors that differ only by schema path would read as duplicates */
+  const readOnlyErrorItems: ErrorItem[] = [
+    ...new Set(nodeErrors.map((error) => error.message)),
+  ].map((message) => ({ message }));
+  /* In edit mode the form shows every error it can place; only the unplaced ones are listed here */
+  const unplacedErrorItems: ErrorItem[] = Object.entries(taskValidation.unplacedErrors).map(
+    ([field, message]) => (field === "" ? { message } : { message, field }),
+  );
+  const errorItems: ErrorItem[] = isReadOnly ? readOnlyErrorItems : unplacedErrorItems;
 
   const hasTask = task !== undefined && node.type !== undefined;
 

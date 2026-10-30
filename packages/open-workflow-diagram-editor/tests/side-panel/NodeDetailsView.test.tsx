@@ -16,12 +16,18 @@
 
 import * as React from "react";
 import { describe, it, expect } from "vitest";
-import { screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { ReactFlowProvider } from "@xyflow/react";
+import { I18nProvider } from "@openworkflowspec/i18n";
 import type * as RF from "@xyflow/react";
 import { NodeDetailsView } from "../../src/side-panel/NodeDetailsView";
 import { useTaskValidation } from "../../src/side-panel/forms/validation";
 import type { BaseNodeData } from "../../src/react-flow/nodes/Nodes";
-import { renderWithProviders } from "../test-utils/render-helpers";
+import { en } from "../../src/i18n/locales/en";
+import { SidebarProvider } from "../../src/components/ui/sidebar";
+import { EditSessionProvider } from "../../src/side-panel/EditSession";
+import { DiagramEditorContext } from "../../src/store/DiagramEditorContext";
+import { createMockContextValue, renderWithProviders } from "../test-utils/render-helpers";
 
 const makeNode = (data: BaseNodeData, type = "call"): RF.Node<BaseNodeData> => ({
   id: "node-1",
@@ -80,7 +86,7 @@ describe("NodeDetailsView", () => {
     const taskReference = "/do/0/getPets";
     const taskReferences = new Set([taskReference]);
 
-    it("renders the node's errors above the Properties section, with field labels", () => {
+    it("renders the node's errors above the Properties section, without field labels", () => {
       const node = makeNode({
         label: "getPets",
         taskReference,
@@ -98,8 +104,7 @@ describe("NodeDetailsView", () => {
       });
 
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
-      const field = document.querySelector(".dec-sidebar-error-field");
-      expect(field?.textContent).toBe("with");
+      expect(document.querySelector(".dec-sidebar-error-field")).toBeNull();
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
       expect(screen.getByText("Properties")).toBeInTheDocument();
     });
@@ -117,6 +122,32 @@ describe("NodeDetailsView", () => {
       expect(screen.getByText("something is wrong")).toBeInTheDocument();
       expect(screen.queryByText("Properties")).not.toBeInTheDocument();
       expect(screen.queryByText("No additional details for this node")).not.toBeInTheDocument();
+    });
+    it("lists errors that share a message once, even when their schema paths differ", () => {
+      const node = makeNode({
+        label: "getPets",
+        taskReference,
+        task: { call: "http", with: {} },
+      });
+
+      renderWithProviders(<NodeDetailsView node={node} />, {
+        taskReferences,
+        errors: [
+          {
+            path: taskReference,
+            errorType: "#/oneOf/0/unevaluatedProperties",
+            message: "must NOT have unevaluated properties",
+          },
+          {
+            path: taskReference,
+            errorType: "#/oneOf/1/unevaluatedProperties",
+            message: "must NOT have unevaluated properties",
+          },
+        ],
+      });
+
+      expect(screen.getAllByText("must NOT have unevaluated properties")).toHaveLength(1);
+      expect(document.querySelector(".dec-sidebar-errors-count")?.textContent).toBe("1");
     });
 
     it("does not render the errors section when the node has no errors", () => {
@@ -155,7 +186,7 @@ describe("NodeDetailsView", () => {
       });
 
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
-      expect(document.querySelector(".dec-sidebar-error-field")?.textContent).toBe("with");
+      expect(document.querySelector(".dec-sidebar-error-field")).toBeNull();
     });
 
     it("always shows workflow errors regardless of whether validation was attempted", () => {
@@ -189,6 +220,45 @@ describe("NodeDetailsView", () => {
       // Workflow error is still shown in the error banner — not replaced by level errors.
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
       expect(screen.getByText("workflow error")).toBeInTheDocument();
+    });
+
+    it("drops the errors edit mode rendered inside the form when switching to read-only", async () => {
+      const node = makeNode({
+        label: "callService",
+        taskReference,
+        task: { call: "http", with: {} },
+      });
+      const errors = [{ path: taskReference, message: "must NOT have unevaluated properties" }];
+      const ui = (isReadOnly: boolean) => (
+        <ReactFlowProvider>
+          <DiagramEditorContext.Provider
+            value={createMockContextValue({ isReadOnly, taskReferences, errors })}
+          >
+            <I18nProvider locale="en" dictionaries={{ en }}>
+              <SidebarProvider defaultOpen={true}>
+                <EditSessionProvider>
+                  <NodeDetailsView node={node} />
+                </EditSessionProvider>
+              </SidebarProvider>
+            </I18nProvider>
+          </DiagramEditorContext.Provider>
+        </ReactFlowProvider>
+      );
+
+      const { rerender } = render(ui(false));
+      // Edit mode places the task-root error inside the form
+      await waitFor(() =>
+        expect(document.querySelector(".dec-level-errors")).toHaveTextContent(
+          "must NOT have unevaluated properties",
+        ),
+      );
+
+      rerender(ui(true));
+
+      // Read-only lists it once, in the top section, and not again inside the form
+      await waitFor(() => expect(document.querySelector(".dec-level-errors")).toBeNull());
+      expect(screen.getAllByText("must NOT have unevaluated properties")).toHaveLength(1);
+      expect(document.querySelector(".dec-sidebar-errors-count")?.textContent).toBe("1");
     });
 
     it("does not show level errors in the top banner (they are rendered inside the form by LevelErrors)", () => {
@@ -237,6 +307,44 @@ describe("NodeDetailsView", () => {
         errors: [],
       });
 
+      expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("validation errors in edit mode", () => {
+    const taskReference = "/do/0/getPets";
+    const taskReferences = new Set([taskReference]);
+    const node = makeNode({
+      label: "getPets",
+      taskReference,
+      task: { call: "http", with: { endpoint: "https://api.example.com", method: "get" } },
+    });
+
+    it("lists only errors the form cannot place in the errors section", async () => {
+      renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: false,
+        taskReferences,
+        errors: [
+          { path: `${taskReference}/with/method`, message: "placed on the method field" },
+          { path: `${taskReference}/nowhere/deep`, message: "no slot for this" },
+        ],
+      });
+
+      expect(await screen.findByTestId("sidebar-errors")).toBeInTheDocument();
+      expect(screen.getByText("no slot for this")).toBeInTheDocument();
+      expect(document.querySelector(".dec-sidebar-error-field")?.textContent).toBe("nowhere.deep");
+      const items = document.querySelectorAll(".dec-sidebar-error-item");
+      expect(items).toHaveLength(1);
+    });
+
+    it("does not render the errors section when every error has a slot in the form", async () => {
+      renderWithProviders(<NodeDetailsView node={node} />, {
+        isReadOnly: false,
+        taskReferences,
+        errors: [{ path: `${taskReference}/with/method`, message: "placed on the method field" }],
+      });
+
+      expect(await screen.findByRole("form", { name: /task properties/i })).toBeInTheDocument();
       expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
     });
   });

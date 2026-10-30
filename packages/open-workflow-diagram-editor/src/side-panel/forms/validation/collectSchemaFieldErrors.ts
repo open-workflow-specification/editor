@@ -19,7 +19,7 @@ import { flattenTask } from "@/core/taskDraft";
 import { SENTINEL_KEY } from "../sentinels";
 import { collectValueMapFields, getNestedValue } from "../taskFormContext";
 import { getValueMapInnerObject } from "../customFields/innerObjectText";
-import { validateTaskData } from "./schemaValidator";
+import { validateTaskData } from "@/core/schemaValidator";
 import { prepareValuesForValidation, extractFieldErrors } from "./fieldErrorMapper";
 import { buildActiveFormView } from "./activeFormView";
 import { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
@@ -27,7 +27,7 @@ import { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassi
 /**
  * Flattens the live `__oneof__` form values into sentinel-prefixed paths.
  */
-function extractSentinels(formValues: Record<string, unknown>): Record<string, unknown> {
+export function extractSentinels(formValues: Record<string, unknown>): Record<string, unknown> {
   const sentinels: Record<string, unknown> = {};
   const liveOneof = formValues.__oneof__ as Record<string, unknown> | undefined;
   if (liveOneof) {
