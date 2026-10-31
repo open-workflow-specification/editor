@@ -20,6 +20,7 @@ import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormField
 import {
   validateTaskForm,
   collectSchemaErrorPaths,
+  emptyValidationResult,
 } from "../../../../src/side-panel/forms/validation/taskLevelValidation";
 import { INNER_TEXT_KEY } from "../../../../src/side-panel/forms/sentinels";
 
@@ -231,5 +232,24 @@ describe("validateTaskForm", () => {
       hasUnparseableValueMapPayload: false,
     });
     expect(setError).not.toHaveBeenCalled();
+  });
+});
+
+describe("emptyValidationResult", () => {
+  it("has no errors", () => {
+    expect(emptyValidationResult()).toEqual({
+      fieldErrors: {},
+      levelErrors: {},
+      unplacedErrors: {},
+      hasUnparseableValueMapPayload: false,
+    });
+  });
+
+  it("returns a fresh object on every call", () => {
+    const first = emptyValidationResult();
+    first.fieldErrors["a"] = "x";
+
+    expect(emptyValidationResult().fieldErrors).toEqual({});
+    expect(emptyValidationResult()).not.toBe(emptyValidationResult());
   });
 });

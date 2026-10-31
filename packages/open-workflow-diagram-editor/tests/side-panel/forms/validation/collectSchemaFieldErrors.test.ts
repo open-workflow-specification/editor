@@ -16,14 +16,15 @@
 
 import { describe, it, expect, vi } from "vitest";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
-import { collectSchemaFieldErrors } from "../../../../src/side-panel/forms/validation/collectSchemaFieldErrors";
-import { validateTaskData } from "../../../../src/side-panel/forms/validation/schemaValidator";
+import {
+  collectSchemaFieldErrors,
+  extractSentinels,
+} from "../../../../src/side-panel/forms/validation/collectSchemaFieldErrors";
+import { validateTaskData } from "../../../../src/core/schemaValidator";
+import { SENTINEL_KEY } from "../../../../src/side-panel/forms/sentinels";
 
-vi.mock("../../../../src/side-panel/forms/validation/schemaValidator", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("../../../../src/side-panel/forms/validation/schemaValidator")
-    >();
+vi.mock("../../../../src/core/schemaValidator", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../src/core/schemaValidator")>();
   return { ...actual, validateTaskData: vi.fn(actual.validateTaskData) };
 });
 
@@ -61,5 +62,25 @@ describe("collectSchemaFieldErrors", () => {
 
     const validated = vi.mocked(validateTaskData).mock.lastCall?.[1];
     expect(validated).toEqual({ wait: "PT5S" });
+  });
+});
+
+describe("extractSentinels", () => {
+  it.each([
+    { name: "no __oneof__ values", values: { wait: "PT5S" } },
+    { name: "an empty __oneof__ object", values: { __oneof__: {} } },
+  ])("returns no sentinels for $name", ({ values }) => {
+    expect(extractSentinels(values)).toEqual({});
+  });
+
+  it("flattens the __oneof__ values into sentinel-prefixed dot paths", () => {
+    const sentinels = extractSentinels({
+      __oneof__: { endpoint: { selected: 1 }, flat: 2 },
+    });
+
+    expect(sentinels).toEqual({
+      [`${SENTINEL_KEY}.endpoint.selected`]: 1,
+      [`${SENTINEL_KEY}.flat`]: 2,
+    });
   });
 });

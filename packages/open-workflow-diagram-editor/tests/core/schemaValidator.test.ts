@@ -19,7 +19,7 @@ import {
   getTaskSchemaValidator,
   validateTaskData,
   getDefinitionNameForNodeType,
-} from "../../../../src/side-panel/forms/validation/schemaValidator";
+} from "../../src/core/schemaValidator";
 
 describe("schemaValidator", () => {
   it("resolves definition names for known node types", () => {

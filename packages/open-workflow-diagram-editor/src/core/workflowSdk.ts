@@ -16,9 +16,13 @@
 
 import { load } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
+import type { ErrorObject } from "ajv/dist/2020";
 import { fixNodesConnections } from "./graph";
-import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
 import { isSafeKey } from "./utils";
+import { validateTaskData } from "./schemaValidator";
+import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
+import { ONE_OF_BRANCH_PREFIX } from "./validationErrors";
+import { getTaskTypeKey } from "./taskTypes";
 
 export type ContentFormat = "json" | "yaml";
 
@@ -233,30 +237,149 @@ function dedupeValidationErrors(errors: ValidationError[]): ValidationError[] {
   });
 }
 
+/**
+ * Converts an Ajv ErrorObject into the editor's ValidationError shape so
+ * the rest of the codebase (error badges, form seeding, side-panel) can
+ * consume it unchanged.
+ */
+function ajvErrorToValidationError(error: ErrorObject): ValidationError {
+  const result: ValidationError = {
+    errorType: error.schemaPath,
+    message: error.message ?? error.keyword,
+  };
+  if (error.instancePath) {
+    result.path = error.instancePath;
+  }
+  if (Object.keys(error.params).length > 0) {
+    result.object = sanitizeObject(error.params);
+  }
+  return result;
+}
+
+/**
+ * Strips `oneOf` cascade noise from Ajv errors using the discriminator
+ * pattern. When a `oneOf` branch has a `const` or `not` failure on a
+ * property (its discriminator doesn't match), ALL errors from that
+ * branch are secondary noise — the branch was never a candidate.
+ *
+ * This is the structural equivalent of what `collapseBranchGroups` does
+ * for the form layer, but operates on raw Ajv errors without needing
+ * form-level context.
+ */
+function stripDiscriminatedCascade(errors: ErrorObject[]): ErrorObject[] {
+  const ghostPrefixes: Set<string> = new Set<string>();
+
+  for (const error of errors) {
+    if (error.keyword !== "const" && error.keyword !== "not") continue;
+    if (!error.schemaPath.includes("/properties/")) continue;
+    const match: RegExpExecArray | null = ONE_OF_BRANCH_PREFIX.exec(error.schemaPath);
+    if (match) ghostPrefixes.add(match[1]!);
+  }
+
+  if (ghostPrefixes.size === 0) return errors;
+
+  return errors.filter((error) => {
+    for (const prefix of ghostPrefixes) {
+      if (error.schemaPath.startsWith(prefix)) return false;
+    }
+    return true;
+  });
+}
+
+/**
+ * Validates every top-level task individually against its task-specific schema.
+ * Errors are rebased onto the task's indexed path. An error is dropped when the SDK already
+ * reported the same path and message (`sdkSignatures`): the two report the same problem under
+ * different schema paths (`errorType`). Ajv errors are compared with each other on the full
+ * signature, since sibling `oneOf` branches share path and message but are distinct errors.
+ */
+function collectTaskAjvErrors(
+  model: sdk.Specification.Workflow,
+  sdkSignatures: Set<string>,
+): ValidationError[] {
+  const doArray: unknown = model.do;
+  if (!Array.isArray(doArray)) return [];
+
+  const seen: Set<string> = new Set<string>();
+  const collected: ValidationError[] = [];
+
+  for (let i = 0; i < doArray.length; i++) {
+    const item: unknown = doArray[i];
+    if (item == null || typeof item !== "object") continue;
+
+    const taskName: string | undefined = Object.keys(item)[0];
+    if (taskName === undefined) continue;
+
+    const taskObj: unknown = (item as Record<string, unknown>)[taskName];
+    if (taskObj == null || typeof taskObj !== "object") continue;
+
+    const taskType: string | undefined = getTaskTypeKey(taskObj as Record<string, unknown>);
+    if (taskType === undefined) continue;
+
+    const taskErrors: ErrorObject[] | null = validateTaskData(taskType, taskObj);
+    if (taskErrors === null) continue;
+
+    const pathPrefix: string = `/do/${i}/${taskName}`;
+    for (const err of stripDiscriminatedCascade(taskErrors)) {
+      const converted: ValidationError = ajvErrorToValidationError(err);
+      const path: string = `${pathPrefix}${converted.path ?? ""}`;
+      converted.path = path;
+      const signature: string = `${path}|${converted.errorType}|${converted.message}`;
+      if (!seen.has(signature) && !sdkSignatures.has(`${path}|${converted.message}`)) {
+        seen.add(signature);
+        collected.push(converted);
+      }
+    }
+  }
+
+  return collected;
+}
+
+/**
+ * Validates a workflow by combining two passes:
+ *
+ * 1. **SDK validation** — `sdk.validate()` provides runtime semantic checks
+ *    (DSL version, cross-task `then` references, etc.) that are not covered by
+ *    JSON Schema alone. All SDK errors are kept, task-level ones included.
+ *
+ * 2. **Per-task Ajv validation** — every top-level task is validated
+ *    individually against its task-specific sub-schema (which has spec
+ *    workaround patches applied). Discriminator-based cascade filtering
+ *    removes the `oneOf` noise that `allErrors: true` produces. This
+ *    covers all tasks — unlike the SDK which short-circuits after the
+ *    first failing one. Errors the SDK already reported (same path and
+ *    message) are not repeated.
+ */
 export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] {
+  const sdkErrors: SdkError[] = [];
+
   try {
     sdk.validate("Workflow", model);
-    return [];
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const parsedErrors = dedupeValidationErrors(parseValidationErrorMessage(message));
+    const message: string = err instanceof Error ? err.message : String(err);
+    const parsed: ValidationError[] = dedupeValidationErrors(parseValidationErrorMessage(message));
 
-    /* If parsing succeeded and returned errors, use them.
-     *
-     * TEMPORARY — TO REVERT WHEN THE SDK IS BUMPED (see core/specWorkarounds.ts):
-     * Replace `stripSpecAheadOfSdkErrors(...)` with `return parsedErrors;` again.
-     */
-    if (parsedErrors.length > 0) {
-      //return parsedErrors;
-      return stripSpecAheadOfSdkErrors(parsedErrors);
+    if (parsed.length > 0) {
+      // Keep all SDK errors (including task-level) so semantic checks like cross-task
+      // then references are not lost. Schema-level cascade noise is filtered downstream by isNoiseError.
+      sdkErrors.push(...stripSpecAheadOfSdkErrors(parsed));
+    } else if (err instanceof Error) {
+      sdkErrors.push(err);
+    } else {
+      sdkErrors.push(new Error(message));
     }
-
-    // Otherwise, return the original error as-is
-    if (err instanceof Error) {
-      return [err];
-    }
-    return [new Error(message)];
   }
+
+  const sdkSignatures: Set<string> = new Set<string>();
+  for (const err of sdkErrors) {
+    if (!(err instanceof Error)) {
+      sdkSignatures.add(`${err.path ?? ""}|${err.message}`);
+    }
+  }
+
+  sdkErrors.push(...stripSpecAheadOfSdkErrors(collectTaskAjvErrors(model, sdkSignatures)));
+
+  return sdkErrors;
 }
 
 export function parseWorkflow(text: string): WorkflowParseResult {

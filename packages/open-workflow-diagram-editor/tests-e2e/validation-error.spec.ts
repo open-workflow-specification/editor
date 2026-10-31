@@ -69,5 +69,6 @@ test("a nested task's error marks the child node, not its container", async ({ p
   const errors = nodeDetails.getByTestId("sidebar-errors");
   await expect(errors).toBeVisible();
   await expect(errors.getByText("must have required property 'endpoint'")).toBeVisible();
-  await expect(errors.locator(".dec-sidebar-error-field")).toHaveText("with");
+  // Read-only errors are listed by message only, without a field label
+  await expect(errors.locator(".dec-sidebar-error-field")).toHaveCount(0);
 });

@@ -88,6 +88,32 @@ describe("taskValidationContext", () => {
     expect(result.current.taskValidation).toEqual(INITIAL_TASK_VALIDATION_STATE);
     expect(result.current.errorCount).toBe(0);
   });
+  it("flags workflow-seeded results without latching attempted, and clears the flag on the next record", () => {
+    const { result } = renderHook(() => useTaskValidation(), {
+      wrapper: TaskValidationProvider,
+    });
+    const seeded = {
+      fieldErrors: { "with.endpoint": "Required" },
+      levelErrors: {},
+      unplacedErrors: {},
+      hasUnparseableValueMapPayload: false,
+    };
+
+    act(() => {
+      result.current.recordValidationResult(seeded, undefined, true);
+    });
+
+    expect(result.current.taskValidation.hasWorkflowErrors).toBe(true);
+    expect(result.current.taskValidation.attempted).toBe(false);
+    expect(result.current.errorCount).toBe(1);
+
+    act(() => {
+      result.current.recordValidationResult(seeded, true);
+    });
+
+    expect(result.current.taskValidation.hasWorkflowErrors).toBe(false);
+    expect(result.current.taskValidation.attempted).toBe(true);
+  });
 
   describe("useLevelErrors", () => {
     it("returns message and error count for a container and its sub-containers", () => {

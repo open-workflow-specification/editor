@@ -204,6 +204,35 @@ describe("validateWorkflow", () => {
     expect(signatures.length).toBe(new Set(signatures).size);
   });
 
+  it("reports validation errors across multiple failing tasks", () => {
+    const multiInvalid = new Classes.Workflow({
+      document: { dsl: "1.0.3", name: "multi-invalid", version: "1.0.0", namespace: "default" },
+      do: [
+        {
+          step1: {
+            wait: "invalid-duration",
+          },
+        },
+        {
+          step2: {
+            call: "http",
+            with: {
+              method: "post",
+            },
+          },
+        },
+      ],
+    }) as Specification.Workflow;
+
+    const errors = validateWorkflow(multiInvalid);
+    const paths = errors
+      .filter((e): e is Exclude<typeof e, Error> => !(e instanceof Error))
+      .map((e) => e.path);
+
+    expect(paths.some((p) => p?.startsWith("/do/0/step1"))).toBe(true);
+    expect(paths.some((p) => p?.startsWith("/do/1/step2"))).toBe(true);
+  });
+
   it("returns original Error when validation throws unstructured error message", () => {
     // This test verifies the fallback branch in validateWorkflow (lines 228-232)
     // where an error is thrown that doesn't match either supported format.

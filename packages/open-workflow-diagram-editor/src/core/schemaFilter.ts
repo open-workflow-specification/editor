@@ -16,6 +16,7 @@
 
 import { merge } from "allof-merge";
 import { workflowSchema } from "@openworkflowspec/sdk";
+import { patchSchemaForSpecWorkarounds } from "./specWorkarounds";
 
 /* A fully dereferenced, self-contained JSON schema object.
  * All $ref pointers have been replaced and allOf compositions merged. */
@@ -35,6 +36,7 @@ let _taskBaseKeys: Set<string> | null = null;
 function getMergedSchema(): Record<string, unknown> {
   if (_merged === null) {
     _merged = merge(workflowSchema, { source: workflowSchema }) as Record<string, unknown>;
+    patchSchemaForSpecWorkarounds(_merged["$defs"] as Record<string, unknown>);
   }
   return _merged;
 }

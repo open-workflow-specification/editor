@@ -18,7 +18,6 @@ import { describe, it, expect } from "vitest";
 import {
   isValidationError,
   getNodeErrors,
-  getNodeErrorField,
   getErrorTaskReferences,
   getGeneralErrors,
 } from "../../src/core";
@@ -137,25 +136,99 @@ describe("getNodeErrors", () => {
 
     expect(getNodeErrors(errors, "/do/0/try", references)).toHaveLength(0);
   });
-});
 
-describe("getNodeErrorField", () => {
-  it.each([
-    { path: "/do/0/call/with", taskReference: "/do/0/call", expected: "with" },
-    {
-      path: "/do/0/call/with/endpoint",
-      taskReference: "/do/0/call",
-      expected: "with.endpoint",
-    },
-    { path: "/do/0/call", taskReference: "/do/0/call", expected: undefined },
-    { path: "/do/1/set", taskReference: "/do/0/call", expected: undefined },
-    { path: undefined, taskReference: "/do/0/call", expected: undefined },
-  ])(
-    "path=$path taskReference=$taskReference -> $expected",
-    ({ path, taskReference, expected }) => {
-      expect(getNodeErrorField(vErr({ path }), taskReference)).toBe(expected);
-    },
-  );
+  describe("oneOf branch ghosts", () => {
+    const PATH = "/do/0/call";
+    const branchErrors = (branch: number): ValidationError[] => [
+      vErr({
+        path: PATH,
+        errorType: `#/oneOf/${branch}/required`,
+        message: "must have required property 'call'",
+        object: { missingProperty: "call" },
+      }),
+      vErr({
+        path: PATH,
+        errorType: `#/oneOf/${branch}/required`,
+        message: "must have required property 'with'",
+        object: { missingProperty: "with" },
+      }),
+      vErr({
+        path: PATH,
+        errorType: `#/oneOf/${branch}/unevaluatedProperties`,
+        message: "must NOT have unevaluated properties",
+      }),
+    ];
+
+    it("drops the siblings of a branch rejected for a missing task type key", () => {
+      const errors: SdkError[] = [...branchErrors(0), ...branchErrors(1)];
+
+      expect(getNodeErrors(errors, PATH, TASK_REFERENCES)).toHaveLength(0);
+      expect(getErrorTaskReferences(errors, TASK_REFERENCES)).toEqual(new Set());
+    });
+
+    it("keeps errors of a branch that was not rejected for a missing task type key", () => {
+      const errors: SdkError[] = [
+        ...branchErrors(0),
+        vErr({
+          path: PATH,
+          errorType: "#/oneOf/2/required",
+          message: "must have required property 'with'",
+          object: { missingProperty: "with" },
+        }),
+      ];
+
+      const result = getNodeErrors(errors, PATH, TASK_REFERENCES);
+      expect(result).toHaveLength(1);
+      expect(result[0]!.message).toBe("must have required property 'with'");
+    });
+
+    it("keeps a real error on a field of the task next to ghost branches", () => {
+      const errors: SdkError[] = [
+        ...branchErrors(0),
+        vErr({
+          path: `${PATH}/with`,
+          errorType: "#/allOf/1/properties/with/required",
+          message: "must have required property 'endpoint'",
+          object: { missingProperty: "endpoint" },
+        }),
+      ];
+
+      const result = getNodeErrors(errors, PATH, TASK_REFERENCES);
+      expect(result.map((error) => error.message)).toEqual([
+        "must have required property 'endpoint'",
+      ]);
+    });
+
+    it("drops 'catch' only when the task is also reported as missing 'try'", () => {
+      const missingCatch = vErr({
+        path: PATH,
+        errorType: "#/required",
+        message: "must have required property 'catch'",
+        object: { missingProperty: "catch" },
+      });
+      const missingTry = vErr({
+        path: PATH,
+        errorType: "#/required",
+        message: "must have required property 'try'",
+        object: { missingProperty: "try" },
+      });
+
+      expect(getNodeErrors([missingCatch, missingTry], PATH, TASK_REFERENCES)).toHaveLength(0);
+      expect(getNodeErrors([missingCatch], PATH, TASK_REFERENCES)).toHaveLength(1);
+    });
+
+    it("tolerates raw Errors, path-less errors and errors with no errorType next to ghost branches", () => {
+      const bare = vErr({ path: PATH, message: "bare" });
+      const errors: SdkError[] = [
+        new Error("syntax"),
+        vErr({ errorType: "#/required", message: "no path" }),
+        ...branchErrors(0),
+        bare,
+      ];
+
+      expect(getNodeErrors(errors, PATH, TASK_REFERENCES)).toEqual([bare]);
+    });
+  });
 });
 
 describe("getErrorTaskReferences", () => {

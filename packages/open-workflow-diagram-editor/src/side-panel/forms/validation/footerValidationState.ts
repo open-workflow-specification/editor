@@ -50,18 +50,31 @@ export interface FooterValidationState {
 }
 
 /**
+ * True once the footer shows an error count: after an Apply attempt, or when the errors
+ * were seeded from workflow validation. While counting, every change re-runs task validation.
+ */
+export function isCountingErrors(
+  state: Pick<TaskValidationState, "attempted" | "hasWorkflowErrors">,
+): boolean {
+  return state.attempted || state.hasWorkflowErrors;
+}
+
+/**
  * Derives the footer validation presentation state from the current task validation state.
  * `errorCount` is passed in from the context so the count is never derived twice.
+ * Seeded workflow errors show the error UI without enabling the "Apply anyway" bypass,
+ * which needs an Apply attempt.
  */
 export function deriveFooterValidationState(
   taskValidation: TaskValidationState,
   errorCount: number,
 ): FooterValidationState {
-  const hasErrors = taskValidation.attempted && errorCount > 0;
-  const isBypassable = hasErrors && !taskValidation.hasUnparseableValueMapPayload;
+  const hasErrors = errorCount > 0;
+  const isBypassable =
+    taskValidation.attempted && hasErrors && !taskValidation.hasUnparseableValueMapPayload;
 
   return {
-    showErrorUI: hasErrors,
+    showErrorUI: isCountingErrors(taskValidation) && hasErrors,
     applyLabelKey: isBypassable ? "sidebar.form.applyAnyway" : "sidebar.form.apply",
     applyVariant: isBypassable ? "destructive" : "default",
     isBypassable,

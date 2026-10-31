@@ -346,7 +346,7 @@ export const INVALID_TASKS: InvalidTaskCase[] = [
   {
     name: "emit with a source that is not a uri",
     nodeType: "emit",
-    task: { emit: { event: { with: { source: "nope", type: "t" } } } },
+    task: { emit: { event: { with: { source: "not a uri!", type: "t" } } } },
     fieldPaths: ["emit.event.with.source"],
     levelPaths: [],
   },

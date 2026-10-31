@@ -22,6 +22,7 @@ import {
   getErrorTaskReferences,
   getGeneralErrors,
   stripSpecAheadOfSdkErrors,
+  patchSchemaForSpecWorkarounds,
 } from "../../src/core";
 import type { ValidationError } from "../../src/core";
 
@@ -91,12 +92,38 @@ describe("workflows valid per current spec produce no editor errors", () => {
             type: com.example.order
 `,
     },
+    {
+      pr: "spec#1175 — emit event with no source, nested in a do task",
+      yaml: `${DOCUMENT}do:
+  - outer:
+      do:
+        - emitIt:
+            emit:
+              event:
+                with:
+                  type: com.example.order
+`,
+    },
   ])("$pr", ({ yaml }) => {
     expect(surfacedErrors(yaml)).toEqual({ badgedTasks: [], general: [] });
   });
 });
 
 describe("errors the workaround must not swallow", () => {
+  it("still badges only the nested emit task when its required type is missing", () => {
+    const { badgedTasks } = surfacedErrors(`${DOCUMENT}do:
+  - outer:
+      do:
+        - emitIt:
+            emit:
+              event:
+                with:
+                  source: https://example.com
+`);
+
+    expect(badgedTasks).toEqual(["/do/0/outer/do/0/emitIt"]);
+  });
+
   it("still badges a task with a genuinely missing required property", () => {
     const { badgedTasks } = surfacedErrors(`${DOCUMENT}do:
   - getPets:
@@ -181,23 +208,44 @@ do:
 });
 
 describe("stripSpecAheadOfSdkErrors", () => {
-  it("drops the whole sibling cluster at a path where the old URI pattern fired", () => {
-    const errors = [
-      vErr({
-        path: "/do/0/emitIt/emit/event/with/source",
-        errorType: "#/$defs/uriTemplate/anyOf/0/pattern",
-      }),
-      vErr({
-        path: "/do/0/emitIt/emit/event/with/source",
-        errorType: "#/$defs/runtimeExpression/pattern",
-      }),
-      vErr({
-        path: "/do/0/emitIt/emit/event/with/source",
-        errorType: "#/properties/source/oneOf",
-      }),
-    ];
+  it("drops only the uriTemplate and runtimeExpression siblings at a path where the old URI pattern fired", () => {
+    const uriTemplateErr = vErr({
+      path: "/do/0/emitIt/emit/event/with/source",
+      errorType: "#/$defs/uriTemplate/anyOf/0/pattern",
+    });
+    const runtimeExpressionErr = vErr({
+      path: "/do/0/emitIt/emit/event/with/source",
+      errorType: "#/$defs/runtimeExpression/pattern",
+    });
+    // The oneOf cascade sibling is already handled as noise by isNoiseError downstream.
+    const oneOfErr = vErr({
+      path: "/do/0/emitIt/emit/event/with/source",
+      errorType: "#/properties/source/oneOf",
+    });
 
-    expect(stripSpecAheadOfSdkErrors(errors)).toEqual([]);
+    expect(stripSpecAheadOfSdkErrors([uriTemplateErr, runtimeExpressionErr, oneOfErr])).toEqual([
+      oneOfErr,
+    ]);
+  });
+
+  it("does not strip a non-uriTemplate error at a URI path (real user error co-located with the cluster)", () => {
+    const uriTemplateErr = vErr({
+      path: "/do/0/getPets/call/http/endpoint/uri",
+      errorType: "#/$defs/uriTemplate/anyOf/0/pattern",
+    });
+    const runtimeExpressionErr = vErr({
+      path: "/do/0/getPets/call/http/endpoint/uri",
+      errorType: "#/$defs/runtimeExpression/pattern",
+    });
+    const realFormatErr = vErr({
+      path: "/do/0/getPets/call/http/endpoint/uri",
+      errorType: "#/properties/uri/format",
+      message: 'must match format "uri"',
+    });
+
+    expect(
+      stripSpecAheadOfSdkErrors([uriTemplateErr, runtimeExpressionErr, realFormatErr]),
+    ).toEqual([realFormatErr]);
   });
 
   it("keeps a runtimeExpression error at a path with no URI error", () => {
@@ -237,5 +285,78 @@ describe("stripSpecAheadOfSdkErrors", () => {
     ];
 
     expect(stripSpecAheadOfSdkErrors(errors)).toEqual(errors);
+  });
+});
+
+describe("patchSchemaForSpecWorkarounds", () => {
+  const emitDef = (required: unknown): Record<string, unknown> => ({
+    properties: { emit: { properties: { event: { properties: { with: { required } } } } } },
+  });
+  const requiredOf = (def: Record<string, unknown>): unknown =>
+    (
+      (
+        (
+          (def["properties"] as Record<string, Record<string, unknown>>)["emit"]![
+            "properties"
+          ] as Record<string, Record<string, unknown>>
+        )["event"]!["properties"] as Record<string, Record<string, unknown>>
+      )["with"] as Record<string, unknown>
+    )["required"];
+
+  it("relaxes the pattern of every uriTemplate variant to accept relative URIs only", () => {
+    const defs: Record<string, unknown> = {
+      uriTemplate: { anyOf: [{ pattern: "old-a" }, { pattern: "old-b" }] },
+    };
+
+    patchSchemaForSpecWorkarounds(defs);
+
+    const variants = (defs["uriTemplate"] as { anyOf: Array<{ pattern: string }> }).anyOf;
+    for (const variant of variants) {
+      const pattern = new RegExp(variant.pattern);
+      expect(pattern.test("/orders/service")).toBe(true);
+      expect(pattern.test("openapi/petstore.json")).toBe(true);
+      expect(pattern.test("${ .url }")).toBe(false);
+      expect(pattern.test(" spaced")).toBe(false);
+    }
+  });
+
+  it.each([
+    { name: "the flattened shape", build: () => emitDef(["source", "type"]), nested: false },
+    {
+      name: "the allOf shape",
+      build: () => ({ allOf: [emitDef(["source", "type"])] }),
+      nested: true,
+    },
+  ])("removes source from the required list of emit event.with in $name", ({ build, nested }) => {
+    const emitTask = build();
+    patchSchemaForSpecWorkarounds({ emitTask });
+
+    const target = nested ? (emitTask["allOf"] as Array<Record<string, unknown>>)[0]! : emitTask;
+    expect(requiredOf(target)).toEqual(["type"]);
+  });
+
+  it("leaves a non-array required untouched", () => {
+    const emitTask = emitDef("source");
+
+    patchSchemaForSpecWorkarounds({ emitTask });
+
+    expect(requiredOf(emitTask)).toBe("source");
+  });
+
+  it.each([
+    { name: "no definitions", defs: {} },
+    { name: "a uriTemplate without anyOf", defs: { uriTemplate: {} } },
+    { name: "an emitTask without properties", defs: { emitTask: {} } },
+  ])("does not throw for $name", ({ defs }) => {
+    expect(() => patchSchemaForSpecWorkarounds(defs)).not.toThrow();
+  });
+});
+
+describe("stripSpecAheadOfSdkErrors without an errorType", () => {
+  it("keeps an error with no errorType at a relaxed URI path", () => {
+    const uriError = vErr({ path: "/do/0/a/uri", errorType: "#/$defs/uriTemplate/pattern" });
+    const bare = vErr({ path: "/do/0/a/uri" });
+
+    expect(stripSpecAheadOfSdkErrors([uriError, bare])).toEqual([bare]);
   });
 });

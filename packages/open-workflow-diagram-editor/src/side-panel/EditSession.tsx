@@ -41,6 +41,8 @@ type EditSessionValue = {
    * runs right after a `setValue` would read it stale.
    */
   liveFormState: () => LiveFormState;
+  /** Increments on every `resetDraft`, so effects can re-run when the draft is reset. */
+  draftVersion: number;
   /**
    * Resets the form to `task` (see `buildFormValues`) and makes it the baseline the draft's
    * changes are measured against. Every reset of the task form goes through here.
@@ -88,6 +90,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
   // State for rendering; ref for event handlers. Both updated by `resetDraft`
   const [baseline, setBaseline] = React.useState<DraftBaseline | null>(null);
   const baselineRef = React.useRef<DraftBaseline | null>(null);
+  const [draftVersion, setDraftVersion] = React.useState<number>(0);
 
   // Kept current by RHF's `subscribe`, which reports synchronously on every change.
   const liveStateRef = React.useRef<LiveFormState>({ dirtyFields: {}, defaultValues: {} });
@@ -111,6 +114,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
       const next = { task, fields };
       baselineRef.current = next;
       setBaseline(next);
+      setDraftVersion((version) => version + 1);
     },
     [form],
   );
@@ -146,6 +150,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     () => ({
       form,
       liveFormState,
+      draftVersion,
       resetDraft,
       isNavigationBlocked: blockedNavigation !== null,
       requestNavigation,
@@ -155,6 +160,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     [
       form,
       liveFormState,
+      draftVersion,
       resetDraft,
       blockedNavigation,
       requestNavigation,

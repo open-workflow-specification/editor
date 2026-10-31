@@ -19,7 +19,13 @@ import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { buildActiveFormView } from "../../../../src/side-panel/forms/validation/activeFormView";
 import { GROUP_KEYWORD } from "../../../../src/side-panel/forms/validation/branchGroups";
-import { classifyTaskErrors } from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
+import {
+  classifyErrorPath,
+  classifyTaskErrors,
+  recordClassification,
+  type ClassifiedTaskErrors,
+  type Classification,
+} from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
 
 const leaf = (path: string, required = false): FormFieldDescriptor => ({
   kind: "string",
@@ -290,5 +296,93 @@ describe("classifyTaskErrors", () => {
         unplacedErrors: {},
       });
     });
+  });
+});
+
+describe("classifyErrorPath", () => {
+  const view = buildActiveFormView(fields, {}, {});
+
+  it.each([
+    { name: "a leaf", path: "name", keyword: "type", expected: { kind: "field", path: "name" } },
+    {
+      name: "a container structure keyword",
+      path: "obj",
+      keyword: "required",
+      expected: { kind: "level", path: "obj" },
+    },
+    {
+      name: "an unrelated keyword on a container",
+      path: "obj",
+      keyword: "pattern",
+      expected: { kind: "drop" },
+    },
+    {
+      name: "an untraceable path",
+      path: "nowhere.at.all",
+      keyword: "type",
+      expected: { kind: "unplaced", path: "nowhere.at.all" },
+    },
+  ] satisfies Array<{ name: string; path: string; keyword: string; expected: Classification }>)(
+    "places $name",
+    ({ path, keyword, expected }) => {
+      expect(classifyErrorPath(path, keyword, {}, view)).toEqual(expected);
+    },
+  );
+
+  it("keeps a type error whose expected type is object on a container", () => {
+    expect(classifyErrorPath("obj", "type", { type: "object" }, view)).toEqual({
+      kind: "level",
+      path: "obj",
+    });
+    expect(classifyErrorPath("obj", "type", { type: "string" }, view)).toEqual({ kind: "drop" });
+  });
+});
+
+describe("recordClassification", () => {
+  const emptyResult = (): ClassifiedTaskErrors => ({
+    fieldErrors: {},
+    levelErrors: {},
+    unplacedErrors: {},
+  });
+
+  it.each([
+    {
+      name: "a field",
+      placed: { kind: "field", path: "a" },
+      expected: { fieldErrors: { a: "msg" }, levelErrors: {}, unplacedErrors: {} },
+    },
+    {
+      name: "a level",
+      placed: { kind: "level", path: "obj" },
+      expected: { fieldErrors: {}, levelErrors: { obj: "msg" }, unplacedErrors: {} },
+    },
+    {
+      name: "an unplaced error as both a level and an unplaced error",
+      placed: { kind: "unplaced", path: "x" },
+      expected: { fieldErrors: {}, levelErrors: { x: "msg" }, unplacedErrors: { x: "msg" } },
+    },
+    {
+      name: "a dropped error as nothing",
+      placed: { kind: "drop" },
+      expected: { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} },
+    },
+  ] satisfies Array<{ name: string; placed: Classification; expected: ClassifiedTaskErrors }>)(
+    "records $name",
+    ({ placed, expected }) => {
+      const result = emptyResult();
+
+      recordClassification(result, placed, "msg");
+
+      expect(result).toEqual(expected);
+    },
+  );
+
+  it("keeps the first message of a path", () => {
+    const result = emptyResult();
+
+    recordClassification(result, { kind: "field", path: "a" }, "first");
+    recordClassification(result, { kind: "field", path: "a" }, "second");
+
+    expect(result.fieldErrors).toEqual({ a: "first" });
   });
 });
