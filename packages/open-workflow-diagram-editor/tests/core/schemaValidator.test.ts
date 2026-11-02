@@ -15,10 +15,12 @@
  */
 
 import { describe, it, expect } from "vitest";
+import type { ErrorObject } from "ajv/dist/2020";
 import {
   getTaskSchemaValidator,
   validateTaskData,
   getDefinitionNameForNodeType,
+  stripDiscriminatedCascade,
 } from "../../src/core/schemaValidator";
 
 describe("schemaValidator", () => {
@@ -63,5 +65,89 @@ describe("schemaValidator", () => {
   it("handles compiler exceptions gracefully and returns undefined", () => {
     const validator = getTaskSchemaValidator("completelyNonExistentDef");
     expect(validator).toBeUndefined();
+  });
+});
+
+describe("stripDiscriminatedCascade", () => {
+  function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
+    return {
+      keyword: "required",
+      instancePath: "",
+      schemaPath: "#/required",
+      params: {},
+      message: "boom",
+      ...overrides,
+    };
+  }
+
+  const messages = (errors: ErrorObject[]): (string | undefined)[] => errors.map((e) => e.message);
+
+  it("returns the same array when no branch was rejected by its discriminator", () => {
+    const errors = [ajvError({ schemaPath: "#/oneOf/0/required", message: "real" })];
+    expect(stripDiscriminatedCascade(errors)).toBe(errors);
+  });
+
+  it("drops every error of a branch whose discriminator did not match", () => {
+    const result = stripDiscriminatedCascade([
+      ajvError({
+        keyword: "const",
+        schemaPath: "#/oneOf/0/properties/call/const",
+        message: "ghost",
+      }),
+      ajvError({ schemaPath: "#/oneOf/0/required", message: "cascade" }),
+      ajvError({ schemaPath: "#/oneOf/1/required", message: "real" }),
+    ]);
+    expect(messages(result)).toEqual(["real"]);
+  });
+
+  it("treats a failing `not` on a property as a discriminator mismatch", () => {
+    const result = stripDiscriminatedCascade([
+      ajvError({ keyword: "not", schemaPath: "#/oneOf/0/properties/call/not", message: "ghost" }),
+      ajvError({ schemaPath: "#/oneOf/0/required", message: "cascade" }),
+      ajvError({ schemaPath: "#/oneOf/1/required", message: "real" }),
+    ]);
+    expect(messages(result)).toEqual(["real"]);
+  });
+
+  it.each([
+    { name: "outside a property", keyword: "const", schemaPath: "#/oneOf/0/const" },
+    { name: "with no oneOf branch", keyword: "const", schemaPath: "#/properties/call/const" },
+    { name: "for another keyword", keyword: "enum", schemaPath: "#/oneOf/0/properties/call/enum" },
+  ])("keeps every error for a discriminator failure $name", ({ keyword, schemaPath }) => {
+    const errors = [
+      ajvError({ keyword, schemaPath }),
+      ajvError({ schemaPath: "#/oneOf/0/required", message: "kept" }),
+    ];
+    expect(stripDiscriminatedCascade(errors)).toHaveLength(2);
+  });
+
+  it("scopes pruning to the instance so sibling tasks sharing one schema do not suppress each other", () => {
+    const result = stripDiscriminatedCascade([
+      // grpcChild rejected the HTTP branch (oneOf/0)
+      ajvError({
+        keyword: "const",
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/call/const",
+        instancePath: "/do/0/grpcChild/call",
+        message: "grpc ghost",
+      }),
+      ajvError({
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/with/required",
+        instancePath: "/do/0/grpcChild/with",
+        message: "grpc cascade",
+      }),
+      // httpChild rejected the gRPC branch (oneOf/1) but has a real error on the HTTP branch (oneOf/0)
+      ajvError({
+        keyword: "const",
+        schemaPath: "#/definitions/callTask/oneOf/1/properties/call/const",
+        instancePath: "/do/1/httpChild/call",
+        message: "http ghost",
+      }),
+      ajvError({
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/with/required",
+        instancePath: "/do/1/httpChild/with",
+        message: "http real",
+      }),
+    ]);
+    expect(messages(result)).toEqual(["http real"]);
   });
 });

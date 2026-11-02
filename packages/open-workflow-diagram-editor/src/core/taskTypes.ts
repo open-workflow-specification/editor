@@ -50,7 +50,9 @@ export const TASK_TYPE_KEYS: ReadonlySet<string> = new Set<TaskTypeKey>([
   GraphNodeType.Wait,
 ]);
 
-/* Returns the key that gives the task its type or undefined when it has none i.e object not a task */
+/* Returns the key that gives the task its type or undefined when it has none i.e object not a task.
+ `do` is also the body of a `for` task, so it only counts as the type when no other type key is present. */
 export function getTaskTypeKey(task: Record<string, unknown>): string | undefined {
-  return Object.keys(task).find((key) => TASK_TYPE_KEYS.has(key));
+  const keys = Object.keys(task).filter((key) => TASK_TYPE_KEYS.has(key));
+  return keys.find((key) => key !== GraphNodeType.Do) ?? keys[0];
 }

@@ -34,13 +34,13 @@ export function getErrorKeyword(error: ValidationError): string | undefined {
 }
 
 function isNoiseError(error: ValidationError): boolean {
-  const keyword = getErrorKeyword(error);
+  const keyword: string | undefined = getErrorKeyword(error);
 
   if (keyword === "oneOf") {
     return true;
   }
 
-  const missingProperty = error.object?.["missingProperty"];
+  const missingProperty: unknown = error.object?.["missingProperty"];
   if (typeof missingProperty === "string" && TASK_TYPE_KEYS.has(missingProperty)) {
     return true;
   }
@@ -57,24 +57,29 @@ function isNodeError(error: SdkError): error is NodeError {
   return isValidationError(error) && error.path !== undefined && !isNoiseError(error);
 }
 
-const BRANCH_REQUIRED: RegExp = /^(.*\/oneOf\/\d+\/)required$/;
+/* Returns the `oneOf/N/` prefix when the error is the `required` keyword of that branch itself. */
+function getBranchRequiredPrefix(error: ValidationError): string | undefined {
+  const errorType: string = error.errorType ?? "";
+  const prefix: string | undefined = ONE_OF_BRANCH_PREFIX.exec(errorType)?.[1];
+  return prefix !== undefined && errorType === `${prefix}required` ? prefix : undefined;
+}
 
 /* A `oneOf` branch that fails with `required <task type key>` such as `call` was never selected by the task. The other errors that branch reports at the same path (`required 'with'`, `unevaluatedProperties`, ...) are ghosts: the task is not that kind of task, so they say nothing the user can act on. A `try` task missing `catch` is only real when `try` itself is present, so `catch` is a ghost when `try` is reported missing. */
 function removeBranchGhosts(errors: SdkError[]): SdkError[] {
-  const ghostBranches = new Set<string>();
-  const missingTryPaths = new Set<string>();
+  const ghostBranches: Set<string> = new Set<string>();
+  const missingTryPaths: Set<string> = new Set<string>();
 
   for (const error of errors) {
     if (!isValidationError(error) || error.path === undefined) {
       continue;
     }
-    const missingProperty = error.object?.["missingProperty"];
+    const missingProperty: unknown = error.object?.["missingProperty"];
     if (typeof missingProperty !== "string" || !TASK_TYPE_KEYS.has(missingProperty)) {
       continue;
     }
-    const branch = BRANCH_REQUIRED.exec(error.errorType ?? "");
-    if (branch) {
-      ghostBranches.add(`${error.path}|${branch[1]}`);
+    const branchPrefix: string | undefined = getBranchRequiredPrefix(error);
+    if (branchPrefix !== undefined) {
+      ghostBranches.add(`${error.path}|${branchPrefix}`);
     } else if (missingProperty === "try" && error.errorType === "#/required") {
       missingTryPaths.add(error.path);
     }
@@ -95,20 +100,20 @@ function removeBranchGhosts(errors: SdkError[]): SdkError[] {
     ) {
       return false;
     }
-    const branch = ONE_OF_BRANCH_PREFIX.exec(error.errorType ?? "");
+    const branch: RegExpExecArray | null = ONE_OF_BRANCH_PREFIX.exec(error.errorType ?? "");
     return !(branch && ghostBranches.has(`${error.path}|${branch[1]}`));
   });
 }
 
 /* Find the task owning this error path. Both sides are JSON pointers, so the longest matching taskReference is found by dropping trailing segments until one is known. */
 function findOwningTaskReference(path: string, taskReferences: Set<string>): string | undefined {
-  let candidate = path;
+  let candidate: string = path;
 
   while (candidate.length > 0) {
     if (taskReferences.has(candidate)) {
       return candidate;
     }
-    const cut = candidate.lastIndexOf("/");
+    const cut: number = candidate.lastIndexOf("/");
     if (cut <= 0) {
       break;
     }
@@ -135,12 +140,12 @@ export function getErrorTaskReferences(
   errors: SdkError[],
   taskReferences: Set<string>,
 ): Set<string> {
-  const owners = new Set<string>();
+  const owners: Set<string> = new Set<string>();
   for (const error of removeBranchGhosts(errors)) {
     if (!isNodeError(error)) {
       continue;
     }
-    const owner = findOwningTaskReference(error.path, taskReferences);
+    const owner: string | undefined = findOwningTaskReference(error.path, taskReferences);
     if (owner !== undefined) {
       owners.add(owner);
     }

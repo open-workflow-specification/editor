@@ -190,6 +190,36 @@ describe("classifyWorkflowErrors", () => {
     expect(result.fieldErrors).toEqual({ name: "first" });
   });
 
+  it("records an unevaluated property so it can be kept while it is in the draft", () => {
+    const result = classify([
+      workflowError("", "must NOT have unevaluated properties", {
+        errorType: "#/oneOf/2/unevaluatedProperties",
+        object: { unevaluatedProperty: "typo" },
+      }),
+      workflowError("obj", "must NOT have additional properties", {
+        errorType: "#/properties/obj/additionalProperties",
+        object: { additionalProperty: "extra" },
+      }),
+    ]);
+
+    expect(result.undeclaredProperties).toEqual([
+      {
+        property: "typo",
+        placed: { kind: "level", path: "" },
+        message: "must NOT have unevaluated properties",
+      },
+      {
+        property: "obj.extra",
+        placed: { kind: "level", path: "obj" },
+        message: "must NOT have additional properties",
+      },
+    ]);
+  });
+
+  it("records no undeclared properties for other errors", () => {
+    expect(classify([workflowError("name", "bad value")]).undeclaredProperties).toBeUndefined();
+  });
+
   it("skips errors with no path or outside the task", () => {
     const result = classify([
       { message: "no path" },

@@ -21,7 +21,11 @@ import { flattenTask } from "@/core/taskDraft";
 import { collectSchemaFieldErrors } from "./collectSchemaFieldErrors";
 import { isSectionEmpty, buildOptionalSectionSet } from "./fieldErrorMapper";
 import { isCountingErrors } from "./footerValidationState";
-import { validateTaskForm, type TaskValidationResult } from "./taskLevelValidation";
+import {
+  reconcileUndeclaredProperties,
+  validateTaskForm,
+  type TaskValidationResult,
+} from "./taskLevelValidation";
 import { useTaskValidation } from "./taskValidationContext";
 import { SENTINEL_KEY } from "../sentinels";
 
@@ -45,14 +49,20 @@ export function useFieldLevelValidation(
 ): { validateField: FieldValidationHandler; revalidateIfAttempted: () => void } {
   const { taskValidation, recordValidationResult } = useTaskValidation();
   const optionalSections = React.useMemo(() => buildOptionalSectionSet(fields), [fields]);
-  const { hasWorkflowErrors } = taskValidation;
+  const { hasWorkflowErrors, undeclaredProperties } = taskValidation;
   // Once the footer shows a count, every change re-runs whole-task validation so the count stays live.
   const isCounting: boolean = isCountingErrors(taskValidation);
 
-  // Re-validation keeps the source of the errors the context already holds.
+  // Re-validation keeps the source of the errors the context already holds. Task-level validation
+  // drops undeclared-property errors by design, so the seeded ones still in the draft are kept.
   const recordKeepingSource = React.useCallback(
-    (result: TaskValidationResult) => recordValidationResult(result, undefined, hasWorkflowErrors),
-    [recordValidationResult, hasWorkflowErrors],
+    (result: TaskValidationResult) =>
+      recordValidationResult(
+        reconcileUndeclaredProperties(result, undeclaredProperties, form.getValues()),
+        undefined,
+        hasWorkflowErrors,
+      ),
+    [recordValidationResult, hasWorkflowErrors, undeclaredProperties, form],
   );
 
   const revalidateIfAttempted = React.useCallback(() => {

@@ -33,7 +33,7 @@ import { classifyWorkflowErrors } from "./workflowErrorClassifier";
  * Seeded results are never the non-bypassable valueMap case, which only an Apply run detects.
  */
 function mergeResults(
-  primary: ClassifiedTaskErrors,
+  primary: TaskValidationResult,
   secondary: ClassifiedTaskErrors,
 ): TaskValidationResult {
   return {
@@ -41,6 +41,7 @@ function mergeResults(
     levelErrors: { ...secondary.levelErrors, ...primary.levelErrors },
     unplacedErrors: { ...secondary.unplacedErrors, ...primary.unplacedErrors },
     hasUnparseableValueMapPayload: false,
+    ...(primary.undeclaredProperties ? { undeclaredProperties: primary.undeclaredProperties } : {}),
   };
 }
 
@@ -65,9 +66,9 @@ function mergeResults(
  * @param setError       - `setError` from `react-hook-form`'s `useForm`.
  * @param clearErrors    - `clearErrors` from `react-hook-form`'s `useForm`.
  * @param resetKey       - Opaque key that changes whenever the selected task
- *                         changes (typically the non-indexed node id).  The
- *                         effect re-runs whenever this value changes so errors
- *                         are refreshed for the new task.
+ *                         changes or its draft is reset (the node id combined with
+ *                         the draft version).  The effect re-runs whenever this
+ *                         value changes so errors are refreshed.
  * @param allFields      - Form field descriptors for the selected task.
  * @param getValues      - `getValues` from `react-hook-form`'s `useForm`.
  * @param recordValidationResult - `recordValidationResult` from the task validation context.
@@ -111,14 +112,12 @@ export function useWorkflowErrorsForForm(
       previousFieldsRef.current = [];
     }
 
-    if (!taskReference) return;
-
-    if (isReadOnly) return;
+    if (!taskReference || isReadOnly) return;
 
     const nodeErrors: ValidationError[] = getNodeErrors(errors, taskReference, taskReferences);
     const formValues: Record<string, unknown> = getValues();
 
-    const workflowResult: ClassifiedTaskErrors =
+    const workflowResult: TaskValidationResult =
       nodeErrors.length > 0
         ? classifyWorkflowErrors(
             nodeErrors,

@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import type { TaskValidationResult } from "./taskLevelValidation";
+import type { TaskValidationResult, UndeclaredPropertyError } from "./taskLevelValidation";
 import { countErrors } from "./footerValidationState";
 
 export interface TaskValidationState {
@@ -31,6 +31,8 @@ export interface TaskValidationState {
   unplacedErrors: Record<string, string>;
   /** True when an unparseable valueMap enum payload is present (non-bypassable). */
   hasUnparseableValueMapPayload: boolean;
+  /** Seeded workflow diagnostics that task-level validation drops; kept while still in the draft. */
+  undeclaredProperties: UndeclaredPropertyError[];
 }
 
 export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
@@ -40,6 +42,7 @@ export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
   levelErrors: {},
   unplacedErrors: {},
   hasUnparseableValueMapPayload: false,
+  undeclaredProperties: [],
 };
 
 export interface TaskValidationContextValue {
@@ -79,6 +82,7 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
         levelErrors: result.levelErrors,
         unplacedErrors: result.unplacedErrors,
         hasUnparseableValueMapPayload: result.hasUnparseableValueMapPayload,
+        undeclaredProperties: result.undeclaredProperties ?? [],
       }));
     },
     [],

@@ -22,7 +22,7 @@ import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import { YamlField, SectionHeader } from "./Fields";
 import { TaskForm } from "./forms/TaskForm";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { getNodeErrors } from "@/core";
+import { getNodeErrors, type ValidationError } from "@/core";
 import { ErrorSection, type ErrorItem } from "./ErrorsSection";
 import { useTaskValidation } from "./forms/validation";
 
@@ -38,7 +38,7 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const taskReference = node.data.taskReference;
 
   /* Layout-only nodes (entry/exit/start/end) have no taskReference. Only read-only mode lists them all */
-  const nodeErrors =
+  const nodeErrors: ValidationError[] =
     isReadOnly && taskReference ? getNodeErrors(errors, taskReference, taskReferences) : [];
   /* The list shows messages only, so errors that differ only by schema path would read as duplicates */
   const readOnlyErrorItems: ErrorItem[] = [

@@ -23,6 +23,7 @@ import {
   classifyErrorPath,
   classifyTaskErrors,
   recordClassification,
+  UNDECLARED_PROPERTY_KEYWORDS,
   type ClassifiedTaskErrors,
   type Classification,
 } from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
@@ -384,5 +385,14 @@ describe("recordClassification", () => {
     recordClassification(result, { kind: "field", path: "a" }, "second");
 
     expect(result.fieldErrors).toEqual({ a: "first" });
+  });
+});
+
+describe("UNDECLARED_PROPERTY_KEYWORDS", () => {
+  it("lists the keywords that report a property the schema does not allow", () => {
+    expect([...UNDECLARED_PROPERTY_KEYWORDS].sort()).toEqual([
+      "additionalProperties",
+      "unevaluatedProperties",
+    ]);
   });
 });

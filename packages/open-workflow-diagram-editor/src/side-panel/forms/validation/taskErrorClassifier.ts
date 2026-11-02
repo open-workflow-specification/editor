@@ -43,12 +43,14 @@ const CONTAINER_KEYWORDS: ReadonlySet<string> = new Set([
   GROUP_KEYWORD,
 ]);
 
-/** Keywords that never point at something the user can edit or act upon. */
-const NOISE_KEYWORDS: ReadonlySet<string> = new Set([
+/** Keywords reporting a property the schema does not allow; task-level validation drops them. */
+export const UNDECLARED_PROPERTY_KEYWORDS: ReadonlySet<string> = new Set([
   "unevaluatedProperties",
   "additionalProperties",
-  "if",
 ]);
+
+/** Keywords that never point at something the user can edit or act upon. */
+const NOISE_KEYWORDS: ReadonlySet<string> = new Set([...UNDECLARED_PROPERTY_KEYWORDS, "if"]);
 
 /** Checks containment using `.` separators (dot-notation form paths). */
 function isAtOrBelow(path: string, base: string): boolean {

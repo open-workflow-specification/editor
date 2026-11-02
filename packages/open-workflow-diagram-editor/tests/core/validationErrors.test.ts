@@ -17,6 +17,8 @@
 import { describe, it, expect } from "vitest";
 import {
   isValidationError,
+  getErrorKeyword,
+  ONE_OF_BRANCH_PREFIX,
   getNodeErrors,
   getErrorTaskReferences,
   getGeneralErrors,
@@ -370,5 +372,35 @@ describe("getGeneralErrors", () => {
 
       expect(getGeneralErrors(errors, new Set())).toEqual(errors);
     });
+  });
+});
+
+describe("getErrorKeyword", () => {
+  it.each([
+    { errorType: "#/oneOf/2/allOf/1/properties/with/required", expected: "required" },
+    { errorType: "#/required", expected: "required" },
+    { errorType: "required", expected: "required" },
+    { errorType: undefined, expected: undefined },
+  ])("returns $expected for $errorType", ({ errorType, expected }) => {
+    const error: ValidationError = errorType === undefined ? vErr({}) : vErr({ errorType });
+
+    expect(getErrorKeyword(error)).toBe(expected);
+  });
+});
+
+describe("ONE_OF_BRANCH_PREFIX", () => {
+  it.each([
+    { schemaPath: "#/oneOf/2/required", prefix: "#/oneOf/2/" },
+    { schemaPath: "#/oneOf/2/allOf/1/properties/with/required", prefix: "#/oneOf/2/" },
+    {
+      schemaPath: "#/$defs/task/oneOf/0/properties/do/items/oneOf/11/properties/call/const",
+      prefix: "#/$defs/task/oneOf/0/properties/do/items/oneOf/11/",
+    },
+  ])("captures the deepest branch prefix of $schemaPath", ({ schemaPath, prefix }) => {
+    expect(ONE_OF_BRANCH_PREFIX.exec(schemaPath)?.[1]).toBe(prefix);
+  });
+
+  it("does not match a path without a oneOf branch", () => {
+    expect(ONE_OF_BRANCH_PREFIX.exec("#/properties/with/required")).toBeNull();
   });
 });

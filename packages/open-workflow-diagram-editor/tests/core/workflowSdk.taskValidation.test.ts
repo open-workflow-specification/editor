@@ -28,7 +28,10 @@ vi.mock("@openworkflowspec/sdk", async (importOriginal) => {
   return { ...actual, validate: sdkValidate };
 });
 
-vi.mock("../../src/core/schemaValidator", () => ({ validateTaskData: vi.fn() }));
+vi.mock("../../src/core/schemaValidator", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/core/schemaValidator")>();
+  return { ...actual, validateTaskData: vi.fn() };
+});
 
 function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
   return {
@@ -77,6 +80,48 @@ describe("validateWorkflow SDK failures", () => {
 });
 
 describe("validateWorkflow per-task validation", () => {
+  it("validates a task that has both for and do against the for schema", () => {
+    vi.mocked(validateTaskData).mockReturnValue(null);
+
+    validateWorkflow(
+      workflowWith([{ loop: { do: [{ inner: { wait: "PT1S" } }], for: { each: "item" } } }]),
+    );
+
+    expect(validateTaskData).toHaveBeenCalledWith("for", expect.anything());
+  });
+
+  it("prunes a ghost branch reported at the task root without touching other tasks", () => {
+    vi.mocked(validateTaskData)
+      .mockReturnValueOnce([
+        ajvError({
+          keyword: "const",
+          schemaPath: "#/oneOf/0/properties/call/const",
+          instancePath: "",
+          message: "must be equal to constant",
+        }),
+        ajvError({
+          keyword: "required",
+          schemaPath: "#/oneOf/0/required",
+          instancePath: "",
+          message: "cascade",
+        }),
+      ])
+      .mockReturnValueOnce([
+        ajvError({
+          keyword: "required",
+          schemaPath: "#/oneOf/0/required",
+          instancePath: "",
+          message: "real error",
+        }),
+      ]);
+
+    const errors = validationErrors(
+      validateWorkflow(workflowWith([{ a: { call: "http" } }, { b: { call: "http" } }])),
+    );
+
+    expect(errors.map((error) => error.message)).toEqual(["real error"]);
+  });
+
   it.each([
     { name: "no do list", doList: undefined },
     { name: "a do list that is not an array", doList: { a: 1 } },
@@ -205,5 +250,68 @@ describe("validateWorkflow discriminator cascade filtering", () => {
     const errors = validationErrors(validateWorkflow(workflowWith([{ step: { call: "http" } }])));
 
     expect(errors).toHaveLength(2);
+  });
+
+  it("scopes discriminator cascade pruning to its instance so heterogeneous nested tasks do not suppress each other", () => {
+    vi.mocked(validateTaskData).mockReturnValue([
+      // grpcChild rejected HTTP branch (oneOf/0)
+      ajvError({
+        keyword: "const",
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/call/const",
+        instancePath: "/do/0/grpcChild/call",
+        message: "must be equal to constant",
+      }),
+      ajvError({
+        keyword: "required",
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/with/required",
+        instancePath: "/do/0/grpcChild/with",
+        message: "cascade on grpcChild",
+      }),
+      // httpChild rejected gRPC branch (oneOf/1)
+      ajvError({
+        keyword: "const",
+        schemaPath: "#/definitions/callTask/oneOf/1/properties/call/const",
+        instancePath: "/do/1/httpChild/call",
+        message: "must be equal to constant",
+      }),
+      ajvError({
+        keyword: "required",
+        schemaPath: "#/definitions/callTask/oneOf/1/properties/proto/required",
+        instancePath: "/do/1/httpChild/proto",
+        message: "cascade on httpChild",
+      }),
+      // httpChild legitimate error on HTTP branch (oneOf/0)
+      ajvError({
+        keyword: "required",
+        schemaPath: "#/definitions/callTask/oneOf/0/properties/with/required",
+        instancePath: "/do/1/httpChild/with",
+        params: { missingProperty: "endpoint" },
+        message: "must have required property 'endpoint'",
+      }),
+    ]);
+
+    const errors = validationErrors(
+      validateWorkflow(
+        workflowWith([
+          {
+            parentDo: {
+              do: [
+                { grpcChild: { call: "grpc", with: { proto: "service.proto" } } },
+                { httpChild: { call: "http", with: {} } },
+              ],
+            },
+          },
+        ]),
+      ),
+    );
+
+    expect(errors).toEqual([
+      {
+        path: "/do/0/parentDo/do/1/httpChild/with",
+        errorType: "#/definitions/callTask/oneOf/0/properties/with/required",
+        message: "must have required property 'endpoint'",
+        object: { missingProperty: "endpoint" },
+      },
+    ]);
   });
 });

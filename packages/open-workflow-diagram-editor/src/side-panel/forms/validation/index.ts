@@ -20,7 +20,6 @@ export { collectSchemaFieldErrors, collectTaskErrors } from "./collectSchemaFiel
 export { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 export { collapseBranchGroups, GROUP_KEYWORD } from "./branchGroups";
 export { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
-export { classifyWorkflowErrors } from "./workflowErrorClassifier";
 export {
   validateTaskForm,
   collectSchemaErrorPaths,

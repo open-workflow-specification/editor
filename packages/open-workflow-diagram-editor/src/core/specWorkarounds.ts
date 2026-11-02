@@ -23,8 +23,12 @@ import { getErrorKeyword } from "./validationErrors";
  To revert when the SDK is bumped:
  - delete this file and its `export *` line in `core/index.ts`;
  - remove the `patchSchemaForSpecWorkarounds` call in `getMergedSchema` (`schemaFilter.ts`);
- - remove the `stripSpecAheadOfSdkErrors` calls in `validateWorkflow` (`workflowSdk.ts`).
+ - remove the `stripSpecAheadOfSdkErrors` call in `validateWorkflow` (`workflowSdk.ts`).
  */
+
+/* Accepts absolute and relative URIs and rejects empty values and runtime expressions (`${ ... }`). */
+const URI_TEMPLATE_PATTERN: string =
+  "^(?!\\s*\\$\\{)(?=\\S)(([^:/?#]+):)?(//([^/?#\\s]*))?([^?#\\s]*)(\\?([^#\\s]*))?(#(\\S*))?$";
 
 // ---------------------------------------------------------------------------
 // Schema-level patches (prevent false positives at the source)
@@ -44,15 +48,19 @@ import { getErrorKeyword } from "./validationErrors";
  */
 export function patchSchemaForSpecWorkarounds(defs: Record<string, unknown>): void {
   // spec#1169 — allow relative URIs in uriTemplate.
-  // The original pattern `^[A-Za-z][A-Za-z0-9+\-.]*://.*` only allows absolute
-  // URIs. We relax it to `^[^$\s]` so relative paths like `/orders/service` or
-  // `openapi/petstore.json` pass, while runtime expressions like `${foo}` are
-  // still rejected (preserving oneOf discrimination with runtimeExpression).
-  const uriTemplate = defs["uriTemplate"] as Record<string, unknown> | undefined;
-  const uriVariants = uriTemplate?.["anyOf"] as Array<Record<string, unknown>> | undefined;
+  // The original pattern `^[A-Za-z][A-Za-z0-9+\-.]*://.*` only allows absolute URIs.
+  // `URI_TEMPLATE_PATTERN` also accepts relative paths such as `/orders/service` or
+  // `openapi/petstore.json`, while runtime expressions such as `${foo}` are still rejected
+  // (preserving oneOf discrimination with runtimeExpression).
+  const uriTemplate: Record<string, unknown> | undefined = defs["uriTemplate"] as
+    | Record<string, unknown>
+    | undefined;
+  const uriVariants: Array<Record<string, unknown>> | undefined = uriTemplate?.["anyOf"] as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (Array.isArray(uriVariants)) {
     for (const variant of uriVariants) {
-      variant["pattern"] = "^[^$\\s]";
+      variant["pattern"] = URI_TEMPLATE_PATTERN;
     }
   }
 
@@ -61,20 +69,27 @@ export function patchSchemaForSpecWorkarounds(defs: Record<string, unknown>): vo
   // schema keeps it under `allOf`, so check both shapes. Missing the flattened one
   // leaves `source` required for Ajv, and a nested emit task (validated through its
   // parent) then fails every branch of the task `oneOf`.
-  const emitTask = defs["emitTask"] as Record<string, unknown> | undefined;
+  const emitTask: Record<string, unknown> | undefined = defs["emitTask"] as
+    | Record<string, unknown>
+    | undefined;
   if (emitTask) {
-    const allOf = emitTask["allOf"] as Array<Record<string, unknown>> | undefined;
-    const candidates = [emitTask, ...(Array.isArray(allOf) ? allOf : [])];
+    const allOf: Array<Record<string, unknown>> | undefined = emitTask["allOf"] as
+      | Array<Record<string, unknown>>
+      | undefined;
+    const candidates: Array<Record<string, unknown>> = [
+      emitTask,
+      ...(Array.isArray(allOf) ? allOf : []),
+    ];
     for (const candidate of candidates) {
-      const emitProp = (candidate["properties"] as Record<string, unknown> | undefined)?.[
-        "emit"
-      ] as Record<string, unknown> | undefined;
-      const eventProp = (emitProp?.["properties"] as Record<string, unknown> | undefined)?.[
-        "event"
-      ] as Record<string, unknown> | undefined;
-      const withProp = (eventProp?.["properties"] as Record<string, unknown> | undefined)?.[
-        "with"
-      ] as Record<string, unknown> | undefined;
+      const emitProp: Record<string, unknown> | undefined = (
+        candidate["properties"] as Record<string, unknown> | undefined
+      )?.["emit"] as Record<string, unknown> | undefined;
+      const eventProp: Record<string, unknown> | undefined = (
+        emitProp?.["properties"] as Record<string, unknown> | undefined
+      )?.["event"] as Record<string, unknown> | undefined;
+      const withProp: Record<string, unknown> | undefined = (
+        eventProp?.["properties"] as Record<string, unknown> | undefined
+      )?.["with"] as Record<string, unknown> | undefined;
       if (withProp && Array.isArray(withProp["required"])) {
         withProp["required"] = (withProp["required"] as string[]).filter((r) => r !== "source");
       }
@@ -82,13 +97,13 @@ export function patchSchemaForSpecWorkarounds(defs: Record<string, unknown>): vo
   }
 }
 
-const URI_TEMPLATE_DEF = "/$defs/uriTemplate";
-const RUNTIME_EXPRESSION_PATTERN: string = "/$defs/runtimeExpression/pattern";
-const EMIT_WITH_REQUIRED = "/properties/emit/properties/event/properties/with/required";
+const URI_TEMPLATE_DEF: string = "/$defs/uriTemplate";
+const RUNTIME_EXPRESSION_PATTERN_DEF: string = "/$defs/runtimeExpression/pattern";
+const EMIT_WITH_REQUIRED: string = "/properties/emit/properties/event/properties/with/required";
 
 /* https://github.com/open-workflow-specification/specification/pull/1169 */
 function findRelaxedUriPaths(errors: ValidationError[]): Set<string> {
-  const paths = new Set<string>();
+  const paths: Set<string> = new Set<string>();
   for (const error of errors) {
     if (error.path !== undefined && error.errorType?.includes(URI_TEMPLATE_DEF)) {
       paths.add(error.path);
@@ -111,7 +126,7 @@ function findRelaxedUriPaths(errors: ValidationError[]): Set<string> {
 function isUriClusterSibling(error: ValidationError, relaxedUriPaths: Set<string>): boolean {
   if (error.path === undefined || !relaxedUriPaths.has(error.path)) return false;
   const errorType: string = error.errorType ?? "";
-  if (errorType.includes(URI_TEMPLATE_DEF) || errorType.includes(RUNTIME_EXPRESSION_PATTERN)) {
+  if (errorType.includes(URI_TEMPLATE_DEF) || errorType.includes(RUNTIME_EXPRESSION_PATTERN_DEF)) {
     return true;
   }
   // The oneOf cascade for a URI field also emits a `type: must be object` error from the
@@ -135,7 +150,7 @@ function isEmitSourceRequiredError(error: ValidationError): boolean {
  Done during `validateWorkflow` so the errors never reach the store.
  */
 export function stripSpecAheadOfSdkErrors(errors: ValidationError[]): ValidationError[] {
-  const relaxedUriPaths = findRelaxedUriPaths(errors);
+  const relaxedUriPaths: Set<string> = findRelaxedUriPaths(errors);
 
   return errors.filter((error) => {
     if (isUriClusterSibling(error, relaxedUriPaths)) return false;

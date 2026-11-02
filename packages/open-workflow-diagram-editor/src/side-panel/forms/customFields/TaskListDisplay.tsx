@@ -17,7 +17,7 @@
 import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { GraphNodeType } from "@openworkflowspec/sdk";
-import { TASK_TYPE_KEYS } from "../../../core/taskTypes";
+import { getTaskTypeKey } from "../../../core/taskTypes";
 
 // ---------------------------------------------------------------------------
 // TaskListDisplay
@@ -28,15 +28,11 @@ type TaskEntry = Record<string, unknown>;
 function deriveTaskType(taskBody: unknown): string | undefined {
   if (!taskBody || typeof taskBody !== "object" || Array.isArray(taskBody)) return undefined;
   const body = taskBody as Record<string, unknown>;
-  for (const key of TASK_TYPE_KEYS) {
-    if (key in body) {
-      if (key === GraphNodeType.Call && typeof body[key] === "string") {
-        return `${GraphNodeType.Call}: ${body[key] as string}`;
-      }
-      return key;
-    }
+  const key = getTaskTypeKey(body);
+  if (key === GraphNodeType.Call && typeof body[key] === "string") {
+    return `${GraphNodeType.Call}: ${body[key] as string}`;
   }
-  return undefined;
+  return key;
 }
 
 export type TaskListDisplayProps = {

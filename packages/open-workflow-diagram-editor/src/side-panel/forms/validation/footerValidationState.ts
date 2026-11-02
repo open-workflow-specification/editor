@@ -69,8 +69,8 @@ export function deriveFooterValidationState(
   taskValidation: TaskValidationState,
   errorCount: number,
 ): FooterValidationState {
-  const hasErrors = errorCount > 0;
-  const isBypassable =
+  const hasErrors: boolean = errorCount > 0;
+  const isBypassable: boolean =
     taskValidation.attempted && hasErrors && !taskValidation.hasUnparseableValueMapPayload;
 
   return {

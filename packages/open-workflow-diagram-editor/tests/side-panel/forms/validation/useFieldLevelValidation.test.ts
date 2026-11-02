@@ -456,4 +456,72 @@ describe("useFieldLevelValidation", () => {
       expect(result.current.validation.errorCount).toBe(0);
     });
   });
+
+  describe("with a seeded undeclared-property error", () => {
+    const typoMessage = "must NOT have unevaluated properties";
+    const seeded = {
+      ...EMPTY_RESULT,
+      levelErrors: { "": typoMessage },
+      undeclaredProperties: [
+        { property: "typo", placed: { kind: "level" as const, path: "" }, message: typoMessage },
+      ],
+    };
+
+    function setup(values: Record<string, unknown>) {
+      const form = {
+        getValues: vi.fn().mockReturnValue(values),
+        formState: { errors: {} },
+        setError: vi.fn(),
+        clearErrors: vi.fn(),
+      } as unknown as UseFormReturn<Record<string, unknown>>;
+
+      const { result } = renderHook(
+        () => ({
+          validation: useTaskValidation(),
+          fieldValidation: useFieldLevelValidation("wait", form, false, fields),
+        }),
+        { wrapper: TaskValidationProvider },
+      );
+      act(() => {
+        result.current.validation.recordValidationResult(seeded, undefined, true);
+      });
+      return result;
+    }
+
+    it("keeps the error when a field is blurred while the property is still in the draft", () => {
+      const result = setup({ wait: "PT1S", typo: true });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.taskValidation.levelErrors).toEqual({ "": typoMessage });
+      expect(result.current.validation.errorCount).toBe(1);
+      expect(result.current.validation.taskValidation.hasWorkflowErrors).toBe(true);
+    });
+
+    it("drops the error once the property is gone from the draft", () => {
+      const result = setup({ wait: "PT1S" });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.errorCount).toBe(0);
+      expect(result.current.validation.taskValidation.undeclaredProperties).toEqual([]);
+    });
+
+    it("keeps the error across consecutive blurs", () => {
+      const result = setup({ wait: "PT1S", typo: true });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.errorCount).toBe(1);
+    });
+  });
 });

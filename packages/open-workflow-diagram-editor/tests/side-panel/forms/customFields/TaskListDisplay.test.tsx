@@ -72,6 +72,8 @@ describe("TaskListDisplay", () => {
     { task: [{ t: { try: {} } }], expectedType: "try" },
     { task: [{ t: { wait: {} } }], expectedType: "wait" },
     { task: [{ t: { for: {} } }], expectedType: "for" },
+    { task: [{ t: { do: [], for: {} } }], expectedType: "for" },
+    { task: [{ t: { for: {}, do: [] } }], expectedType: "for" },
   ])("derives type $expectedType from task body", ({ task, expectedType }) => {
     render(<Wrapper tasks={task} />);
     expect(screen.getByText(expectedType)).toBeInTheDocument();

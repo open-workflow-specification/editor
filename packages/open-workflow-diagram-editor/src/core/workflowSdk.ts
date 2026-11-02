@@ -19,9 +19,8 @@ import * as sdk from "@openworkflowspec/sdk";
 import type { ErrorObject } from "ajv/dist/2020";
 import { fixNodesConnections } from "./graph";
 import { isSafeKey } from "./utils";
-import { validateTaskData } from "./schemaValidator";
+import { stripDiscriminatedCascade, validateTaskData } from "./schemaValidator";
 import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
-import { ONE_OF_BRANCH_PREFIX } from "./validationErrors";
 import { getTaskTypeKey } from "./taskTypes";
 
 export type ContentFormat = "json" | "yaml";
@@ -257,36 +256,6 @@ function ajvErrorToValidationError(error: ErrorObject): ValidationError {
 }
 
 /**
- * Strips `oneOf` cascade noise from Ajv errors using the discriminator
- * pattern. When a `oneOf` branch has a `const` or `not` failure on a
- * property (its discriminator doesn't match), ALL errors from that
- * branch are secondary noise — the branch was never a candidate.
- *
- * This is the structural equivalent of what `collapseBranchGroups` does
- * for the form layer, but operates on raw Ajv errors without needing
- * form-level context.
- */
-function stripDiscriminatedCascade(errors: ErrorObject[]): ErrorObject[] {
-  const ghostPrefixes: Set<string> = new Set<string>();
-
-  for (const error of errors) {
-    if (error.keyword !== "const" && error.keyword !== "not") continue;
-    if (!error.schemaPath.includes("/properties/")) continue;
-    const match: RegExpExecArray | null = ONE_OF_BRANCH_PREFIX.exec(error.schemaPath);
-    if (match) ghostPrefixes.add(match[1]!);
-  }
-
-  if (ghostPrefixes.size === 0) return errors;
-
-  return errors.filter((error) => {
-    for (const prefix of ghostPrefixes) {
-      if (error.schemaPath.startsWith(prefix)) return false;
-    }
-    return true;
-  });
-}
-
-/**
  * Validates every top-level task individually against its task-specific schema.
  * Errors are rebased onto the task's indexed path. An error is dropped when the SDK already
  * reported the same path and message (`sdkSignatures`): the two report the same problem under
@@ -377,7 +346,7 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
     }
   }
 
-  sdkErrors.push(...stripSpecAheadOfSdkErrors(collectTaskAjvErrors(model, sdkSignatures)));
+  sdkErrors.push(...collectTaskAjvErrors(model, sdkSignatures));
 
   return sdkErrors;
 }

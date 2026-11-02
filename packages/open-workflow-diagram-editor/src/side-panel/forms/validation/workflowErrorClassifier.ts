@@ -18,10 +18,12 @@ import { getErrorKeyword, type ValidationError } from "@/core";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD } from "./branchGroups";
-import type { TaskValidationResult } from "./taskLevelValidation";
+import type { TaskValidationResult, UndeclaredPropertyError } from "./taskLevelValidation";
 import {
+  UNDECLARED_PROPERTY_KEYWORDS,
   classifyErrorPath,
   recordClassification,
+  type Classification,
   type ClassifiedTaskErrors,
 } from "./taskErrorClassifier";
 
@@ -53,6 +55,18 @@ function toFormPath(error: ValidationError, taskReference: string): string | und
   return relative;
 }
 
+/** The form path of the property an `unevaluatedProperties` / `additionalProperties` error names. */
+function undeclaredPropertyPath(error: ValidationError, containerPath: string): string | undefined {
+  const keyword: string | undefined = getErrorKeyword(error);
+  if (keyword === undefined || !UNDECLARED_PROPERTY_KEYWORDS.has(keyword)) return undefined;
+  const property: unknown =
+    error.object?.[
+      keyword === "unevaluatedProperties" ? "unevaluatedProperty" : "additionalProperty"
+    ];
+  if (typeof property !== "string" || property === "") return undefined;
+  return containerPath === "" ? property : `${containerPath}.${property}`;
+}
+
 /**
  * Turns the workflow-level SDK errors of one task into the shape the form layer consumes,
  * placing each error by its path against what the form shows now: a field error on a value
@@ -72,6 +86,7 @@ export function classifyWorkflowErrors(
   sentinels: Record<string, unknown>,
 ): TaskValidationResult {
   const classified: ClassifiedTaskErrors = { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
+  const undeclaredProperties: UndeclaredPropertyError[] = [];
   const view: ActiveFormView = buildActiveFormView(fields, sentinels, formValues);
 
   for (const error of nodeErrors) {
@@ -80,12 +95,19 @@ export function classifyWorkflowErrors(
 
     // GROUP_KEYWORD is always in CONTAINER_KEYWORDS, so any container path is kept as a level error.
     // The SDK errors are already noise-filtered upstream; no keyword-based dropping is needed here.
-    recordClassification(
-      classified,
-      classifyErrorPath(path, GROUP_KEYWORD, {}, view),
-      error.message,
-    );
+    const placed: Classification = classifyErrorPath(path, GROUP_KEYWORD, {}, view);
+    recordClassification(classified, placed, error.message);
+
+    // Task-level validation drops these, so remember them to keep them while the property is in the draft.
+    const property: string | undefined = undeclaredPropertyPath(error, path);
+    if (property !== undefined && (placed.kind === "level" || placed.kind === "unplaced")) {
+      undeclaredProperties.push({ property, placed, message: error.message });
+    }
   }
 
-  return { ...classified, hasUnparseableValueMapPayload: false };
+  return {
+    ...classified,
+    hasUnparseableValueMapPayload: false,
+    ...(undeclaredProperties.length > 0 ? { undeclaredProperties } : {}),
+  };
 }
