@@ -20,8 +20,8 @@
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { DiagramEditor } from "@openworkflowspec/diagram-editor";
-import type { DiagramEditorProps, ColorMode } from "@openworkflowspec/diagram-editor";
-
+import type { DiagramEditorProps } from "@openworkflowspec/diagram-editor";
+import type { ColorMode } from "@openworkflowspec/core";
 export class DiagramEditorElement extends HTMLElement {
   static observedAttributes = ["locale", "color-mode", "read-only"];
 

@@ -22,8 +22,8 @@ import { I18nProvider, detectLocale, useI18n } from "@openworkflowspec/i18n";
 import { dictionaries } from "../i18n/locales";
 import { useDiagramEditorContext } from "../store/DiagramEditorContext";
 import { ParsingErrorPage } from "./error-pages/ParsingErrorPage";
-import { ColorMode, ResolvedColorMode } from "../types/colorMode";
-import { useResolvedColorMode } from "../hooks/useResolvedColorMode";
+import { ColorMode, ResolvedColorMode } from "@openworkflowspec/core";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidePanel } from "@/side-panel/SidePanel";
 import { DiagramEditorErrorBoundary } from "./error-pages/DiagramEditorErrorBoundary";
@@ -86,6 +86,8 @@ export type DiagramEditorProps = {
    * the lifetime of the component — see `getContent()` on `DiagramEditorRef`.
    */
   content: string;
+  /** Language/serialization format to use instead of detecting it from `content`. */
+  language?: "json" | "yaml";
   /**
    * When `true`, the diagram is read-only: no history is recorded, undo/redo
    * are no-ops, and `fitView` runs on every content change. When `false`
@@ -102,6 +104,11 @@ export type DiagramEditorProps = {
    * `"system"` follows the OS/browser preference via `prefers-color-scheme`.
    */
   colorMode?: ColorMode;
+  /**
+   * Called when an in-editor edit, undo, or redo changes the workflow.
+   * Initial and externally supplied content changes do not trigger the callback.
+   */
+  onContentChange?: (content: string) => void;
 };
 
 const DiagramEditorContent = ({
@@ -147,6 +154,8 @@ const DiagramEditorBody = ({
           content={props.content}
           isReadOnly={props.isReadOnly}
           locale={props.locale}
+          {...(props.language && { language: props.language })}
+          {...(props.onContentChange && { onContentChange: props.onContentChange })}
         >
           <SidebarProvider defaultOpen={false}>
             <EditSessionProvider>

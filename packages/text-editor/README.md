@@ -46,6 +46,7 @@ The editor fills `100%` of its container's width and height. The host must provi
 
 ```tsx
 import { TextEditor } from "@openworkflowspec/text-editor";
+import "@openworkflowspec/text-editor/styles.css";
 import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
 import { useState } from "react";
 

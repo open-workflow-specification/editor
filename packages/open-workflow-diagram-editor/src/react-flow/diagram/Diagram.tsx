@@ -20,7 +20,7 @@ import { useI18n } from "@openworkflowspec/i18n";
 import { ReactFlowNodeTypes } from "../nodes/Nodes";
 import "@xyflow/react/dist/style.css";
 import "./Diagram.css";
-import { ResolvedColorMode } from "../../types/colorMode";
+import { ResolvedColorMode } from "@openworkflowspec/core";
 import { ReactFlowEdgeTypes } from "../edges/Edges";
 import { useDiagramEditorContext } from "../../store/DiagramEditorContext";
 import { buildDiagramElements } from "./diagramBuilder";

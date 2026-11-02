@@ -2,62 +2,62 @@ packages:
   - packages/*
   - examples/*
 catalog:
-  "@base-ui/react": ^1.8.0
+  "@base-ui/react": ^1.9.0
   "@changesets/changelog-github": ^1.0.1
   ajv: ^8.20.0
   ajv-formats: ^3.0.1
   "@changesets/cli": ^3.0.3
-  "@chromatic-com/storybook": ^5.3.1
+  "@chromatic-com/storybook": ^5.6.0
   "@openworkflowspec/sdk": "^1.0.3-alpha8"
-  "@playwright/test": ^1.63.0
-  "@storybook/addon-a11y": ^10.6.0
-  "@storybook/addon-docs": ^10.6.0
-  "@storybook/addon-vitest": ^10.6.0
-  "@storybook/react-vite": ^10.6.0
+  "@playwright/test": ^1.64.1
+  "@storybook/addon-a11y": ^10.6.3
+  "@storybook/addon-docs": ^10.6.3
+  "@storybook/addon-vitest": ^10.6.3
+  "@storybook/react-vite": ^10.6.3
   "@tailwindcss/vite": ^4.3.3
   "@testing-library/dom": ^10.4.2
   "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.3
-  "@testing-library/user-event": ^14.6.7
+  "@testing-library/user-event": ^14.6.8
   "@types/js-yaml": ^4.0.9
-  "@types/node": ^26.6.2
+  "@types/node": ^26.6.5
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
-  "@vitest/browser": ^5.0.1
-  "@vitest/browser-playwright": ^5.0.1
-  "@vitest/coverage-v8": ^5.0.1
-  "@vitest/ui": ^5.0.1
-  "@volar/language-service": ^2.4.28
-  "@volar/monaco": ^2.4.28
+  "@vitest/browser": ^5.0.5
+  "@vitest/browser-playwright": ^5.0.5
+  "@vitest/coverage-v8": ^5.0.5
+  "@vitest/ui": ^5.0.5
+  "@volar/language-service": ^2.4.30
+  "@volar/monaco": ^2.4.30
   "@xyflow/react": ^12.12.0
   allof-merge: ^0.6.8
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
   elkjs: ^0.12.0
-  fast-equals: ^6.0.4
+  fast-equals: ^6.2.1
   html-to-image: ^1.11.13
   husky: ^9.1.7
-  "js-yaml": ^5.4.2
-  jsdom: ^30.1.0
+  "js-yaml": ^5.5.0
+  jsdom: ^30.1.3
   lint-staged: ^17.6.0
-  lucide-react: ^1.47.0
+  lucide-react: ^1.61.0
   monaco-editor: ^0.57.0
-  oxfmt: ^0.70.0
-  oxlint: ^1.83.0
-  radix-ui: ^1.6.5
-  react: ^19.3.0
-  react-dom: ^19.3.0
+  oxfmt: ^0.74.0
+  oxlint: ^1.89.0
+  radix-ui: ^1.8.1
+  react: ^19.3.1
+  react-dom: ^19.3.1
   react-hook-form: ^7.86.0
   rimraf: ^6.1.3
-  storybook: ^10.6.0
+  storybook: ^10.6.3
   syncpack: ^15.3.3
   tailwindcss: ^4.3.3
-  typescript: ^7.0.2
+  typescript: ^6.0.0
   use-sync-external-store: ^1.7.0
-  vite: ^8.3.1
-  vitest: ^5.0.1
+  vite: ^8.3.5
+  vitest: ^5.0.5
   volar-service-json: "0.0.71"
-  vscode-languageserver-textdocument: "^1.0.15"
+  vscode-languageserver-textdocument: "^1.0.16"
   vscode-uri: ^3.2.0
 cleanupUnusedCatalogs: true
 onlyBuiltDependencies:
@@ -69,12 +69,13 @@ onlyBuiltDependencies:
   - unrs-resolver
 overrides:
   baseline-browser-mapping@>=2.0.0 <2.11.0: ">=2.11.0"
-  brace-expansion@>=4.0.0 <5.0.8: ">=5.0.8"
-  brace-expansion@>=4.0.0 <5.0.9: ">=5.0.9"
+  brace-expansion@>=4.0.0 <5.0.12: ">=5.0.12"
   browserslist@<=4.28.6: ">=4.28.7"
-  dompurify@<3.4.9: ">=3.4.9"
-  dompurify@<=3.4.10: ">=3.4.11"
-  dompurify@<=3.4.11: ">=3.4.12"
-  dompurify@<=3.4.12: ">=3.4.13"
-  fast-uri@>=3.0.0 <3.1.6: ">=3.1.6 <4.0.0"
+  dompurify@>=3.4.4 <=3.4.16: ">=3.4.17"
+  fast-uri@>=3.1.3 <3.1.9: ">=3.1.9"
+  launch-editor@<=2.14.1: ">=2.14.2"
   nanoid@>=3.0.0 <3.3.18: "3.3.18"
+  shell-quote@>=1.8.4 <1.11.0: ">=1.11.0"
+  source-map-js@>=1.0.0 <1.2.2: ">=1.2.2"
+  # Force a single TypeScript major across the dependency graph. To be removed when #508 is resolved.
+  typescript: "catalog:"

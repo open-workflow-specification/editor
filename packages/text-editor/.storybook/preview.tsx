@@ -22,10 +22,21 @@ const withColorMode: Decorator = (Story) => {
   const [{ colorMode: argColorMode }, updateArgs] = useArgs();
   const [{ colorMode: globalColorMode }, updateGlobals] = useGlobals();
 
+  const isFirstRender = React.useRef(true);
   const lastArgColorMode = React.useRef(argColorMode);
   const lastGlobalColorMode = React.useRef(globalColorMode);
 
   React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      if (globalColorMode !== undefined && argColorMode !== globalColorMode) {
+        updateArgs({ colorMode: globalColorMode });
+      }
+      lastArgColorMode.current = globalColorMode;
+      lastGlobalColorMode.current = globalColorMode;
+      return;
+    }
+
     const argsChanged = argColorMode !== lastArgColorMode.current;
     const globalChanged = globalColorMode !== lastGlobalColorMode.current;
 

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": false,
+    "emitDeclarationOnly": true,
+    "noEmitOnError": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "dist-storybook"]
+}

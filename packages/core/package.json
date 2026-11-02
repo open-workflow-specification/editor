@@ -1,0 +1,39 @@
+{
+  "name": "@openworkflowspec/core",
+  "version": "1.1.0",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --config .oxlintrc.json src/",
+    "format": "oxfmt --config .oxfmtrc.json",
+    "format:check": "oxfmt --config .oxfmtrc.json --check",
+    "clean": "rimraf ./dist",
+    "build:dev": "pnpm typecheck && pnpm clean && tsc -p tsconfig.json && vite build",
+    "build:prod": "pnpm lint && pnpm typecheck && pnpm clean && tsc -p tsconfig.json && vite build"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "react": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

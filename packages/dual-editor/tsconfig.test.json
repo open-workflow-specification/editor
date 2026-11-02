@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "node", "vite/client"],
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["tests/**/*", "tests-e2e/**/*"]
+}

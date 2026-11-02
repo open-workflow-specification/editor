@@ -18,7 +18,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useArgs } from "storybook/preview-api";
 import { DiagramEditor, DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
-import { useResolvedColorMode } from "../../src/hooks/useResolvedColorMode";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 import { authenticationReusable } from "../examples";
 
 // ---------------------------------------------------------------------------

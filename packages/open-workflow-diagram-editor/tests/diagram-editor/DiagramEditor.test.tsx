@@ -79,6 +79,64 @@ describe("DiagramEditor Component", () => {
     expect(screen.getByTestId("dec-root")).toHaveAttribute("lang", "fr");
   });
 
+  it("does not report externally loaded content as an edit", async () => {
+    const onContentChange = vi.fn();
+    render(
+      <DiagramEditor
+        content={BASIC_VALID_WORKFLOW_JSON}
+        locale="en"
+        isReadOnly={true}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    expect(onContentChange).not.toHaveBeenCalled();
+  });
+
+  it("reports workflow changes made by undo and redo", async () => {
+    const ref = React.createRef<DiagramEditorRef>();
+    const onContentChange = vi.fn();
+    const updatedWorkflow = JSON.stringify({
+      document: {
+        dsl: "1.0.3",
+        name: "updated-via-ref",
+        version: "1.0.0",
+        namespace: "default",
+      },
+      do: [{ step: { set: { result: "updated" } } }],
+    });
+
+    render(
+      <DiagramEditor
+        ref={ref}
+        content={BASIC_VALID_WORKFLOW_JSON}
+        locale="en"
+        isReadOnly={false}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+
+    act(() => ref.current?.setContent(updatedWorkflow));
+    expect(onContentChange).not.toHaveBeenCalled();
+
+    act(() => ref.current?.undo());
+    await waitFor(() => {
+      expect(onContentChange).toHaveBeenLastCalledWith(
+        expect.stringContaining('"name":"valid-workflow-json"'),
+      );
+    });
+
+    act(() => ref.current?.redo());
+    await waitFor(() => {
+      expect(onContentChange).toHaveBeenLastCalledWith(
+        expect.stringContaining('"name":"updated-via-ref"'),
+      );
+    });
+  });
+
   it("updates the rendered content when the workflow content change", () => {
     const { rerender } = render(
       <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,

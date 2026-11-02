@@ -19,9 +19,9 @@ import * as monaco from "monaco-editor/editor";
 import "monaco-editor/features/register.all";
 import { jsonDefaults } from "monaco-editor/languages/features/json/register";
 import "monaco-editor/languages/definitions/yaml/register";
-import { useResolvedColorMode } from "./hooks/useResolvedColorMode";
+import { useResolvedColorMode } from "@openworkflowspec/core";
 import { createTextEditorLanguageService } from "./language-service";
-import { ColorMode } from "./types/colorMode";
+import type { ColorMode } from "@openworkflowspec/core";
 
 jsonDefaults.setModeConfiguration({
   tokens: true,
