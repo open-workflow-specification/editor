@@ -48,7 +48,7 @@ catalog:
   storybook: ^10.6.3
   syncpack: ^15.3.3
   tailwindcss: ^4.3.3
-  typescript: ^7.0.2
+  typescript: ^6.0.0
   use-sync-external-store: ^1.7.0
   vite: ^8.3.5
   vitest: ^5.0.5
@@ -73,3 +73,5 @@ overrides:
   nanoid@>=3.0.0 <3.3.18: "3.3.18"
   shell-quote@>=1.8.4 <1.11.0: ">=1.11.0"
   source-map-js@>=1.0.0 <1.2.2: ">=1.2.2"
+  # Force a single TypeScript major across the dependency graph. To be removed when #508 is resolved.
+  typescript: "catalog:"
