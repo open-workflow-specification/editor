@@ -59,7 +59,7 @@ describe("LevelErrors", () => {
           unplacedErrors: {},
           hasUnparseableValueMapPayload: false,
         },
-        true,
+        { attempted: true },
       );
     });
 
@@ -76,7 +76,7 @@ describe("LevelErrors", () => {
           unplacedErrors: {},
           hasUnparseableValueMapPayload: false,
         },
-        true,
+        { attempted: true },
       );
     });
 

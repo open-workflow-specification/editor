@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { getParentPath, isAtOrBelow, joinPath, pointerToDotPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenTask, unflattenValues } from "@/core/taskDraft";
 import { isReservedPath, sentinelPath } from "../sentinels";
@@ -63,7 +64,7 @@ export function prepareValuesForValidation(
       continue; // untouched (already an object) or absent: flattened values are accurate
     }
     for (const key of Object.keys(cleanedFlat)) {
-      if (key === field.path || key.startsWith(`${field.path}.`)) {
+      if (isAtOrBelow(key, field.path)) {
         delete cleanedFlat[key];
       }
     }
@@ -230,12 +231,12 @@ function collectMismatchedBranchPrefixes(
  * Converts an Ajv ErrorObject into a dot-notation form path.
  */
 export function ajvErrorToFieldPath(error: ErrorObject): string | undefined {
-  let path = error.instancePath ? error.instancePath.replace(/^\//, "").split("/").join(".") : "";
+  let path = pointerToDotPath(error.instancePath);
 
   if (error.keyword === "required") {
     const missingProp = (error.params as { missingProperty?: string }).missingProperty;
     if (missingProp) {
-      path = path ? `${path}.${missingProp}` : missingProp;
+      path = joinPath(path, missingProp);
     }
   }
 
@@ -291,7 +292,7 @@ export function extractFieldErrors(
     if (err.keyword === "required") {
       let isAncestorOptionalAndEmpty = false;
       for (const sectionPath of optionalSections) {
-        if (fieldPath === sectionPath || fieldPath.startsWith(`${sectionPath}.`)) {
+        if (isAtOrBelow(fieldPath, sectionPath)) {
           if (isSectionEmpty(sectionPath, formValues)) {
             isAncestorOptionalAndEmpty = true;
             break;
@@ -306,11 +307,9 @@ export function extractFieldErrors(
     // Scoped blur validation: if scopedPath is provided, only include errors for that path
     // or its immediate parent section
     if (scopedPath) {
-      const parentSection = scopedPath.includes(".")
-        ? scopedPath.slice(0, scopedPath.lastIndexOf("."))
-        : "";
+      const parentSection = getParentPath(scopedPath);
       const matchesField = fieldPath === scopedPath;
-      const matchesSection = parentSection && fieldPath.startsWith(`${parentSection}.`);
+      const matchesSection = parentSection !== "" && isAtOrBelow(fieldPath, parentSection);
       if (!matchesField && !matchesSection) {
         continue;
       }

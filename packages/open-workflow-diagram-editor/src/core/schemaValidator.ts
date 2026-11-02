@@ -16,6 +16,7 @@
 
 import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
+import { isPointerAtOrBelow } from "./paths";
 import { getSchemaForDefinition } from "./schemaFilter";
 import { NODE_TYPE_TO_DEF } from "./schemaWalker";
 import { ONE_OF_BRANCH_PREFIX } from "./validationErrors";
@@ -104,11 +105,6 @@ function getOneOfInstancePath(instancePath: string, schemaSuffix: string): strin
   return remaining.join("/");
 }
 
-function isUnderInstancePath(instancePath: string, parentPath: string): boolean {
-  if (parentPath === "") return true;
-  return instancePath === parentPath || instancePath.startsWith(`${parentPath}/`);
-}
-
 /**
  * Strips `oneOf` cascade noise from Ajv errors using the discriminator
  * pattern. When a `oneOf` branch has a `const` or `not` failure on a
@@ -149,7 +145,7 @@ export function stripDiscriminatedCascade(errors: ErrorObject[]): ErrorObject[] 
     for (const ghost of ghostBranches) {
       if (
         error.schemaPath.startsWith(ghost.prefix) &&
-        isUnderInstancePath(errorInstancePath, ghost.instancePath)
+        isPointerAtOrBelow(errorInstancePath, ghost.instancePath)
       ) {
         return false;
       }

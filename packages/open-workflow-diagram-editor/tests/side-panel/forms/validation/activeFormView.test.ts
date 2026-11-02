@@ -18,18 +18,9 @@ import { describe, it, expect } from "vitest";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { sentinelPath } from "../../../../src/side-panel/forms/sentinels";
 import { buildActiveFormView } from "../../../../src/side-panel/forms/validation/activeFormView";
-import { buildTaskFormState, variantLabel } from "../../../test-utils/validation-helpers";
+import { buildTaskFormState, leaf, variantLabel } from "../../../test-utils/validation-helpers";
 
 const matchesAny = (): boolean => true;
-
-const leaf = (path: string): FormFieldDescriptor => ({
-  kind: "string",
-  path,
-  label: path,
-  required: false,
-  multiline: false,
-  isRuntimeExpression: false,
-});
 
 const oneOf = (path: string, variants: Array<[string, string, FormFieldDescriptor[]]>) =>
   ({

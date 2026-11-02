@@ -18,10 +18,10 @@ import { describe, it, expect, vi } from "vitest";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import {
   collectSchemaFieldErrors,
-  extractSentinels,
+  collectValueMapParseErrors,
 } from "../../../../src/side-panel/forms/validation/collectSchemaFieldErrors";
 import { validateTaskData } from "../../../../src/core/schemaValidator";
-import { SENTINEL_KEY } from "../../../../src/side-panel/forms/sentinels";
+import { INNER_TEXT_KEY } from "../../../../src/side-panel/forms/sentinels";
 
 vi.mock("../../../../src/core/schemaValidator", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../src/core/schemaValidator")>();
@@ -31,6 +31,24 @@ vi.mock("../../../../src/core/schemaValidator", async (importOriginal) => {
 const waitFields: FormFieldDescriptor[] = [
   { kind: "duration", path: "wait", label: "Wait Duration", required: true },
 ];
+
+const backoffField: FormFieldDescriptor = {
+  kind: "enum",
+  path: "catch.retry.backoff",
+  label: "Backoff Policy",
+  required: false,
+  options: ["exponential", "linear"],
+  innerObjectFormat: "yaml",
+  valueMap: { exponential: { exponential: {} }, linear: { linear: {} } },
+};
+
+const withBackoffText = (text: string): Record<string, unknown> => ({
+  catch: { retry: { backoff: "exponential" } },
+  [INNER_TEXT_KEY]: { catch: { retry: { backoff: text } } },
+});
+
+const translate = (key: string): string =>
+  key === "sidebar.form.innerObject.parseError" ? "Parse error" : key;
 
 describe("collectSchemaFieldErrors", () => {
   it.each([
@@ -65,22 +83,49 @@ describe("collectSchemaFieldErrors", () => {
   });
 });
 
-describe("extractSentinels", () => {
+describe("collectValueMapParseErrors", () => {
   it.each([
-    { name: "no __oneof__ values", values: { wait: "PT5S" } },
-    { name: "an empty __oneof__ object", values: { __oneof__: {} } },
-  ])("returns no sentinels for $name", ({ values }) => {
-    expect(extractSentinels(values)).toEqual({});
+    { name: "parses", text: "initial: PT1S", expected: {} },
+    {
+      name: "is not an object",
+      text: "[not, an, object]",
+      expected: { [backoffField.path]: "Parse error" },
+    },
+  ])("reports the payload text when it $name", ({ text, expected }) => {
+    expect(collectValueMapParseErrors(withBackoffText(text), [backoffField], translate)).toEqual(
+      expected,
+    );
   });
 
-  it("flattens the __oneof__ values into sentinel-prefixed dot paths", () => {
-    const sentinels = extractSentinels({
-      __oneof__: { endpoint: { selected: 1 }, flat: 2 },
+  it("falls back to the English message without a translation function", () => {
+    expect(collectValueMapParseErrors(withBackoffText("[x]"), [backoffField])).toEqual({
+      [backoffField.path]: "Must be a valid YAML/JSON object",
     });
+  });
+});
 
-    expect(sentinels).toEqual({
-      [`${SENTINEL_KEY}.endpoint.selected`]: 1,
-      [`${SENTINEL_KEY}.flat`]: 2,
-    });
+describe("collectSchemaFieldErrors value-map payloads", () => {
+  it("translates the parse error of the scoped field", () => {
+    const errors = collectSchemaFieldErrors(
+      "tryTask",
+      withBackoffText("[x]"),
+      [backoffField],
+      backoffField.path,
+      translate,
+    );
+
+    expect(errors[backoffField.path]).toBe("Parse error");
+  });
+
+  it("leaves out the parse error of a field outside the scoped path", () => {
+    const errors = collectSchemaFieldErrors(
+      "tryTask",
+      withBackoffText("[x]"),
+      [backoffField],
+      "catch.as",
+      translate,
+    );
+
+    expect(errors).not.toHaveProperty(backoffField.path);
   });
 });

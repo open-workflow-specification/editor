@@ -15,16 +15,18 @@
  */
 
 import * as React from "react";
-import type { UseFormClearErrors, UseFormGetValues, UseFormSetError } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
 import { getNodeErrors } from "@/core";
-import type { SdkError, ValidationError } from "@/core";
+import type { ValidationError } from "@/core";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { extractSentinels, collectTaskErrors } from "./collectSchemaFieldErrors";
+import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
+import { collectTaskErrors } from "./collectSchemaFieldErrors";
 import { countErrors } from "./footerValidationState";
-import type { ClassifiedTaskErrors } from "./taskErrorClassifier";
+import { mergeClassifiedErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
 import { emptyValidationResult, type TaskValidationResult } from "./taskLevelValidation";
-import type { TaskValidationContextValue } from "./taskValidationContext";
+import { useTaskValidation } from "./taskValidationContext";
 import { classifyWorkflowErrors } from "./workflowErrorClassifier";
+import { flattenSentinels } from "../sentinels";
 
 /**
  * Merges two validation results, taking the union of all error maps.
@@ -37,9 +39,7 @@ function mergeResults(
   secondary: ClassifiedTaskErrors,
 ): TaskValidationResult {
   return {
-    fieldErrors: { ...secondary.fieldErrors, ...primary.fieldErrors },
-    levelErrors: { ...secondary.levelErrors, ...primary.levelErrors },
-    unplacedErrors: { ...secondary.unplacedErrors, ...primary.unplacedErrors },
+    ...mergeClassifiedErrors(primary, secondary),
     hasUnparseableValueMapPayload: false,
     ...(primary.undeclaredProperties ? { undeclaredProperties: primary.undeclaredProperties } : {}),
   };
@@ -58,38 +58,34 @@ function mergeResults(
  * fields are highlighted without the user having to touch them. Stale field errors
  * from a previous run are cleared before the new set is applied.
  *
- * @param errors         - Current SDK errors for the whole workflow.
- * @param taskReference  - RFC 6901-style indexed path for the selected task.
- *                         May be `undefined` for layout-only nodes that have no task.
- * @param taskReferences - Full set of known task references used by
- *                         `getNodeErrors` to attribute ownership.
- * @param setError       - `setError` from `react-hook-form`'s `useForm`.
- * @param clearErrors    - `clearErrors` from `react-hook-form`'s `useForm`.
- * @param resetKey       - Opaque key that changes whenever the selected task
- *                         changes or its draft is reset (the node id combined with
- *                         the draft version).  The effect re-runs whenever this
- *                         value changes so errors are refreshed.
- * @param allFields      - Form field descriptors for the selected task.
- * @param getValues      - `getValues` from `react-hook-form`'s `useForm`.
- * @param recordValidationResult - `recordValidationResult` from the task validation context.
- * @param isReadOnly     - In read-only mode nothing is seeded; errors are displayed
- *                         directly by NodeDetailsView.
- * @param nodeType       - Graph node type, used to run supplementary task-level
- *                         Ajv validation.
+ * In read-only mode nothing is seeded, and what edit mode seeded is cleared: read-only lists the
+ * errors only at the top of the panel (NodeDetailsView), where the inline copy would repeat them.
+ *
+ * The workflow errors, task references and read-only flag come from the editor context.
  */
-export function useWorkflowErrorsForForm(
-  errors: SdkError[],
-  taskReference: string | undefined,
-  taskReferences: Set<string>,
-  setError: UseFormSetError<Record<string, unknown>>,
-  clearErrors: UseFormClearErrors<Record<string, unknown>>,
-  resetKey: string | undefined,
-  allFields: FormFieldDescriptor[],
-  getValues: UseFormGetValues<Record<string, unknown>>,
-  recordValidationResult: TaskValidationContextValue["recordValidationResult"],
-  isReadOnly: boolean,
-  nodeType: string,
-): void {
+export function useWorkflowErrorsForForm({
+  form,
+  nodeType,
+  taskReference,
+  allFields,
+  resetKey,
+}: {
+  form: UseFormReturn<Record<string, unknown>>;
+  /** Graph node type, used to run supplementary task-level Ajv validation. */
+  nodeType: string;
+  /** Indexed task path; `undefined` for layout-only nodes that have no task. */
+  taskReference: string | undefined;
+  /** Form field descriptors for the selected task. */
+  allFields: FormFieldDescriptor[];
+  /**
+   * Changes whenever the selected task changes or its draft is reset (the node id combined
+   * with the draft version), so the errors are re-seeded.
+   */
+  resetKey: string | undefined;
+}): void {
+  const { errors, taskReferences, isReadOnly } = useDiagramEditorContext();
+  const { recordValidationResult, resetValidation } = useTaskValidation();
+  const { setError, clearErrors, getValues } = form;
   /** Field paths seeded by the previous run of the effect. */
   const previousFieldsRef = React.useRef<string[]>([]);
   /** Whether the previous run seeded the validation context. */
@@ -124,7 +120,7 @@ export function useWorkflowErrorsForForm(
             taskReference,
             allFields,
             formValues,
-            extractSentinels(formValues),
+            flattenSentinels(formValues),
           )
         : emptyValidationResult();
 
@@ -135,7 +131,7 @@ export function useWorkflowErrorsForForm(
 
     if (countErrors(result.fieldErrors, result.levelErrors) === 0) {
       if (wasSeededRef.current) {
-        recordValidationResult(emptyValidationResult(), undefined, false);
+        recordValidationResult(emptyValidationResult());
         wasSeededRef.current = false;
       }
       return;
@@ -147,7 +143,7 @@ export function useWorkflowErrorsForForm(
       seededFields.push(path);
     }
 
-    recordValidationResult(result, undefined, true);
+    recordValidationResult(result, { hasWorkflowErrors: true });
     previousFieldsRef.current = seededFields;
     wasSeededRef.current = true;
     // resetKey changes when the selected task changes — re-run for the new task.
@@ -155,4 +151,10 @@ export function useWorkflowErrorsForForm(
     // errors/taskReferences/taskReference are content-stable within a render cycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey, errors, taskReference, allFields, isReadOnly, nodeType]);
+
+  React.useEffect(() => {
+    if (!isReadOnly) return;
+    resetValidation();
+    form.clearErrors();
+  }, [isReadOnly, form, resetValidation]);
 }

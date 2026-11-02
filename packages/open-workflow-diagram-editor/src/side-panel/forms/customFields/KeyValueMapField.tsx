@@ -20,8 +20,9 @@ import { X, Plus } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { MapField } from "../../../core/schemaToFormFields";
-import { useTaskFormContext } from "../taskFormContext";
-import { useFieldError, FieldWithError } from "./fieldHelpers";
+import { isObjectNotArray } from "../../../core/utils";
+import { getNestedValue, useTaskFormContext } from "../taskFormContext";
+import { useFieldError, FieldWithError, formatEntryCount, newId } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,11 +38,6 @@ export interface MapEntry {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Generate a stable row id that does not collide across adds/deletes. */
-export function newId(): string {
-  return Math.random().toString(36).slice(2);
-}
 
 /**
  * Serializes a value for editing in the text input or display in read-only mode.
@@ -84,28 +80,12 @@ function parseValue(valueStr: string): unknown {
 }
 
 /**
- * Extract map entries from a nested task data object at `prefix`.
- * Returns the key/value pairs of the object stored at that path.
+ * Convert a key→value object into MapEntry rows; anything that is not a plain object has none.
  */
-function extractEntries(taskData: Record<string, unknown>, prefix: string): MapEntry[] {
-  // Walk the dot-notation prefix to find the nested object.
-  const parts = prefix ? prefix.split(".") : [];
-  let node: unknown = taskData;
-  for (const part of parts) {
-    if (node == null || typeof node !== "object" || Array.isArray(node)) return [];
-    node = (node as Record<string, unknown>)[part];
-  }
-  if (node == null || typeof node !== "object" || Array.isArray(node)) return [];
-  return extractEntriesFromObject(node as Record<string, unknown>);
-}
-
-/**
- * Convert a plain key→value object directly into MapEntry rows.
- * Used when the object is already resolved (e.g. from `getValues()`).
- */
-function extractEntriesFromObject(obj: Record<string, unknown>): MapEntry[] {
+function extractEntries(value: unknown): MapEntry[] {
+  if (!isObjectNotArray(value)) return [];
   // `undefined` is how this field removes a key (`clearKey`), including every key rename leaves behind while typing. Without the filter they come back as empty rows whenever the field remounts e.g. after visiting a drill-in level.
-  return Object.entries(obj)
+  return Object.entries(value)
     .filter(([, v]) => v !== undefined)
     .map(([k, v]) => ({
       id: newId(),
@@ -127,9 +107,9 @@ export type KeyValueMapFieldProps = {
 /**
  * Renders a dynamic key-value map editor backed by react-hook-form.
  *
- * Each entry maps to a flat form key `field.path + "." + entryKey`, so the
- * standard `unflattenValues` call in the footer reconstructs the nested object
- * without any special knowledge of map fields.
+ * Each entry maps to a form key `field.path + "." + entryKey`, so Apply
+ * (`buildTaskFromDraft`) merges it key by key without any special knowledge
+ * of map fields.
  *
  * Works generically for any `MapField` produced by `schemaToFormFields`:
  * `set`, `with`, `headers`, `query`, `environment`, and any future map-shaped
@@ -154,15 +134,10 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   // to taskData (the committed task snapshot).
   const [rows, setRows] = React.useState<MapEntry[]>(() => {
     const rhfValue = getValues(field.path as never);
-    if (
-      rhfValue !== null &&
-      rhfValue !== undefined &&
-      typeof rhfValue === "object" &&
-      !Array.isArray(rhfValue)
-    ) {
-      return extractEntriesFromObject(rhfValue as Record<string, unknown>);
+    if (isObjectNotArray(rhfValue)) {
+      return extractEntries(rhfValue);
     }
-    return extractEntries(taskData, field.path);
+    return extractEntries(getNestedValue(taskData, field.path));
   });
 
   // Re-sync rows on any form reset (node switch, undo/redo, or cancel).
@@ -175,21 +150,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   React.useEffect(() => {
     if (prevDefaultValuesRef.current === defaultValues) return;
     prevDefaultValuesRef.current = defaultValues;
-    // Walk the dot-notation path inside the nested defaultValues object.
-    const parts = field.path ? field.path.split(".") : [];
-    let node: unknown = defaultValues;
-    for (const part of parts) {
-      if (node == null || typeof node !== "object" || Array.isArray(node)) {
-        node = undefined;
-        break;
-      }
-      node = (node as Record<string, unknown>)[part];
-    }
-    if (node != null && typeof node === "object" && !Array.isArray(node)) {
-      setRows(extractEntriesFromObject(node as Record<string, unknown>));
-    } else {
-      setRows([]);
-    }
+    setRows(extractEntries(defaultValues ? getNestedValue(defaultValues, field.path) : undefined));
   }, [defaultValues, field.path]);
 
   // Keep a stable ref to rows so event handlers can read the current snapshot
@@ -247,7 +208,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
 
   // ── Count badge ───────────────────────────────────────────────────────────
   const filledCount = rows.filter((r) => r.key !== "").length;
-  const countLabel = `${filledCount} ${t(filledCount === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+  const countLabel = formatEntryCount(t, filledCount);
   const label = showLabel ? <span className="dec-map-label">{field.label}</span> : null;
 
   // ── Read-only mode ────────────────────────────────────────────────────────

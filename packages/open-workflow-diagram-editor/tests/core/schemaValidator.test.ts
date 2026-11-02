@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { ajvError } from "../test-utils/validation-helpers";
 import type { ErrorObject } from "ajv/dist/2020";
 import {
   getTaskSchemaValidator,
@@ -69,17 +70,6 @@ describe("schemaValidator", () => {
 });
 
 describe("stripDiscriminatedCascade", () => {
-  function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
-    return {
-      keyword: "required",
-      instancePath: "",
-      schemaPath: "#/required",
-      params: {},
-      message: "boom",
-      ...overrides,
-    };
-  }
-
   const messages = (errors: ErrorObject[]): (string | undefined)[] => errors.map((e) => e.message);
 
   it("returns the same array when no branch was rejected by its discriminator", () => {

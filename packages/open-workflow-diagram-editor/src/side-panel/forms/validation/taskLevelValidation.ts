@@ -15,11 +15,21 @@
  */
 
 import type { UseFormReturn } from "react-hook-form";
+import { joinPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { collectValueMapFields, getNestedValue, hasValue } from "../taskFormContext";
-import { getValueMapInnerObject } from "../customFields/innerObjectText";
-import { collectTaskErrors } from "./collectSchemaFieldErrors";
-import { recordClassification, type Classification } from "./taskErrorClassifier";
+import { hasValue } from "../taskFormContext";
+import {
+  collectTaskErrors,
+  collectValueMapParseErrors,
+  type Translate,
+} from "./collectSchemaFieldErrors";
+import {
+  emptyClassifiedErrors,
+  mergeClassifiedErrors,
+  recordClassification,
+  type Classification,
+  type ClassifiedTaskErrors,
+} from "./taskErrorClassifier";
 
 /**
  * A property the workflow validator reports as not allowed on the task (`unevaluatedProperties` /
@@ -65,32 +75,19 @@ export function reconcileUndeclaredProperties(
   );
   if (kept.length === 0) return result;
 
-  const reconciled: TaskValidationResult = {
-    ...result,
-    fieldErrors: { ...result.fieldErrors },
-    levelErrors: { ...result.levelErrors },
-    unplacedErrors: { ...result.unplacedErrors },
-    undeclaredProperties: kept,
-  };
-  for (const error of kept) recordClassification(reconciled, error.placed, error.message);
-  return reconciled;
+  const seeded: ClassifiedTaskErrors = emptyClassifiedErrors();
+  for (const error of kept) recordClassification(seeded, error.placed, error.message);
+  return { ...result, ...mergeClassifiedErrors(result, seeded), undeclaredProperties: kept };
 }
 
 /** A result with no errors. A fresh object each call, as results are stored in state. */
 export function emptyValidationResult(): TaskValidationResult {
-  return {
-    fieldErrors: {},
-    levelErrors: {},
-    unplacedErrors: {},
-    hasUnparseableValueMapPayload: false,
-  };
+  return { ...emptyClassifiedErrors(), hasUnparseableValueMapPayload: false };
 }
 
 export interface ValidateTaskFormOptions {
-  /** If true, validation is a no-op. */
-  isReadOnly?: boolean;
   /** Translation function for localized messages. */
-  t?: (key: string) => string;
+  t?: Translate;
 }
 
 /**
@@ -109,7 +106,7 @@ export function collectSchemaErrorPaths(
   const result: string[] = [];
   for (const [key, child] of Object.entries(record)) {
     if (key === "ref" || key === "root") continue;
-    const childPath = prefix ? `${prefix}.${key}` : key;
+    const childPath = joinPath(prefix, key);
     result.push(...collectSchemaErrorPaths(child as Record<string, unknown>, childPath));
   }
   return result;
@@ -129,28 +126,10 @@ export function validateTaskForm(
   fields: FormFieldDescriptor[] = [],
   options: ValidateTaskFormOptions = {},
 ): TaskValidationResult {
-  if (options.isReadOnly) {
-    return emptyValidationResult();
-  }
-
   const formValues = form.getValues();
   const classified = collectTaskErrors(nodeType, formValues, fields);
-  const fieldErrors = { ...classified.fieldErrors };
-  const levelErrors = { ...classified.levelErrors };
-  let hasUnparseableValueMapPayload = false;
-
-  // Check for unparseable valueMap payloads
-  for (const field of collectValueMapFields(fields)) {
-    const live = getNestedValue(formValues, field.path);
-    if (typeof live === "string" && field.innerObjectFormat !== undefined) {
-      if (getValueMapInnerObject(field, live, formValues) === null) {
-        hasUnparseableValueMapPayload = true;
-        fieldErrors[field.path] = options.t
-          ? options.t("sidebar.form.innerObject.parseError")
-          : "Must be a valid YAML/JSON object";
-      }
-    }
-  }
+  const parseErrors = collectValueMapParseErrors(formValues, fields, options.t);
+  const fieldErrors = { ...classified.fieldErrors, ...parseErrors };
 
   // Write schema errors to RHF
   for (const [path, message] of Object.entries(fieldErrors)) {
@@ -166,9 +145,8 @@ export function validateTaskForm(
   }
 
   return {
+    ...classified,
     fieldErrors,
-    levelErrors,
-    unplacedErrors: classified.unplacedErrors,
-    hasUnparseableValueMapPayload,
+    hasUnparseableValueMapPayload: Object.keys(parseErrors).length > 0,
   };
 }

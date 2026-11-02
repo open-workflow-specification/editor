@@ -16,7 +16,13 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { Classes, type Specification } from "@openworkflowspec/sdk";
-import { addTask, deleteTask, replaceTask, updateTask } from "../../src/core/workflowEditing";
+import {
+  addTask,
+  deleteTask,
+  readTaskEntry,
+  replaceTask,
+  updateTask,
+} from "../../src/core/workflowEditing";
 import { MANAGING_GITHUB_ISSUES_WORKFLOW } from "../fixtures/workflows";
 
 function makeWorkflow(data: object): Specification.Workflow {
@@ -722,5 +728,25 @@ describe("addTask", () => {
         "/do",
       ),
     ).toThrow("Malformed task entry: expected exactly one key but got 2 (taskA, taskB)");
+  });
+});
+
+describe("readTaskEntry", () => {
+  const task = { set: { a: 1 } };
+
+  it.each([
+    ["null", null],
+    ["a string", "step1"],
+    ["an array", [{ step1: task }]],
+    ["an empty object", {}],
+  ])("returns undefined for %s", (_label, entry) => {
+    expect(readTaskEntry(entry)).toBeUndefined();
+  });
+
+  it.each([
+    ["a task", { step1: task }, { name: "step1", task }],
+    ["a malformed task value", { step1: "oops" }, { name: "step1", task: "oops" }],
+  ])("returns the name and value of %s", (_label, entry, expected) => {
+    expect(readTaskEntry(entry)).toEqual(expected);
   });
 });

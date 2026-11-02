@@ -15,20 +15,12 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { leaf } from "../../../test-utils/validation-helpers";
 import type { ValidationError } from "../../../../src/core";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { classifyWorkflowErrors } from "../../../../src/side-panel/forms/validation/workflowErrorClassifier";
 
 const TASK_REFERENCE = "/do/0/step1";
-
-const leaf = (path: string, required = false): FormFieldDescriptor => ({
-  kind: "string",
-  path,
-  label: path,
-  required,
-  multiline: false,
-  isRuntimeExpression: false,
-});
 
 const fields: FormFieldDescriptor[] = [
   leaf("name", true),

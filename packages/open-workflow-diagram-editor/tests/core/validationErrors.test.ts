@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { vErr } from "../test-utils/validation-helpers";
 import {
   isValidationError,
   getErrorKeyword,
@@ -24,11 +25,6 @@ import {
   getGeneralErrors,
 } from "../../src/core";
 import type { SdkError, ValidationError } from "../../src/core";
-
-const vErr = (partial: Partial<ValidationError> & { message?: string }): ValidationError => ({
-  message: "boom",
-  ...partial,
-});
 
 describe("isValidationError", () => {
   it.each([

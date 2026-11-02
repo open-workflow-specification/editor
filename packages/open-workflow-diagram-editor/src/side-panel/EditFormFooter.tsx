@@ -129,7 +129,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
     const validationResult = validateTaskForm(nodeType, form, allFields, { t });
     // Capture `attempted` before the state update so the decision uses the pre-click snapshot.
     const wasAttempted = taskValidation.attempted;
-    recordValidationResult(validationResult, true);
+    recordValidationResult(validationResult, { attempted: true });
 
     if (shouldBlockCommit(validationResult, wasAttempted)) {
       return;

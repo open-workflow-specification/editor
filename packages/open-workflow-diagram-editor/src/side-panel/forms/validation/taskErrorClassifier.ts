@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { getParentPath, isAtOrBelow } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import type { ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD, collapseBranchGroups } from "./branchGroups";
@@ -31,6 +32,23 @@ export interface ClassifiedTaskErrors {
    * are counted once). They are listed with their path in the footer instead.
    */
   unplacedErrors: Record<string, string>;
+}
+
+/** A fresh set of classified errors with nothing in it. */
+export function emptyClassifiedErrors(): ClassifiedTaskErrors {
+  return { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
+}
+
+/** The union of two sets of classified errors; on a path both hold, `primary` keeps its message. */
+export function mergeClassifiedErrors(
+  primary: ClassifiedTaskErrors,
+  secondary: ClassifiedTaskErrors,
+): ClassifiedTaskErrors {
+  return {
+    fieldErrors: { ...secondary.fieldErrors, ...primary.fieldErrors },
+    levelErrors: { ...secondary.levelErrors, ...primary.levelErrors },
+    unplacedErrors: { ...secondary.unplacedErrors, ...primary.unplacedErrors },
+  };
 }
 
 /** Keywords that describe the structure of a container; other value-shape errors on containers are branch noise. */
@@ -52,11 +70,6 @@ export const UNDECLARED_PROPERTY_KEYWORDS: ReadonlySet<string> = new Set([
 /** Keywords that never point at something the user can edit or act upon. */
 const NOISE_KEYWORDS: ReadonlySet<string> = new Set([...UNDECLARED_PROPERTY_KEYWORDS, "if"]);
 
-/** Checks containment using `.` separators (dot-notation form paths). */
-function isAtOrBelow(path: string, base: string): boolean {
-  return path === base || path.startsWith(`${base}.`);
-}
-
 /**
  * A `type` error saying a container's value is not an object (a scalar where an object belongs,
  * e.g. `for: "x"`). Any other type comes from a sibling `oneOf` branch, such as a string
@@ -72,8 +85,7 @@ function findLeaf(path: string, view: ActiveFormView): string | undefined {
   let current = path;
   while (current !== "") {
     if (view.leaves.has(current)) return current;
-    const cut = current.lastIndexOf(".");
-    current = cut < 0 ? "" : current.slice(0, cut);
+    current = getParentPath(current);
   }
   return undefined;
 }
@@ -171,7 +183,7 @@ export function classifyTaskErrors(
   formValues: Record<string, unknown>,
   fields: FormFieldDescriptor[],
 ): ClassifiedTaskErrors {
-  const result: ClassifiedTaskErrors = { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
+  const result: ClassifiedTaskErrors = emptyClassifiedErrors();
   if (!ajvErrors || ajvErrors.length === 0) return result;
 
   const optionalSections = buildOptionalSectionSet(fields);

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export { KeyValueMapField, MapRow, newId } from "./KeyValueMapField";
+export { KeyValueMapField, MapRow } from "./KeyValueMapField";
 export type { MapEntry } from "./KeyValueMapField";
 export { StructuredValueField } from "./StructuredValueField";
 export { DurationField } from "./DurationField";
@@ -25,7 +25,7 @@ export { ChildTaskListField } from "./ChildTaskListField";
 export { EventFilterListField } from "./EventFilterListField";
 export { TaskListDisplay } from "./TaskListDisplay";
 export { ScrollableTextField } from "./ScrollableTextField";
-export { useFieldError, FieldWithError } from "./fieldHelpers";
+export { useFieldError, FieldWithError, newId, formatEntryCount } from "./fieldHelpers";
 export { StringControl } from "./StringControl";
 export { NumberControl } from "./NumberControl";
 export { BooleanControl } from "./BooleanControl";

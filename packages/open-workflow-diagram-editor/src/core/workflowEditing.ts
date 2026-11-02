@@ -15,6 +15,7 @@
  */
 
 import { Classes, type Specification } from "@openworkflowspec/sdk";
+import { isObjectNotArray } from "./utils";
 
 type TaskEntry = Record<string, Specification.Task>;
 
@@ -148,6 +149,20 @@ function getTaskName(taskEntry: TaskEntry): string {
     );
   }
   return keys[0]!;
+}
+
+/**
+ * Reads a task-list entry (`{ <name>: <task> }`) without trusting its shape, for code that
+ * must tolerate an invalid workflow (validation, display). Unlike `getTaskName` it never throws.
+ *
+ * @param entry - A task-list item of unknown shape.
+ * @returns The entry's (first) task name and its value; `undefined` when it is not an object
+ * or has no key.
+ */
+export function readTaskEntry(entry: unknown): { name: string; task: unknown } | undefined {
+  if (!isObjectNotArray(entry)) return undefined;
+  const name: string | undefined = Object.keys(entry)[0];
+  return name === undefined ? undefined : { name, task: entry[name] };
 }
 
 /**

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { joinPath } from "./paths";
 import type { DereferencedSchema } from "./schemaFilter";
 import { isObjectNotArray } from "./utils";
 import type { ContentFormat } from "./workflowSdk";
@@ -599,7 +600,7 @@ export function schemaToFormFields(
     if (!isObjectNotArray(rawProp)) continue;
 
     const prop = rawProp as Record<string, unknown>;
-    const fieldPath = path ? `${path}.${key}` : key;
+    const fieldPath = joinPath(path, key);
     const isRequired = req.has(key);
     const description = typeof prop.description === "string" ? prop.description : undefined;
 

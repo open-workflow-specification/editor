@@ -20,7 +20,8 @@ import { X, Plus } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { StringListField as StringListFieldDescriptor } from "../../../core/schemaToFormFields";
-import { useTaskFormContext } from "../taskFormContext";
+import { getNestedValue, useTaskFormContext } from "../taskFormContext";
+import { newId } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,19 +37,10 @@ interface ListItem {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function newId(): string {
-  return Math.random().toString(36).slice(2);
-}
-
-function extractItems(taskData: Record<string, unknown>, path: string): ListItem[] {
-  const parts = path ? path.split(".") : [];
-  let node: unknown = taskData;
-  for (const part of parts) {
-    if (node == null || typeof node !== "object" || Array.isArray(node)) return [];
-    node = (node as Record<string, unknown>)[part];
-  }
-  if (!Array.isArray(node)) return [];
-  return (node as unknown[])
+/** The string items of an array as rows; anything that is not an array has none. */
+function extractItems(value: unknown): ListItem[] {
+  if (!Array.isArray(value)) return [];
+  return (value as unknown[])
     .filter((v): v is string => typeof v === "string")
     .map((v) => ({ id: newId(), value: v }));
 }
@@ -75,11 +67,9 @@ export function StringListField({ field }: StringListFieldProps) {
   const [rows, setRows] = React.useState<ListItem[]>(() => {
     const rhfValue = getValues(field.path as never);
     if (Array.isArray(rhfValue)) {
-      return (rhfValue as unknown[])
-        .filter((v): v is string => typeof v === "string")
-        .map((v) => ({ id: newId(), value: v }));
+      return extractItems(rhfValue);
     }
-    return extractItems(taskData, field.path);
+    return extractItems(getNestedValue(taskData, field.path));
   });
 
   // Re-sync on form.reset (node switch, undo/redo, cancel)
@@ -88,24 +78,7 @@ export function StringListField({ field }: StringListFieldProps) {
   React.useEffect(() => {
     if (prevDefaultValuesRef.current === defaultValues) return;
     prevDefaultValuesRef.current = defaultValues;
-    const parts = field.path ? field.path.split(".") : [];
-    let node: unknown = defaultValues;
-    for (const part of parts) {
-      if (node == null || typeof node !== "object" || Array.isArray(node)) {
-        node = undefined;
-        break;
-      }
-      node = (node as Record<string, unknown>)[part];
-    }
-    if (Array.isArray(node)) {
-      setRows(
-        (node as unknown[])
-          .filter((v): v is string => typeof v === "string")
-          .map((v) => ({ id: newId(), value: v })),
-      );
-    } else {
-      setRows([]);
-    }
+    setRows(extractItems(defaultValues ? getNestedValue(defaultValues, field.path) : undefined));
   }, [defaultValues, field.path]);
 
   // ── Mutation helpers ───────────────────────────────────────────────────────

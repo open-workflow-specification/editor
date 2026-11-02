@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { isAtOrBelow } from "@/core/paths";
 import { applyDirtyValues, flattenTask, setNestedPath } from "@/core/taskDraft";
 import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { structuralEqual } from "@/core/structuralEqual";
@@ -196,7 +197,7 @@ export const NO_DRAFT_CHANGES: DraftChanges = { hasChanges: false, paths: [] };
 
 /** True when `path` equals or is nested under `ancestor */
 const isUnder = (path: string, ancestor: string) =>
-  ancestor === ROOT_ONE_OF_PATH || path === ancestor || path.startsWith(`${ancestor}.`);
+  ancestor === ROOT_ONE_OF_PATH || isAtOrBelow(path, ancestor);
 
 /**
  * True when a flattened `value` at `path` is an object `flattenTask` kept as a leaf only because

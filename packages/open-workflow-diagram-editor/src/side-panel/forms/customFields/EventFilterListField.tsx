@@ -27,9 +27,10 @@ import type {
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
 import { isObjectNotArray } from "../../../core/utils";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
-import { MapRow, newId } from "./KeyValueMapField";
+import { MapRow } from "./KeyValueMapField";
 import type { MapEntry } from "./KeyValueMapField";
-import { valueToText, parseText } from "./StructuredValueField";
+import { newId } from "./fieldHelpers";
+import { parseText, valueToText } from "./innerObjectText";
 
 // ---------------------------------------------------------------------------
 // Types

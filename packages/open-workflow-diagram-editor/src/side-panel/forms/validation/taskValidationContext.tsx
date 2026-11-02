@@ -15,8 +15,10 @@
  */
 
 import * as React from "react";
+import { isAtOrBelow } from "@/core/paths";
 import type { TaskValidationResult, UndeclaredPropertyError } from "./taskLevelValidation";
 import { countErrors } from "./footerValidationState";
+import { emptyClassifiedErrors } from "./taskErrorClassifier";
 
 export interface TaskValidationState {
   /** True after the first Apply click attempted validation (the "latch"). */
@@ -38,26 +40,24 @@ export interface TaskValidationState {
 export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
   attempted: false,
   hasWorkflowErrors: false,
-  fieldErrors: {},
-  levelErrors: {},
-  unplacedErrors: {},
+  ...emptyClassifiedErrors(),
   hasUnparseableValueMapPayload: false,
   undeclaredProperties: [],
 };
+
+export interface RecordValidationOptions {
+  /** Sets the attempted flag (the Apply "latch"); left as it is when omitted. */
+  attempted?: boolean;
+  /** Marks a result seeded from workflow validation; cleared when omitted. */
+  hasWorkflowErrors?: boolean;
+}
 
 export interface TaskValidationContextValue {
   taskValidation: TaskValidationState;
   /** Total number of unique error paths (field errors + level errors). */
   errorCount: number;
-  /**
-   * Records a validation result into state, optionally updating the attempted flag.
-   * `hasWorkflowErrors` marks a result seeded from workflow validation; it is cleared otherwise.
-   */
-  recordValidationResult: (
-    result: TaskValidationResult,
-    attempted?: boolean,
-    hasWorkflowErrors?: boolean,
-  ) => void;
+  /** Records a validation result into state; see `RecordValidationOptions`. */
+  recordValidationResult: (result: TaskValidationResult, options?: RecordValidationOptions) => void;
   /** Resets validation state to initial clean state. */
   resetValidation: () => void;
 }
@@ -74,9 +74,12 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
   }, []);
 
   const recordValidationResult = React.useCallback(
-    (result: TaskValidationResult, attempted?: boolean, hasWorkflowErrors = false) => {
+    (
+      result: TaskValidationResult,
+      { attempted, hasWorkflowErrors = false }: RecordValidationOptions = {},
+    ) => {
       setState((prev) => ({
-        attempted: attempted !== undefined ? attempted : prev.attempted,
+        attempted: attempted ?? prev.attempted,
         hasWorkflowErrors,
         fieldErrors: result.fieldErrors,
         levelErrors: result.levelErrors,
@@ -120,13 +123,7 @@ export function useTaskValidation(): TaskValidationContextValue {
 
 /** Counts the level errors at or below `path` ("" = every level error). */
 export function countLevelErrorsUnder(levelErrors: Record<string, string>, path: string): number {
-  let count = 0;
-  for (const key of Object.keys(levelErrors)) {
-    if (path === "" || key === path || key.startsWith(`${path}.`)) {
-      count++;
-    }
-  }
-  return count;
+  return Object.keys(levelErrors).filter((key) => isAtOrBelow(key, path)).length;
 }
 
 /**

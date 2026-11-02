@@ -18,10 +18,11 @@ import { load } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
 import type { ErrorObject } from "ajv/dist/2020";
 import { fixNodesConnections } from "./graph";
-import { isSafeKey } from "./utils";
+import { isObjectNotArray, isSafeKey } from "./utils";
 import { stripDiscriminatedCascade, validateTaskData } from "./schemaValidator";
 import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
 import { getTaskTypeKey } from "./taskTypes";
+import { readTaskEntry } from "./workflowEditing";
 
 export type ContentFormat = "json" | "yaml";
 
@@ -164,7 +165,7 @@ export function parseValidationErrorMessage(message: string): ValidationError[] 
         try {
           const parsed = JSON.parse(candidateObjectStr);
           // Validate that parsed result is a non-null plain object
-          if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+          if (isObjectNotArray(parsed)) {
             // Found valid split
             errorMessage = candidateMessage;
             objectStr = candidateObjectStr;
@@ -218,6 +219,16 @@ export function parseValidationErrorMessage(message: string): ValidationError[] 
   return errors;
 }
 
+/** What an error reports, by path and message: the same problem under any schema path. */
+function errorSignature(error: ValidationError): string {
+  return `${error.path ?? ""}|${error.message}`;
+}
+
+/** An error's full identity: `errorSignature` plus the schema path (`errorType`). */
+function exactErrorSignature(error: ValidationError): string {
+  return `${errorSignature(error)}|${error.errorType}`;
+}
+
 /*
  * The SDK repeats its full error block within a single message, so the parsed list
  * contains duplicates (identical path + errorType + message). Those carry no
@@ -227,7 +238,7 @@ export function parseValidationErrorMessage(message: string): ValidationError[] 
 function dedupeValidationErrors(errors: ValidationError[]): ValidationError[] {
   const seen = new Set<string>();
   return errors.filter((error) => {
-    const signature = `${error.path ?? ""}|${error.errorType}|${error.message}`;
+    const signature = exactErrorSignature(error);
     if (seen.has(signature)) {
       return false;
     }
@@ -273,28 +284,21 @@ function collectTaskAjvErrors(
   const collected: ValidationError[] = [];
 
   for (let i = 0; i < doArray.length; i++) {
-    const item: unknown = doArray[i];
-    if (item == null || typeof item !== "object") continue;
+    const entry = readTaskEntry(doArray[i]);
+    if (entry === undefined || !isObjectNotArray(entry.task)) continue;
 
-    const taskName: string | undefined = Object.keys(item)[0];
-    if (taskName === undefined) continue;
-
-    const taskObj: unknown = (item as Record<string, unknown>)[taskName];
-    if (taskObj == null || typeof taskObj !== "object") continue;
-
-    const taskType: string | undefined = getTaskTypeKey(taskObj as Record<string, unknown>);
+    const taskType: string | undefined = getTaskTypeKey(entry.task);
     if (taskType === undefined) continue;
 
-    const taskErrors: ErrorObject[] | null = validateTaskData(taskType, taskObj);
+    const taskErrors: ErrorObject[] | null = validateTaskData(taskType, entry.task);
     if (taskErrors === null) continue;
 
-    const pathPrefix: string = `/do/${i}/${taskName}`;
+    const pathPrefix: string = `/do/${i}/${entry.name}`;
     for (const err of stripDiscriminatedCascade(taskErrors)) {
       const converted: ValidationError = ajvErrorToValidationError(err);
-      const path: string = `${pathPrefix}${converted.path ?? ""}`;
-      converted.path = path;
-      const signature: string = `${path}|${converted.errorType}|${converted.message}`;
-      if (!seen.has(signature) && !sdkSignatures.has(`${path}|${converted.message}`)) {
+      converted.path = `${pathPrefix}${converted.path ?? ""}`;
+      const signature: string = exactErrorSignature(converted);
+      if (!seen.has(signature) && !sdkSignatures.has(errorSignature(converted))) {
         seen.add(signature);
         collected.push(converted);
       }
@@ -342,7 +346,7 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
   const sdkSignatures: Set<string> = new Set<string>();
   for (const err of sdkErrors) {
     if (!(err instanceof Error)) {
-      sdkSignatures.add(`${err.path ?? ""}|${err.message}`);
+      sdkSignatures.add(errorSignature(err));
     }
   }
 

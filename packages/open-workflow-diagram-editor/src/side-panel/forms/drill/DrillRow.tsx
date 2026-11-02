@@ -24,6 +24,7 @@ import { isObjectNotArray } from "../../../core/utils";
 import { drillLabel, type DrillTarget } from "./drill";
 import { useDrill } from "./DrillContext";
 import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
+import { formatEntryCount } from "../customFields/fieldHelpers";
 import { countLevelErrorsUnder, useTaskValidation } from "../validation";
 import { COMMON_FIELDS_PATH } from "@/core/schemaToFormFields";
 
@@ -95,7 +96,7 @@ export function DrillRow({
     const entries = isObjectNotArray(map)
       ? Object.values(map).filter((value) => value !== undefined).length
       : 0;
-    summary = `${entries} ${t(entries === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+    summary = formatEntryCount(t, entries);
   } else if (field.kind === "one-of") {
     const value = variantValuePath === undefined ? undefined : variantValue;
     const shown =

@@ -15,6 +15,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ajvError } from "../test-utils/validation-helpers";
 import type { ErrorObject } from "ajv/dist/2020";
 import type { Specification } from "@openworkflowspec/sdk";
 import { validateWorkflow } from "../../src/core";
@@ -32,17 +33,6 @@ vi.mock("../../src/core/schemaValidator", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/core/schemaValidator")>();
   return { ...actual, validateTaskData: vi.fn() };
 });
-
-function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
-  return {
-    keyword: "required",
-    instancePath: "",
-    schemaPath: "#/required",
-    params: {},
-    message: "boom",
-    ...overrides,
-  };
-}
 
 function workflowWith(doList: unknown): Specification.Workflow {
   return { do: doList } as unknown as Specification.Workflow;
