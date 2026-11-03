@@ -8,17 +8,17 @@ catalog:
   "@chromatic-com/storybook": ^5.6.0
   "@openworkflowspec/sdk": "^1.0.3-alpha8"
   "@playwright/test": ^1.64.1
-  "@storybook/addon-a11y": ^10.6.3
-  "@storybook/addon-docs": ^10.6.3
-  "@storybook/addon-vitest": ^10.6.3
-  "@storybook/react-vite": ^10.6.3
+  "@storybook/addon-a11y": ^10.6.5
+  "@storybook/addon-docs": ^10.6.5
+  "@storybook/addon-vitest": ^10.6.5
+  "@storybook/react-vite": ^10.6.5
   "@tailwindcss/vite": ^4.3.3
   "@testing-library/dom": ^10.4.2
   "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.3
   "@testing-library/user-event": ^14.6.8
   "@types/js-yaml": ^4.0.9
-  "@types/node": ^26.6.5
+  "@types/node": ^26.6.6
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
   "@vitest/browser": ^5.0.5
@@ -30,25 +30,25 @@ catalog:
   "@xyflow/react": ^12.12.0
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
-  elkjs: ^0.12.0
+  elkjs: ^0.12.1
   fast-equals: ^6.2.1
   html-to-image: ^1.11.13
   husky: ^9.1.7
   "js-yaml": ^5.5.0
   jsdom: ^30.1.3
   lint-staged: ^17.6.0
-  lucide-react: ^1.61.0
+  lucide-react: ^1.65.0
   monaco-editor: ^0.57.0
-  oxfmt: ^0.74.0
-  oxlint: ^1.89.0
+  oxfmt: ^0.75.0
+  oxlint: ^1.90.0
   radix-ui: ^1.8.1
   react: ^19.3.1
   react-dom: ^19.3.1
   rimraf: ^6.1.3
-  storybook: ^10.6.3
+  storybook: ^10.6.5
   syncpack: ^15.3.3
   tailwindcss: ^4.3.3
-  typescript: ^7.0.2
+  typescript: ^6.0.0
   use-sync-external-store: ^1.7.0
   vite: ^8.3.5
   vitest: ^5.0.5
@@ -74,3 +74,5 @@ overrides:
   nanoid@>=3.0.0 <3.3.18: "3.3.18"
   shell-quote@>=1.8.4 <1.11.0: ">=1.11.0"
   source-map-js@>=1.0.0 <1.2.2: ">=1.2.2"
+  # Force a single TypeScript major across the dependency graph. To be removed when #508 is resolved.
+  typescript: "catalog:"
