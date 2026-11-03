@@ -33,3 +33,16 @@ export const HELLO_WORLD_SAMPLE = `{
     }
   ]
 }`;
+
+export const HELLO_WORLD_YAML_SAMPLE = `document:
+  dsl: "1.0.3"
+  namespace: examples
+  name: hello-world
+  version: "0.1.0"
+do:
+  - greet:
+      call: http
+      with:
+        method: GET
+        endpoint: https://httpbin.org/get
+`;

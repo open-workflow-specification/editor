@@ -139,7 +139,7 @@ describe("TextEditor", () => {
 
   describe("language", () => {
     it.each([
-      { fromLang: "json", toLang: "yaml", expectedCodeLens: false },
+      { fromLang: "json", toLang: "yaml", expectedCodeLens: true },
       { fromLang: "yaml", toLang: "json", expectedCodeLens: true },
     ] as const)(
       "$fromLang → $toLang: updates codeLens before changing model language",
@@ -164,7 +164,7 @@ describe("TextEditor", () => {
       },
     );
 
-    it("YAML + isReadOnly true → false: codeLens stays false", () => {
+    it("YAML + isReadOnly true → false: codeLens is enabled", () => {
       const { rerenderEditor } = renderEditor({ language: "yaml", isReadOnly: true });
       mockEditorUpdateOptions.mockClear();
 
@@ -172,9 +172,24 @@ describe("TextEditor", () => {
 
       expect(mockEditorCreate).toHaveBeenCalledOnce();
       expect(mockEditorUpdateOptions).toHaveBeenCalledWith(
-        expect.objectContaining({ codeLens: false }),
+        expect.objectContaining({ codeLens: true }),
       );
     });
+
+    it.each([
+      { isReadOnly: false, expectedCodeLens: true },
+      { isReadOnly: true, expectedCodeLens: false },
+    ] as const)(
+      "YAML + isReadOnly $isReadOnly: codeLens is $expectedCodeLens at creation time",
+      ({ isReadOnly, expectedCodeLens }) => {
+        const { container } = renderEditor({ language: "yaml", isReadOnly });
+
+        expect(mockEditorCreate).toHaveBeenCalledWith(
+          container.firstElementChild,
+          expect.objectContaining({ readOnly: isReadOnly, codeLens: expectedCodeLens }),
+        );
+      },
+    );
   });
 
   describe("read-only", () => {

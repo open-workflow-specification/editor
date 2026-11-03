@@ -68,13 +68,13 @@ export const TextEditor = ({
     const model = monaco.editor.createModel(
       content,
       language,
-      monaco.Uri.parse("inmemory://openworkflow/workflow.json"),
+      monaco.Uri.parse(`inmemory://openworkflow/workflow.${language}`),
     );
 
     const editor = monaco.editor.create(containerRef.current, {
       model,
       readOnly: isReadOnly,
-      codeLens: language === "json" && !isReadOnly,
+      codeLens: !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
       ...(resolvedColorMode && {
@@ -132,7 +132,7 @@ export const TextEditor = ({
     }
 
     // updateOptions must run before setModelLanguage so that codeLens is applied
-    editor.updateOptions({ readOnly: isReadOnly, codeLens: language === "json" && !isReadOnly });
+    editor.updateOptions({ readOnly: isReadOnly, codeLens: !isReadOnly });
 
     const model = editor.getModel();
     if (model && model.getLanguageId() !== language) {

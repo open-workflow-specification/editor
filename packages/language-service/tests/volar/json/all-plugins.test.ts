@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createJsonLanguageServicePlugins, createJsonCompletionsPlugin } from "../../../src/index";
-import type { LanguageServicePluginInstance } from "../../../src/index";
 import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
 
+const getPluginInstances = () =>
+  createJsonLanguageServicePlugins().map((plugin) => plugin.create(MINIMAL_CONTEXT));
+
 describe("createJsonLanguageServicePlugins", () => {
-  let instances: LanguageServicePluginInstance[];
-
-  beforeEach(() => {
-    instances = createJsonLanguageServicePlugins().map((plugin) => plugin.create(MINIMAL_CONTEXT));
-  });
-
   it("createJsonCompletionsPlugin is marked as isAdditionalCompletion", () => {
     const completionsInstance = createJsonCompletionsPlugin().create(MINIMAL_CONTEXT);
     expect(completionsInstance.isAdditionalCompletion).toBe(true);
@@ -33,17 +29,15 @@ describe("createJsonLanguageServicePlugins", () => {
 
   it("schema-driven completions are available on a partial document", async () => {
     const { doc, cursorPosition } = treat("{🎯}");
-    const labels = await getAllCompletionLabels(instances, doc, cursorPosition);
+    const labels = await getAllCompletionLabels(getPluginInstances(), doc, cursorPosition);
     expect(labels).toContain("document");
     expect(labels).toContain("do");
   });
 
   it("OWS completion is available on an empty document alongside schema-driven completions", async () => {
     const { doc, cursorPosition } = treat("🎯");
-    const labels = await getAllCompletionLabels(instances, doc, cursorPosition);
+    const labels = await getAllCompletionLabels(getPluginInstances(), doc, cursorPosition);
     expect(labels).toContain("Insert Hello World workflow");
-    // Schema-driven completions from createJsonSchemaLanguageServicePlugin are also active
-    // (on an empty document volar-service-json proposes {} as a starting point)
     expect(labels).toContain("{}");
   });
 });

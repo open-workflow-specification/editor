@@ -19,6 +19,7 @@ import {
   mockCreateWebWorker,
   mockMonacoWorkerDispose,
   mockModel,
+  mockSetModelLanguage,
 } from "../__mocks__/monaco-editor";
 import {
   mockRegisterProviders,
@@ -39,6 +40,7 @@ const makeWorker = () => ({ terminate: vi.fn() }) as unknown as Worker;
 describe("createTextEditorLanguageService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetModelLanguage(mockModel, "json");
   });
 
   describe("initialisation", () => {
@@ -61,43 +63,73 @@ describe("createTextEditorLanguageService", () => {
       await expect(options.worker).resolves.toBe(worker);
     });
 
-    it("registers Volar providers for json", () => {
+    it("registers Volar providers for json and yaml", () => {
       createTextEditorLanguageService(mockModel as never, makeWorker);
 
-      expect(mockRegisterProviders).toHaveBeenCalledOnce();
+      expect(mockRegisterProviders).toHaveBeenCalledTimes(2);
       expect(mockRegisterProviders).toHaveBeenCalledWith(
         expect.anything(),
         "json",
         expect.any(Function),
         expect.anything(),
       );
+      expect(mockRegisterProviders).toHaveBeenCalledWith(
+        expect.anything(),
+        "yaml",
+        expect.any(Function),
+        expect.anything(),
+      );
     });
 
-    it("activates markers for json", () => {
+    it("activates markers for json and yaml", () => {
       createTextEditorLanguageService(mockModel as never, makeWorker);
 
       expect(mockActivateMarkers).toHaveBeenCalledOnce();
       expect(mockActivateMarkers).toHaveBeenCalledWith(
         expect.anything(),
-        ["json"],
+        ["json", "yaml"],
         "openworkflow",
         expect.any(Function),
         expect.anything(),
       );
+    });
+
+    it.each(["json", "yaml"])("syncs the model URI when the model language is %s", (language) => {
+      mockSetModelLanguage(mockModel, language);
+
+      createTextEditorLanguageService(mockModel as never, makeWorker);
 
       const getSyncUris = mockActivateMarkers.mock.calls[0]![3];
       expect(getSyncUris()).toEqual([mockModel.uri]);
     });
+
+    it("does not sync the model URI for an unsupported language", () => {
+      mockSetModelLanguage(mockModel, "plaintext");
+
+      createTextEditorLanguageService(mockModel as never, makeWorker);
+
+      const getSyncUris = mockActivateMarkers.mock.calls[0]![3];
+      expect(getSyncUris()).toEqual([]);
+    });
   });
 
   describe("dispose", () => {
-    it("disposes the registered providers on dispose", async () => {
+    it("disposes all registered providers on dispose", async () => {
+      const ls = createTextEditorLanguageService(mockModel as never, makeWorker);
+
+      await Promise.resolve();
+      ls.dispose();
+
+      expect(mockProvidersDispose).toHaveBeenCalledTimes(2);
+    });
+
+    it("disposes providers that resolve after dispose", async () => {
       const ls = createTextEditorLanguageService(mockModel as never, makeWorker);
 
       ls.dispose();
       await Promise.resolve();
 
-      expect(mockProvidersDispose).toHaveBeenCalledOnce();
+      expect(mockProvidersDispose).toHaveBeenCalledTimes(2);
     });
 
     it("disposes the MonacoWebWorker on dispose", () => {
