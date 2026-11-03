@@ -71,7 +71,7 @@ export function setNestedPath(obj: Record<string, unknown>, dotPath: string, val
     current[part] =
       next && typeof next === "object" && !Array.isArray(next)
         ? { ...(next as Record<string, unknown>) }
-        : (Object.create(null) as Record<string, unknown>);
+        : {};
     current = current[part] as Record<string, unknown>;
   }
   current[parts[parts.length - 1]!] = value;

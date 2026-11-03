@@ -54,6 +54,18 @@ describe("buildFormValues", () => {
     expect(getNestedValue(values, "run.container.lifetime")).toEqual({ cleanup: "", after: "" });
   });
 
+  it("pads with plain objects, which RHF clones (it shares any other kind with its defaults)", () => {
+    const grpc = nodeAt(parseFixture(EMPTY_MAPS_WORKFLOW), "/do/greet").data.task as Task;
+    const withoutProto = structuredClone(grpc) as { with: Task };
+    delete withoutProto.with.proto;
+
+    const values = buildFormValues(getFormFieldsForNodeType("call"), withoutProto, {
+      previousTask: grpc,
+    });
+
+    expect(Object.getPrototypeOf(getNestedValue(values, "with.proto"))).toBe(Object.prototype);
+  });
+
   it("pads nothing without a previous task", () => {
     const values = buildFormValues(fields, withoutLifetime());
 
