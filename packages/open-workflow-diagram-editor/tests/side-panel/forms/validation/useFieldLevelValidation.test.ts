@@ -19,13 +19,13 @@ import { renderHook, act } from "@testing-library/react";
 import type { UseFormReturn } from "react-hook-form";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { useFieldLevelValidation } from "../../../../src/side-panel/forms/validation/useFieldLevelValidation";
-import { validateTaskData } from "../../../../src/side-panel/forms/validation/schemaValidator";
+import { validateTaskData } from "../../../../src/core/schemaValidator";
 import {
   TaskValidationProvider,
   useTaskValidation,
 } from "../../../../src/side-panel/forms/validation/taskValidationContext";
 
-vi.mock("../../../../src/side-panel/forms/validation/schemaValidator", () => ({
+vi.mock("../../../../src/core/schemaValidator", () => ({
   validateTaskData: vi.fn().mockReturnValue(null),
 }));
 
@@ -381,6 +381,146 @@ describe("useFieldLevelValidation", () => {
       act(() => {
         result.current.fieldValidation.revalidateIfAttempted();
       });
+      expect(result.current.validation.errorCount).toBe(1);
+    });
+  });
+
+  describe("with workflow-seeded errors (attempted === false)", () => {
+    const seeded = {
+      ...EMPTY_RESULT,
+      fieldErrors: { wait: "Workflow err" },
+    };
+
+    function setup() {
+      const clearErrors = vi.fn();
+      const form = {
+        getValues: vi.fn().mockReturnValue({ wait: "PT5S" }),
+        formState: { errors: { wait: { type: "workflow", message: "Workflow err" } } },
+        setError: vi.fn(),
+        clearErrors,
+      } as unknown as UseFormReturn<Record<string, unknown>>;
+
+      const { result } = renderHook(
+        () => ({
+          validation: useTaskValidation(),
+          fieldValidation: useFieldLevelValidation("wait", form, false, fields),
+        }),
+        { wrapper: TaskValidationProvider },
+      );
+      act(() => {
+        result.current.validation.recordValidationResult(seeded, undefined, true);
+      });
+      return { result, clearErrors };
+    }
+
+    it("runs task-level validation on blur so the counter follows the fixed field", () => {
+      const { result, clearErrors } = setup();
+      expect(result.current.validation.errorCount).toBe(1);
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(clearErrors).toHaveBeenCalledWith("wait");
+      expect(result.current.validation.errorCount).toBe(0);
+    });
+
+    it("keeps the workflow flag and does not latch attempted", () => {
+      vi.mocked(validateTaskData).mockReturnValue([
+        {
+          keyword: "pattern",
+          instancePath: "/wait",
+          schemaPath: "#/properties/wait/pattern",
+          params: { pattern: "^P" },
+          message: 'must match pattern "^P"',
+        },
+      ]);
+      const { result } = setup();
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.taskValidation.hasWorkflowErrors).toBe(true);
+      expect(result.current.validation.taskValidation.attempted).toBe(false);
+      expect(result.current.validation.errorCount).toBe(1);
+    });
+
+    it("revalidateIfAttempted also re-runs whole task validation", () => {
+      const { result } = setup();
+
+      act(() => {
+        result.current.fieldValidation.revalidateIfAttempted();
+      });
+
+      expect(result.current.validation.errorCount).toBe(0);
+    });
+  });
+
+  describe("with a seeded undeclared-property error", () => {
+    const typoMessage = "must NOT have unevaluated properties";
+    const seeded = {
+      ...EMPTY_RESULT,
+      levelErrors: { "": typoMessage },
+      undeclaredProperties: [
+        { property: "typo", placed: { kind: "level" as const, path: "" }, message: typoMessage },
+      ],
+    };
+
+    function setup(values: Record<string, unknown>) {
+      const form = {
+        getValues: vi.fn().mockReturnValue(values),
+        formState: { errors: {} },
+        setError: vi.fn(),
+        clearErrors: vi.fn(),
+      } as unknown as UseFormReturn<Record<string, unknown>>;
+
+      const { result } = renderHook(
+        () => ({
+          validation: useTaskValidation(),
+          fieldValidation: useFieldLevelValidation("wait", form, false, fields),
+        }),
+        { wrapper: TaskValidationProvider },
+      );
+      act(() => {
+        result.current.validation.recordValidationResult(seeded, undefined, true);
+      });
+      return result;
+    }
+
+    it("keeps the error when a field is blurred while the property is still in the draft", () => {
+      const result = setup({ wait: "PT1S", typo: true });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.taskValidation.levelErrors).toEqual({ "": typoMessage });
+      expect(result.current.validation.errorCount).toBe(1);
+      expect(result.current.validation.taskValidation.hasWorkflowErrors).toBe(true);
+    });
+
+    it("drops the error once the property is gone from the draft", () => {
+      const result = setup({ wait: "PT1S" });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
+      expect(result.current.validation.errorCount).toBe(0);
+      expect(result.current.validation.taskValidation.undeclaredProperties).toEqual([]);
+    });
+
+    it("keeps the error across consecutive blurs", () => {
+      const result = setup({ wait: "PT1S", typo: true });
+
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+      act(() => {
+        result.current.fieldValidation.validateField("wait");
+      });
+
       expect(result.current.validation.errorCount).toBe(1);
     });
   });

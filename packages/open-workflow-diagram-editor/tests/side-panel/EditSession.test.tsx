@@ -118,3 +118,28 @@ describe("EditSession navigation guard", () => {
     expect(methodField()).toHaveValue("delete");
   });
 });
+
+describe("EditSession draftVersion", () => {
+  function VersionProbe() {
+    const { draftVersion, resetDraft } = useEditSession();
+    return (
+      <>
+        <span data-testid="version">{draftVersion}</span>
+        <button type="button" onClick={() => resetDraft([], {})}>
+          Reset
+        </button>
+      </>
+    );
+  }
+
+  it("increments on every resetDraft", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<VersionProbe />, { isReadOnly: false, model });
+    const initial = Number(screen.getByTestId("version").textContent);
+
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+
+    expect(Number(screen.getByTestId("version").textContent)).toBe(initial + 2);
+  });
+});

@@ -43,12 +43,14 @@ const CONTAINER_KEYWORDS: ReadonlySet<string> = new Set([
   GROUP_KEYWORD,
 ]);
 
-/** Keywords that never point at something the user can edit or act upon. */
-const NOISE_KEYWORDS: ReadonlySet<string> = new Set([
+/** Keywords reporting a property the schema does not allow; task-level validation drops them. */
+export const UNDECLARED_PROPERTY_KEYWORDS: ReadonlySet<string> = new Set([
   "unevaluatedProperties",
   "additionalProperties",
-  "if",
 ]);
+
+/** Keywords that never point at something the user can edit or act upon. */
+const NOISE_KEYWORDS: ReadonlySet<string> = new Set([...UNDECLARED_PROPERTY_KEYWORDS, "if"]);
 
 /** Checks containment using `.` separators (dot-notation form paths). */
 function isAtOrBelow(path: string, base: string): boolean {
@@ -76,7 +78,7 @@ function findLeaf(path: string, view: ActiveFormView): string | undefined {
   return undefined;
 }
 
-type Classification =
+export type Classification =
   | { kind: "field"; path: string }
   | { kind: "level"; path: string }
   | { kind: "unplaced"; path: string }
@@ -105,7 +107,8 @@ function classifyInOrderedMap(path: string, view: ActiveFormView): Classificatio
   return undefined;
 }
 
-function classify(
+/** Places an error at a dot-notation form path against what the form shows now. */
+export function classifyErrorPath(
   path: string,
   keyword: string,
   params: ErrorObject["params"],
@@ -126,6 +129,22 @@ function classify(
   // Errors that cannot be traced back to fields or containers still block Apply, so they are kept
   // and listed in the footer, as no level of the form shows them.
   return { kind: "unplaced", path };
+}
+
+/** Records a classified error into the result; the first message of a path wins. */
+export function recordClassification(
+  result: ClassifiedTaskErrors,
+  placed: Classification,
+  message: string,
+): void {
+  if (placed.kind === "field") {
+    result.fieldErrors[placed.path] ??= message;
+  } else if (placed.kind === "level") {
+    result.levelErrors[placed.path] ??= message;
+  } else if (placed.kind === "unplaced") {
+    result.levelErrors[placed.path] ??= message;
+    result.unplacedErrors[placed.path] ??= message;
+  }
 }
 
 function isInsideEmptyOptionalSection(
@@ -171,15 +190,11 @@ export function classifyTaskErrors(
       continue;
     }
 
-    const placed = classify(path, error.keyword, error.params, view);
-    if (placed.kind === "field") {
-      result.fieldErrors[placed.path] ??= error.message;
-    } else if (placed.kind === "level") {
-      result.levelErrors[placed.path] ??= error.message;
-    } else if (placed.kind === "unplaced") {
-      result.levelErrors[placed.path] ??= error.message;
-      result.unplacedErrors[placed.path] ??= error.message;
-    }
+    recordClassification(
+      result,
+      classifyErrorPath(path, error.keyword, error.params, view),
+      error.message,
+    );
   }
 
   return result;

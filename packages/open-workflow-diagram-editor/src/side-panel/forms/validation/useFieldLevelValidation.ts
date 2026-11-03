@@ -20,7 +20,12 @@ import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenTask } from "@/core/taskDraft";
 import { collectSchemaFieldErrors } from "./collectSchemaFieldErrors";
 import { isSectionEmpty, buildOptionalSectionSet } from "./fieldErrorMapper";
-import { validateTaskForm } from "./taskLevelValidation";
+import { isCountingErrors } from "./footerValidationState";
+import {
+  reconcileUndeclaredProperties,
+  validateTaskForm,
+  type TaskValidationResult,
+} from "./taskLevelValidation";
 import { useTaskValidation } from "./taskValidationContext";
 import { SENTINEL_KEY } from "../sentinels";
 
@@ -44,12 +49,26 @@ export function useFieldLevelValidation(
 ): { validateField: FieldValidationHandler; revalidateIfAttempted: () => void } {
   const { taskValidation, recordValidationResult } = useTaskValidation();
   const optionalSections = React.useMemo(() => buildOptionalSectionSet(fields), [fields]);
+  const { hasWorkflowErrors, undeclaredProperties } = taskValidation;
+  // Once the footer shows a count, every change re-runs whole-task validation so the count stays live.
+  const isCounting: boolean = isCountingErrors(taskValidation);
+
+  // Re-validation keeps the source of the errors the context already holds. Task-level validation
+  // drops undeclared-property errors by design, so the seeded ones still in the draft are kept.
+  const recordKeepingSource = React.useCallback(
+    (result: TaskValidationResult) =>
+      recordValidationResult(
+        reconcileUndeclaredProperties(result, undeclaredProperties, form.getValues()),
+        undefined,
+        hasWorkflowErrors,
+      ),
+    [recordValidationResult, hasWorkflowErrors, undeclaredProperties, form],
+  );
 
   const revalidateIfAttempted = React.useCallback(() => {
-    if (isReadOnly || !taskValidation.attempted) return;
-    const result = validateTaskForm(nodeType, form, fields, { isReadOnly });
-    recordValidationResult(result);
-  }, [isReadOnly, taskValidation.attempted, nodeType, form, fields, recordValidationResult]);
+    if (isReadOnly || !isCounting) return;
+    recordKeepingSource(validateTaskForm(nodeType, form, fields, { isReadOnly }));
+  }, [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource]);
 
   const validateField = React.useCallback<FieldValidationHandler>(
     (path: string) => {
@@ -57,11 +76,10 @@ export function useFieldLevelValidation(
         return;
       }
 
-      if (taskValidation.attempted) {
+      if (isCounting) {
         // Clear any error on the blurred field (including workflow) before running task validation
         form.clearErrors(path);
-        const result = validateTaskForm(nodeType, form, fields, { isReadOnly });
-        recordValidationResult(result);
+        recordKeepingSource(validateTaskForm(nodeType, form, fields, { isReadOnly }));
         return;
       }
 
@@ -98,15 +116,7 @@ export function useFieldLevelValidation(
         form.clearErrors(path);
       }
     },
-    [
-      isReadOnly,
-      taskValidation.attempted,
-      nodeType,
-      form,
-      fields,
-      recordValidationResult,
-      optionalSections,
-    ],
+    [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource, optionalSections],
   );
 
   return { validateField, revalidateIfAttempted };

@@ -657,6 +657,126 @@ exports[`parseValidationErrorMessage > parses validation errors from workflow wi
     },
     "path": "/do/0/checkup",
   },
+  {
+    "errorType": "#/oneOf/0/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/0/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/1/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/1/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/2/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/2/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/3/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/3/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/4/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/4/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/5/required",
+    "message": "must have required property 'with'",
+    "object": {
+      "missingProperty": "with",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/5/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/oneOf/6/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/unevaluatedProperties",
+    "message": "must NOT have unevaluated properties",
+    "object": {
+      "unevaluatedProperty": "for",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
+  {
+    "errorType": "#/required",
+    "message": "must have required property 'catch'",
+    "object": {
+      "missingProperty": "catch",
+    },
+    "path": "/do/0/checkup/do/1/checkup",
+  },
 ]
 `;
 
