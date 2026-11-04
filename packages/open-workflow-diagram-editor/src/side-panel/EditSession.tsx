@@ -15,7 +15,16 @@
  */
 
 import * as React from "react";
-import { FormProvider, useForm, useFormState, useWatch, type UseFormReturn } from "react-hook-form";
+import {
+  FormProvider,
+  get,
+  useForm,
+  useFormContext,
+  useFormState,
+  useWatch,
+  type UseFormReturn,
+} from "react-hook-form";
+import { isAtOrBelow } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import {
   buildFormValues,
@@ -24,6 +33,8 @@ import {
   type DraftChanges,
 } from "./forms/draft";
 import { TaskValidationProvider } from "./forms/validation";
+import { useTaskFormContext } from "./forms/taskFormContext";
+import { structuralEqual } from "@/core/structuralEqual";
 
 type FormValues = Record<string, unknown>;
 
@@ -219,7 +230,24 @@ export function useEditSession() {
   return context;
 }
 
-/** Returns draft changes against the baseline task. */
+/**
+ * Returns draft changes against the baseline task. A read-only form reports none.
+ */
 export function useDraftChanges(): DraftChanges {
-  return React.useContext(DraftChangesContext);
+  const changes = React.useContext(DraftChangesContext);
+  return useTaskFormContext().isReadOnly ? NO_DRAFT_CHANGES : changes;
+}
+
+/**
+ * True when the draft changes the field at `path`: anything at or below it or, with `exact`, the path itself only.
+ */
+export function useFieldChanged(path: string, { exact = false }: { exact?: boolean } = {}) {
+  const { paths } = useDraftChanges();
+  const { control } = useFormContext<FormValues>();
+  const value = useWatch({ control, name: path }) as unknown;
+  const { defaultValues } = useFormState({ control, name: path });
+  if (exact) return paths.includes(path);
+  if (paths.some((changed) => isAtOrBelow(changed, path))) return true;
+  const insideChangedWhole = paths.some((changed) => changed !== "" && isAtOrBelow(path, changed));
+  return insideChangedWhole && !structuralEqual(value, get(defaultValues, path));
 }

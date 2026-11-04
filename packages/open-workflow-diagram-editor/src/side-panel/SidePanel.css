@@ -23,14 +23,15 @@
   }
 
   .dec-root .dec-sidebar-header-icon-wrap {
-    @apply dec:flex dec:items-center dec:justify-center dec:shrink-0 dec:h-9 dec:w-9 dec:rounded-lg dec:text-gray-100;
+    @apply dec:flex dec:items-center dec:justify-center dec:shrink-0 dec:h-9 dec:w-9 dec:rounded-lg
+      dec:bg-gray-100;
   }
 
   .dec-root.dark .dec-sidebar-header-icon-wrap {
     @apply dec:bg-gray-800;
   }
 
-  .dec-root.dark .dec-sidebar-header-icon-wrap.colored {
+  .dec-root .dec-sidebar-header-icon-wrap.colored {
     background: color-mix(in srgb, var(--task-node-color) 14%, transparent);
   }
 
@@ -150,52 +151,6 @@
     @apply dec:text-gray-100;
   }
 
-  /* Property row */
-  .dec-root .dec-sidebar-prop {
-    @apply dec:py-2 dec:px-1 dec:rounded-sm
-      dec:border-b dec:border-gray-100 dec:transition-colors;
-  }
-
-  .dec-root .dec-sidebar-prop:hover {
-    @apply dec:bg-gray-100/60;
-  }
-
-  .dec-root.dark .dec-sidebar-prop {
-    @apply dec:border-gray-800;
-  }
-
-  .dec-root.dark .dec-sidebar-prop:hover {
-    @apply dec:bg-gray-800/40;
-  }
-
-  .dec-root .dec-sidebar-prop-label {
-    @apply dec:block dec:mb-1 dec:text-xs dec:text-gray-500;
-    overflow-wrap: anywhere;
-  }
-
-  .dec-root.dark .dec-sidebar-prop-label {
-    @apply dec:text-gray-400;
-  }
-
-  .dec-root .dec-sidebar-prop-value {
-    @apply dec:text-sm dec:font-medium dec:text-gray-900;
-    overflow-wrap: anywhere;
-  }
-
-  .dec-root.dark .dec-sidebar-prop-value {
-    @apply dec:text-gray-100;
-  }
-
-  .dec-root .dec-sidebar-prop-activator {
-    @apply dec:block dec:w-full dec:cursor-pointer dec:bg-transparent dec:text-left;
-  }
-
-  .dec-root .dec-sidebar-prop-activator:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: -1px;
-  }
-  /* End Property row */
-
   /* Sidebar Footer */
   .dec-root .dec-sidebar-form-footer {
     @apply dec:-mx-2 dec:-mt-2 dec:flex dec:items-center dec:justify-between dec:gap-2 dec:border-t dec:border-gray-200 dec:px-3 dec:py-3;
@@ -218,7 +173,7 @@
     animation: dec-sidebar-status-in 140ms ease-out;
   }
 
-  .dec-root.dark .dec-sidebar-form-footer-status-icon {
+  .dec-root .dec-sidebar-form-footer-status-icon {
     @apply dec:h-3.5 dec:w-3.5 dec:shrink-0;
   }
 
@@ -245,50 +200,6 @@
     @apply dec:flex dec:flex-col dec:gap-0.5 dec:min-w-0 dec:overflow-hidden;
   }
   /* End Sidebar Footer */
-
-  .dec-root .dec-sidebar-edit-fields {
-    @apply dec:gap-4 dec:py-1;
-  }
-
-  .dec-root .dec-sidebar-edit-field-label {
-    @apply dec:text-xs dec:font-normal dec:text-gray-500;
-    overflow-wrap: anywhere;
-  }
-
-  .dec-root.dark .dec-sidebar-edit-field-label {
-    @apply dec:text-gray-400;
-  }
-
-  .dec-root .dec-sidebar-value {
-    font-family: var(--dec-font-mono);
-    overflow-wrap: anywhere;
-  }
-
-  .dec-root .dec-sidebar-value.numeric {
-    font-variant-numeric: tabular-nums;
-  }
-
-  .dec-root .dec-sidebar-value-shape {
-    @apply dec:text-xs dec:text-gray-500 dec:italic;
-  }
-
-  .dec-root.dark .dec-sidebar-value-shape {
-    @apply dec:text-gray-400;
-  }
-
-  /* A shell command or a script body. Capped and scrollable so one thirty-line script cannot
-     bury every row beneath it. */
-  .dec-root .dec-sidebar-value-multiline {
-    @apply dec:mt-0.5 dec:max-h-32 dec:overflow-auto dec:rounded-sm dec:bg-gray-100
-      dec:px-2 dec:py-1.5 dec:text-xs dec:leading-relaxed dec:text-gray-800;
-    font-family: var(--dec-font-mono);
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-
-  .dec-root.dark .dec-sidebar-value-multiline {
-    @apply dec:bg-gray-800/60 dec:text-gray-200;
-  }
 
   /* Stacked field (label above value) */
   .dec-root .dec-sidebar-stacked-field {
@@ -501,6 +412,24 @@
     @apply dec:w-full;
   }
 
+  /* One focus ring for every control in the form */
+  .dec-root .dec-form-field-help:focus-visible,
+  .dec-root .dec-map-delete-btn:focus-visible,
+  .dec-root .dec-filter-with-disclosure:focus-visible,
+  .dec-root .dec-form-breadcrumb-back:focus-visible,
+  .dec-root .dec-form-breadcrumb-crumb:focus-visible,
+  .dec-root .dec-form-drill-row:focus-visible {
+    outline: 2px solid rgb(var(--dec-selected-rgb));
+    outline-offset: 1px;
+  }
+
+  .dec-root .dec-form-object-toggle:focus-visible,
+  .dec-root .dec-map-add-btn:focus-visible,
+  .dec-root .dec-correlate-header:focus-visible {
+    outline: 2px solid rgb(var(--dec-selected-rgb));
+    outline-offset: -2px;
+  }
+
   .dec-root .dec-task-form-fields {
     @apply dec:flex dec:flex-col dec:gap-2 dec:py-0.5;
   }
@@ -512,7 +441,7 @@
 
   /* Label row: label text + optional ? button */
   .dec-root .dec-form-field-label-row {
-    @apply dec:flex dec:items-center dec:gap-1;
+    @apply dec:relative dec:flex dec:items-center dec:gap-1;
   }
 
   .dec-root .dec-form-field-label {
@@ -526,6 +455,15 @@
 
   .dec-root .dec-form-field-required {
     @apply dec:text-red-500;
+  }
+
+  .dec-root .dec-form-field-changed {
+    @apply dec:inline-block dec:h-1.5 dec:w-1.5 dec:flex-none dec:rounded-full;
+    background-color: var(--dec-accent-text);
+  }
+
+  .dec-root .dec-form-field-gutter-dot {
+    @apply dec:absolute dec:-left-3 dec:top-1/2 dec:flex dec:-translate-y-1/2;
   }
 
   /* Description tooltip trigger button */
@@ -546,11 +484,6 @@
 
   .dec-root.dark .dec-form-field-help:hover {
     @apply dec:text-gray-300;
-  }
-
-  .dec-root .dec-form-field-help:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: 1px;
   }
 
   .dec-root .dec-form-field-help-icon {
@@ -586,7 +519,7 @@
     height: calc(3 * 1.5rem + 2 * 0.375rem); /* 3 lines × line-height + top/bottom padding */
   }
 
-  /* ── Object group (collapsible) ──────────────────────────────────────── */
+  /* ── Collapsible group header (OrderedMapRow, the switch cases) ──────── */
 
   .dec-root .dec-form-object-header {
     @apply dec:flex dec:items-center dec:gap-1.5
@@ -611,11 +544,6 @@
       dec:px-2 dec:py-1
       dec:text-left dec:cursor-pointer
       dec:border-0 dec:bg-transparent dec:transition-colors;
-  }
-
-  .dec-root .dec-form-object-toggle:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: -1px;
   }
 
   .dec-root .dec-form-object-chevron {
@@ -773,7 +701,7 @@
     @apply dec:text-gray-500;
   }
 
-  /* ── Named item list (switch cases) ──────────────────────────────────── */
+  /* ── Ordered map (switch cases) ──────────────────────────────────────── */
 
   .dec-root .dec-form-ordered-map {
     @apply dec:flex dec:flex-col dec:rounded-md
@@ -795,7 +723,7 @@
 
   .dec-root .dec-form-ordered-map-item {
     @apply dec:flex dec:flex-col dec:gap-2 dec:m-0 dec:border-0 dec:p-0
-     dec:pl-2.5 dec:border-l dec:border-gray-200;
+     dec:pl-4 dec:border-l dec:border-gray-200;
     min-width: 0;
   }
 
@@ -828,12 +756,15 @@
 
   /* ── Key-value map editor ────────────────────────────────────────────── */
 
-  .dec-root .dec-map-group {
+  /* The string list (`dec-list-*`) shares the map's frame, rows and header */
+  .dec-root .dec-map-group,
+  .dec-root .dec-list-group {
     @apply dec:flex dec:flex-col dec:rounded-md
       dec:border dec:border-gray-200 dec:overflow-hidden;
   }
 
-  .dec-root.dark .dec-map-group {
+  .dec-root.dark .dec-map-group,
+  .dec-root.dark .dec-list-group {
     @apply dec:border-gray-700;
   }
 
@@ -865,31 +796,40 @@
   }
 
   /* Rows container */
-  .dec-root .dec-map-rows {
+  .dec-root .dec-map-rows,
+  .dec-root .dec-list-rows {
     @apply dec:flex dec:flex-col
       dec:border-t dec:border-gray-200;
   }
 
-  .dec-root.dark .dec-map-rows {
+  .dec-root.dark .dec-map-rows,
+  .dec-root.dark .dec-list-rows {
     @apply dec:border-gray-700;
   }
 
-  /* Single row: key input + value input + delete button */
-  .dec-root .dec-map-row {
+  /* Single row: inputs + delete button (a map row has a key input, a list row doesn't) */
+  .dec-root .dec-map-row,
+  .dec-root .dec-list-row {
     @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:py-1
       dec:border-b dec:border-gray-100;
   }
 
-  .dec-root .dec-map-row:last-child {
+  .dec-root .dec-map-row:last-child,
+  .dec-root .dec-list-row:last-child {
     @apply dec:border-b-0;
   }
 
-  .dec-root.dark .dec-map-row {
+  .dec-root.dark .dec-map-row,
+  .dec-root.dark .dec-list-row {
     @apply dec:border-gray-700/50;
   }
 
-  .dec-root.dark .dec-map-row:last-child {
-    @apply dec:border-b-0;
+  .dec-root .dec-map-group-gutter :is(.dec-map-header, .dec-map-row, .dec-map-add-btn-wrap) {
+    @apply dec:relative dec:pl-5;
+  }
+
+  .dec-root .dec-map-gutter-dot {
+    @apply dec:absolute dec:left-2 dec:top-1/2 dec:flex dec:-translate-y-1/2;
   }
 
   /* Key input — fixed 40% width; !w-2/5 overrides the Input base's w-full */
@@ -921,11 +861,6 @@
 
   .dec-root.dark .dec-map-delete-btn:hover {
     @apply dec:text-gray-300;
-  }
-
-  .dec-root .dec-map-delete-btn:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: 1px;
   }
 
   .dec-root .dec-map-delete-icon {
@@ -963,26 +898,12 @@
       dec:text-[11px] dec:font-medium
       dec:rounded-sm dec:border dec:border-dashed
       dec:bg-transparent dec:cursor-pointer dec:transition-colors;
-    color: #0d9488;
-    border-color: #0d9488;
+    color: var(--dec-teal-text);
+    border-color: var(--dec-teal-text);
   }
 
   .dec-root .dec-map-add-btn:hover {
-    background-color: rgba(13, 148, 136, 0.08);
-  }
-
-  .dec-root.dark .dec-map-add-btn {
-    color: #2dd4bf;
-    border-color: #2dd4bf;
-  }
-
-  .dec-root.dark .dec-map-add-btn:hover {
-    background-color: rgba(45, 212, 191, 0.08);
-  }
-
-  .dec-root .dec-map-add-btn:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: -1px;
+    background-color: color-mix(in srgb, var(--dec-teal-text) 8%, transparent);
   }
 
   .dec-root .dec-map-add-icon {
@@ -990,43 +911,6 @@
   }
 
   /* ── String list field (.dec-list-*) ─────────────────────────────────── */
-  /* Reuses dec-map-group border/header/delete-btn styles; only defines the
-     list-specific row layout (single full-width input, no key column). */
-
-  .dec-root .dec-list-group {
-    @apply dec:flex dec:flex-col dec:rounded-md
-      dec:border dec:border-gray-200 dec:overflow-hidden;
-  }
-
-  .dec-root.dark .dec-list-group {
-    @apply dec:border-gray-700;
-  }
-
-  .dec-root .dec-list-rows {
-    @apply dec:flex dec:flex-col
-      dec:border-t dec:border-gray-200;
-  }
-
-  .dec-root.dark .dec-list-rows {
-    @apply dec:border-gray-700;
-  }
-
-  .dec-root .dec-list-row {
-    @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:py-1
-      dec:border-b dec:border-gray-100;
-  }
-
-  .dec-root .dec-list-row:last-child {
-    @apply dec:border-b-0;
-  }
-
-  .dec-root.dark .dec-list-row {
-    @apply dec:border-gray-700/50;
-  }
-
-  .dec-root.dark .dec-list-row:last-child {
-    @apply dec:border-b-0;
-  }
 
   /* Value input fills the full row width */
   .dec-root .dec-list-value-input {
@@ -1048,10 +932,6 @@
 
   .dec-root.dark .dec-list-row-readonly {
     @apply dec:text-gray-300 dec:border-gray-700/50;
-  }
-
-  .dec-root.dark .dec-list-row-readonly:last-child {
-    @apply dec:border-b-0;
   }
 
   /* ── Event filter list (.dec-filter-*) ──────────────────────────────── */
@@ -1110,24 +990,11 @@
     @apply dec:inline-flex dec:items-center dec:gap-0.5
       dec:text-[10px] dec:font-medium
       dec:bg-transparent dec:border-0 dec:cursor-pointer dec:transition-colors;
-    color: #0d9488;
+    color: var(--dec-teal-text);
   }
 
   .dec-root .dec-filter-with-disclosure:hover {
-    color: #047857;
-  }
-
-  .dec-root.dark .dec-filter-with-disclosure {
-    color: #2dd4bf;
-  }
-
-  .dec-root.dark .dec-filter-with-disclosure:hover {
-    color: #5eead4;
-  }
-
-  .dec-root .dec-filter-with-disclosure:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: 1px;
+    color: var(--dec-teal-text-hover);
   }
 
   .dec-root .dec-filter-disclosure-icon {
@@ -1156,14 +1023,6 @@
 
   .dec-root.dark .dec-event-props-label {
     @apply dec:text-gray-400;
-  }
-
-  .dec-root .dec-event-props-label-hint {
-    @apply dec:text-gray-400 dec:italic;
-  }
-
-  .dec-root.dark .dec-event-props-label-hint {
-    @apply dec:text-gray-500;
   }
 
   .dec-root .dec-event-props-input {
@@ -1197,11 +1056,6 @@
 
   .dec-root.dark .dec-correlate-header:hover {
     @apply dec:bg-gray-800;
-  }
-
-  .dec-root .dec-correlate-header:focus-visible {
-    outline: 1px solid rgb(var(--dec-selected-rgb));
-    outline-offset: -1px;
   }
 
   .dec-root .dec-correlate-chevron {
@@ -1276,11 +1130,7 @@
 
   /* Highlight runtime expression values in teal */
   .dec-root .dec-filter-readonly-value--expression {
-    color: #0d9488;
-  }
-
-  .dec-root.dark .dec-filter-readonly-value--expression {
-    color: #2dd4bf;
+    color: var(--dec-teal-text);
   }
 
   /* Correlate read-only block */
@@ -1301,49 +1151,6 @@
 
   .dec-root.dark .dec-correlate-readonly-header {
     @apply dec:bg-gray-800/60;
-  }
-
-  .dec-root .dec-correlate-readonly-row {
-    @apply dec:flex dec:items-baseline dec:gap-1.5
-      dec:px-2 dec:py-1
-      dec:border-t dec:border-gray-100
-      dec:text-[10px];
-  }
-
-  .dec-root.dark .dec-correlate-readonly-row {
-    @apply dec:border-gray-700/50;
-  }
-
-  .dec-root .dec-correlate-readonly-key {
-    @apply dec:text-gray-500 dec:shrink-0;
-    font-family: var(--dec-font-mono);
-  }
-
-  .dec-root.dark .dec-correlate-readonly-key {
-    @apply dec:text-gray-400;
-  }
-
-  .dec-root .dec-correlate-readonly-arrow {
-    @apply dec:text-gray-400 dec:shrink-0;
-  }
-
-  .dec-root .dec-correlate-readonly-from {
-    @apply dec:flex-1 dec:break-all;
-    font-family: var(--dec-font-mono);
-    color: #0d9488;
-  }
-
-  .dec-root.dark .dec-correlate-readonly-from {
-    color: #2dd4bf;
-  }
-
-  .dec-root .dec-correlate-readonly-expect {
-    @apply dec:text-gray-500 dec:shrink-0;
-    font-family: var(--dec-font-mono);
-  }
-
-  .dec-root.dark .dec-correlate-readonly-expect {
-    @apply dec:text-gray-400;
   }
 
   /* Count-only header variant: right-align the badge when there is no label */
@@ -1461,11 +1268,6 @@
     @apply dec:underline;
   }
 
-  .dec-root .dec-form-breadcrumb-back:focus-visible,
-  .dec-root .dec-form-breadcrumb-crumb:focus-visible {
-    @apply dec:outline-2 dec:outline-offset-1 dec:outline-blue-500;
-  }
-
   .dec-root .dec-form-breadcrumb-current {
     @apply dec:px-1 dec:font-semibold dec:text-gray-900;
   }
@@ -1498,11 +1300,6 @@
     @apply dec:text-gray-500;
   }
 
-  .dec-root.dark .dec-form-breadcrumb-back:focus-visible,
-  .dec-root.dark .dec-form-breadcrumb-crumb:focus-visible {
-    @apply dec:outline-blue-400;
-  }
-
   /* ── Drill-in row ──────────────────────────────────────────────────── */
 
   .dec-root .dec-form-drill-row {
@@ -1513,10 +1310,6 @@
 
   .dec-root .dec-form-drill-row:hover {
     @apply dec:border-gray-300 dec:bg-gray-100;
-  }
-
-  .dec-root .dec-form-drill-row:focus-visible {
-    @apply dec:outline-2 dec:outline-offset-1 dec:outline-blue-500;
   }
 
   .dec-root .dec-form-drill-row.has-error {
@@ -1545,7 +1338,8 @@
   }
 
   .dec-root .dec-form-drill-pill.changed {
-    @apply dec:bg-blue-50 dec:text-blue-700;
+    color: var(--dec-accent-text);
+    background-color: color-mix(in srgb, var(--dec-accent-text) 12%, transparent);
   }
 
   .dec-root .dec-form-drill-pill.error {
@@ -1564,10 +1358,6 @@
     @apply dec:border-gray-600 dec:bg-gray-800;
   }
 
-  .dec-root.dark .dec-form-drill-row:focus-visible {
-    @apply dec:outline-blue-400;
-  }
-
   .dec-root.dark .dec-form-drill-row.has-error {
     @apply dec:border-red-500/60;
   }
@@ -1578,10 +1368,6 @@
 
   .dec-root.dark .dec-form-drill-row-summary {
     @apply dec:text-gray-300;
-  }
-
-  .dec-root.dark .dec-form-drill-pill.changed {
-    @apply dec:bg-blue-500/15 dec:text-blue-300;
   }
 
   .dec-root.dark .dec-form-drill-pill.error {

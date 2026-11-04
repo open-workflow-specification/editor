@@ -93,7 +93,11 @@ export function SidePanel() {
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent aria-label={t("aria.panel.content")} role="region">
+      <SidebarContent
+        aria-label={t("aria.panel.content")}
+        role="region"
+        className="dec:pl-5 dec:pr-5"
+      >
         {selectedNode ? (
           <NodeDetailsView node={selectedNode} />
         ) : (
