@@ -76,3 +76,6 @@ overrides:
   source-map-js@>=1.0.0 <1.2.2: ">=1.2.2"
   # Force a single TypeScript major across the dependency graph. To be removed when #508 is resolved.
   typescript: "catalog:"
+  # Temporary workaround for https://github.com/volarjs/services/pull/127
+  # Remove once a compatible volar-service-yaml release is available.
+  yaml-language-server: "1.24.0"
