@@ -51,8 +51,9 @@ export class DualEditorElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    this._root?.unmount();
+    const root = this._root;
     this._root = null;
+    root?.unmount();
     this._mountPoint?.remove();
     this._mountPoint = null;
   }
@@ -73,6 +74,7 @@ export class DualEditorElement extends HTMLElement {
       createLanguageServiceWorker: () => new LanguageServiceWorker(),
       onContentChange: (content) => {
         this._content = content;
+        this.render();
       },
     };
 

@@ -90,6 +90,21 @@ describe("DualEditorElement", () => {
     await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-b"));
   });
 
+  it("re-renders after edits so external content resets reach the editor", async () => {
+    const el = createElement();
+    const originalContent = "document:\n  dsl: '1.0.3'\n  name: workflow-a";
+    el.content = originalContent;
+    await vi.waitFor(() => expect(lastProps?.content).toBe(originalContent));
+
+    const onContentChange = lastProps?.onContentChange;
+    expect(onContentChange).toBeTypeOf("function");
+    (onContentChange as (content: string) => void)("edited workflow");
+    await vi.waitFor(() => expect(lastProps?.content).toBe("edited workflow"));
+
+    el.content = originalContent;
+    await vi.waitFor(() => expect(lastProps?.content).toBe(originalContent));
+  });
+
   it("passes YAML mode and updates when the language attribute changes", async () => {
     const el = createElement();
     el.setAttribute("language", "yaml");
