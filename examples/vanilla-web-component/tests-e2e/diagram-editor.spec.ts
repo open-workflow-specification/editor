@@ -16,9 +16,11 @@
 
 import { test, expect } from "@playwright/test";
 
-test("web component renders the diagram editor", async ({ page }) => {
+test("web component renders both dual editor panes", async ({ page }) => {
   await page.goto("/");
 
+  await expect(page.getByRole("region", { name: "Text editor" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Diagram editor" })).toBeVisible();
   await expect(page.getByTestId("diagram-container")).toBeVisible();
 
   await expect(page.getByTestId("rf__node-/do/consumeReading")).toContainText("consumeReading");
@@ -41,7 +43,7 @@ do:
         endpoint: https://example.com/hello`;
 
   await page.evaluate((yaml) => {
-    const editor = document.querySelector("openworkflowspec-diagram-editor") as any;
+    const editor = document.querySelector("openworkflowspec-dual-editor") as any;
     editor.content = yaml;
   }, newWorkflow);
 

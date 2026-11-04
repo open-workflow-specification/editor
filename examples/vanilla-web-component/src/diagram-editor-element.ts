@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-// React is required internally by @openworkflowspec/diagram-editor.
+// React is required internally by @openworkflowspec/dual-editor.
 // This wrapper encapsulates it behind a standard Custom Element API,
 // so host applications don't need to interact with React directly.
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { DiagramEditor } from "@openworkflowspec/diagram-editor";
-import type { DiagramEditorProps } from "@openworkflowspec/diagram-editor";
+import { DualEditor } from "@openworkflowspec/dual-editor";
+import type { DualEditorProps } from "@openworkflowspec/dual-editor";
+// Vite transforms this module import into a Worker constructor.
+// oxlint-disable-next-line import/default
+import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
 import type { ColorMode } from "@openworkflowspec/core";
-export class DiagramEditorElement extends HTMLElement {
-  static observedAttributes = ["locale", "color-mode", "read-only"];
+export class DualEditorElement extends HTMLElement {
+  static observedAttributes = ["locale", "color-mode", "read-only", "language"];
 
   private _root: Root | null = null;
   private _mountPoint: HTMLDivElement | null = null;
@@ -41,7 +44,7 @@ export class DiagramEditorElement extends HTMLElement {
   connectedCallback(): void {
     this._mountPoint = document.createElement("div");
     this._mountPoint.style.height = "100%";
-    this._mountPoint.dataset.testid = "diagram-editor-mount-point";
+    this._mountPoint.dataset.testid = "dual-editor-mount-point";
     this.appendChild(this._mountPoint);
     this._root = createRoot(this._mountPoint);
     this.render();
@@ -61,13 +64,18 @@ export class DiagramEditorElement extends HTMLElement {
   private render(): void {
     if (!this._root) return;
 
-    const props: DiagramEditorProps = {
+    const props: DualEditorProps = {
       content: this._content,
       locale: this.getAttribute("locale") ?? "en",
       isReadOnly: this.hasAttribute("read-only"),
       colorMode: (this.getAttribute("color-mode") as ColorMode) ?? "system",
+      language: this.getAttribute("language") === "yaml" ? "yaml" : "json",
+      createLanguageServiceWorker: () => new LanguageServiceWorker(),
+      onContentChange: (content) => {
+        this._content = content;
+      },
     };
 
-    this._root.render(createElement(DiagramEditor, props));
+    this._root.render(createElement(DualEditor, props));
   }
 }

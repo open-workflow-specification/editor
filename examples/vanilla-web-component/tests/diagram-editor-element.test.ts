@@ -16,22 +16,24 @@
 
 import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { screen } from "@testing-library/dom";
-import { DiagramEditorElement } from "../src/diagram-editor-element";
+import { DualEditorElement } from "../src/diagram-editor-element";
 
 let lastProps: Record<string, unknown> | null = null;
 
-vi.mock("@openworkflowspec/diagram-editor", () => ({
-  DiagramEditor: (props: Record<string, unknown>) => {
+vi.mock("@openworkflowspec/dual-editor", () => ({
+  DualEditor: (props: Record<string, unknown>) => {
     lastProps = props;
     return null;
   },
 }));
 
-vi.mock("@openworkflowspec/diagram-editor/styles.css", () => ({}));
+vi.mock("@openworkflowspec/text-editor/worker?worker", () => ({
+  default: class LanguageServiceWorker {},
+}));
 
 beforeAll(() => {
-  if (!customElements.get("openworkflowspec-diagram-editor")) {
-    customElements.define("openworkflowspec-diagram-editor", DiagramEditorElement);
+  if (!customElements.get("openworkflowspec-dual-editor")) {
+    customElements.define("openworkflowspec-dual-editor", DualEditorElement);
   }
 });
 
@@ -40,25 +42,25 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("DiagramEditorElement", () => {
-  function createElement(): DiagramEditorElement {
-    const el = document.createElement("openworkflowspec-diagram-editor") as DiagramEditorElement;
+describe("DualEditorElement", () => {
+  function createElement(): DualEditorElement {
+    const el = document.createElement("openworkflowspec-dual-editor") as DualEditorElement;
     document.body.appendChild(el);
     return el;
   }
 
   it("is registered as a custom element", () => {
     const el = createElement();
-    expect(el).toBeInstanceOf(DiagramEditorElement);
+    expect(el).toBeInstanceOf(DualEditorElement);
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
   it("creates a mount point div on connect", () => {
     createElement();
-    expect(screen.getByTestId("diagram-editor-mount-point")).toBeDefined();
+    expect(screen.getByTestId("dual-editor-mount-point")).toBeDefined();
   });
 
-  it("renders DiagramEditor with default props", async () => {
+  it("renders DualEditor with default props", async () => {
     createElement();
     await vi.waitFor(() => expect(lastProps).not.toBeNull());
     expect(lastProps).toEqual(
@@ -67,6 +69,8 @@ describe("DiagramEditorElement", () => {
         locale: "en",
         isReadOnly: false,
         colorMode: "system",
+        language: "json",
+        createLanguageServiceWorker: expect.any(Function),
       }),
     );
   });
@@ -84,5 +88,11 @@ describe("DiagramEditorElement", () => {
 
     el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-b";
     await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-b"));
+  });
+
+  it("passes YAML mode and updates when the language attribute changes", async () => {
+    const el = createElement();
+    el.setAttribute("language", "yaml");
+    await vi.waitFor(() => expect(lastProps?.language).toBe("yaml"));
   });
 });
