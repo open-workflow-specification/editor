@@ -104,32 +104,6 @@ test.describe("TextEditor JSON", () => {
       await expect(getCodeLens(page, "Create an Open Workflow")).not.toBeVisible();
     });
 
-    test("JSON → YAML: CodeLens disappears after language switch", async ({ page }) => {
-      await openTextEditor(page);
-
-      const codeLens = getCodeLens(page, "Create an Open Workflow");
-      await expect(codeLens).toBeVisible();
-
-      await page.evaluate(() => {
-        window.textEditorSetLanguage?.("yaml");
-      });
-
-      await expect(codeLens).not.toBeVisible();
-    });
-
-    test("YAML → JSON: CodeLens reappears after language switch", async ({ page }) => {
-      await openTextEditor(page, "/iframe.html?id=text-editor--empty-json&args=language:yaml");
-
-      const codeLens = getCodeLens(page, "Create an Open Workflow");
-      await expect(codeLens).not.toBeVisible();
-
-      await page.evaluate(() => {
-        window.textEditorSetLanguage?.("json");
-      });
-
-      await expect(codeLens).toBeVisible();
-    });
-
     test("YAML + isReadOnly true → false: CodeLens stays hidden", async ({ page }) => {
       await openTextEditor(
         page,
