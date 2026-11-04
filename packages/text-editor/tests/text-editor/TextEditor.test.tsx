@@ -139,30 +139,90 @@ describe("TextEditor", () => {
 
   describe("language", () => {
     it.each([
-      { fromLang: "json", toLang: "yaml", expectedCodeLens: true },
-      { fromLang: "yaml", toLang: "json", expectedCodeLens: true },
+      { language: "json", expectedUri: "inmemory://openworkflow/workflow.json" },
+      { language: "yaml", expectedUri: "inmemory://openworkflow/workflow.yaml" },
+    ] as const)("$language: creates the model with a matching URI", ({ language, expectedUri }) => {
+      renderEditor({ language });
+
+      expect(mockCreateModel).toHaveBeenCalledOnce();
+      expect(mockCreateModel.mock.calls[0]![1]).toBe(language);
+      expect(mockCreateModel.mock.calls[0]![2]!.toString()).toBe(expectedUri);
+    });
+
+    it.each([
+      { fromLang: "json", toLang: "yaml", expectedUri: "inmemory://openworkflow/workflow.yaml" },
+      { fromLang: "yaml", toLang: "json", expectedUri: "inmemory://openworkflow/workflow.json" },
     ] as const)(
-      "$fromLang → $toLang: updates codeLens before changing model language",
-      ({ fromLang, toLang, expectedCodeLens }) => {
-        const { rerenderEditor } = renderEditor({ language: fromLang });
-        mockEditorUpdateOptions.mockClear();
-        mockSetModelLanguage.mockClear();
+      "$fromLang → $toLang: recreates model, editor and language service worker",
+      ({ fromLang, toLang, expectedUri }) => {
+        const { rerenderEditor } = renderEditor({ content: "some content", language: fromLang });
 
         rerenderEditor({ language: toLang });
 
-        expect(mockEditorUpdateOptions).toHaveBeenCalledOnce();
-        expect(mockEditorUpdateOptions).toHaveBeenCalledWith(
-          expect.objectContaining({ codeLens: expectedCodeLens }),
+        expect(mockCreateModel).toHaveBeenCalledTimes(2);
+        expect(mockCreateModel).toHaveBeenLastCalledWith(
+          "some content",
+          toLang,
+          expect.objectContaining({ toString: expect.any(Function) }),
         );
-
-        expect(mockSetModelLanguage).toHaveBeenCalledOnce();
-        expect(mockSetModelLanguage).toHaveBeenCalledWith(mockModel, toLang);
-
-        expect(mockEditorUpdateOptions.mock.invocationCallOrder[0]!).toBeLessThan(
-          mockSetModelLanguage.mock.invocationCallOrder[0]!,
-        );
+        expect(mockCreateModel.mock.calls[1]![2]!.toString()).toBe(expectedUri);
+        expect(mockEditorCreate).toHaveBeenCalledTimes(2);
+        expect(createLanguageServiceWorker).toHaveBeenCalledTimes(2);
+        expect(mockCreateWebWorker).toHaveBeenCalledTimes(2);
+        expect(mockSetModelLanguage).not.toHaveBeenCalled();
       },
     );
+
+    it("disposes the previous language service, editor and model before recreating them", () => {
+      const { rerenderEditor } = renderEditor({ language: "json" });
+
+      rerenderEditor({ language: "yaml" });
+
+      expect(mockMonacoWorkerDispose).toHaveBeenCalledOnce();
+      expect(mockEditorDispose).toHaveBeenCalledOnce();
+      expect(mockModelDispose).toHaveBeenCalledOnce();
+      expect(mockEditorDispose.mock.invocationCallOrder[0]!).toBeLessThan(
+        mockEditorCreate.mock.invocationCallOrder[1]!,
+      );
+    });
+
+    it("keeps calling onContentChange for editor-driven changes after a language change", () => {
+      const onContentChange = vi.fn();
+      const { rerenderEditor } = renderEditor({ language: "json", onContentChange });
+
+      rerenderEditor({ language: "yaml" });
+      simulateEditorContentChange("edited after change");
+
+      expect(onContentChange).toHaveBeenCalledOnce();
+      expect(onContentChange).toHaveBeenCalledWith("edited after change");
+    });
+
+    it("preserves the content synchronized by the consumer across a language change", () => {
+      const onContentChange = vi.fn();
+      const { rerenderEditor } = renderEditor({
+        content: "original",
+        language: "json",
+        onContentChange,
+      });
+
+      simulateEditorContentChange("edited");
+      rerenderEditor({ content: "edited" });
+      rerenderEditor({ language: "yaml" });
+
+      expect(mockCreateModel).toHaveBeenLastCalledWith("edited", "yaml", expect.anything());
+      expect(mockEditorSetValue).not.toHaveBeenCalled();
+      expect(onContentChange).toHaveBeenCalledOnce();
+      expect(onContentChange).toHaveBeenCalledWith("edited");
+    });
+
+    it("does not call onContentChange when the language changes", () => {
+      const onContentChange = vi.fn();
+      const { rerenderEditor } = renderEditor({ language: "json", onContentChange });
+
+      rerenderEditor({ language: "yaml" });
+
+      expect(onContentChange).not.toHaveBeenCalled();
+    });
 
     it("YAML + isReadOnly true → false: codeLens is enabled", () => {
       const { rerenderEditor } = renderEditor({ language: "yaml", isReadOnly: true });
@@ -224,12 +284,12 @@ describe("TextEditor", () => {
   });
 
   describe("lifecycle", () => {
-    it("does not recreate Monaco or the language service when props change", () => {
+    it("does not recreate Monaco or the language service when props other than language change", () => {
       const { rerenderEditor } = renderEditor({ content: "v1" });
 
       rerenderEditor({ content: "v2" });
-      rerenderEditor({ language: "yaml" });
       rerenderEditor({ isReadOnly: true });
+      rerenderEditor({ colorMode: "dark" });
       rerenderEditor({ onContentChange: vi.fn() });
 
       expect(mockEditorCreate).toHaveBeenCalledOnce();

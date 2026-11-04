@@ -93,9 +93,9 @@ export const TextEditor = ({
       editorRef.current = null;
     };
 
-    // Monaco and its language-service worker must be created only once.
+    // Recreate Monaco and its language service only when the language changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language]);
 
   React.useEffect(() => {
     const editor = editorRef.current;
@@ -111,7 +111,7 @@ export const TextEditor = ({
     });
 
     return () => disposable.dispose();
-  }, [onContentChange]);
+  }, [onContentChange, language]);
 
   React.useEffect(() => {
     const editor = editorRef.current;
@@ -131,14 +131,8 @@ export const TextEditor = ({
       return;
     }
 
-    // updateOptions must run before setModelLanguage so that codeLens is applied
     editor.updateOptions({ readOnly: isReadOnly, codeLens: !isReadOnly });
-
-    const model = editor.getModel();
-    if (model && model.getLanguageId() !== language) {
-      monaco.editor.setModelLanguage(model, language);
-    }
-  }, [isReadOnly, language]);
+  }, [isReadOnly]);
 
   React.useEffect(() => {
     if (!editorRef.current) {
