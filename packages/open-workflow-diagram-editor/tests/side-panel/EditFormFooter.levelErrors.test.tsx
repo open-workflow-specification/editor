@@ -52,7 +52,7 @@ function renderWithRecordedErrors(
     React.useEffect(() => {
       recordValidationResult(
         { fieldErrors: {}, levelErrors, unplacedErrors, hasUnparseableValueMapPayload: false },
-        true,
+        { attempted: true },
       );
     }, [recordValidationResult]);
     return (

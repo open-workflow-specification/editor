@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { joinPath } from "./paths";
 import { ROOT_ONE_OF_PATH } from "./schemaToFormFields";
 import { getTaskTypeKey } from "./taskTypes";
 import { isObjectNotArray, isSafeKey } from "./utils";
@@ -37,7 +38,7 @@ export function flattenTask(
     const obj = value as Record<string, unknown>;
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
-      const fullKey = prefix ? `${prefix}.${k}` : k;
+      const fullKey = joinPath(prefix, k);
       if (Array.isArray(v) || wholeValuePaths.has(fullKey)) {
         result[fullKey] = v;
       } else if (typeof v === "object" && v !== null) {
@@ -306,8 +307,8 @@ function wroteOwnValue(
 function getPath(obj: Record<string, unknown>, parts: string[]): unknown {
   let node: unknown = obj;
   for (const part of parts) {
-    if (node === null || typeof node !== "object" || Array.isArray(node)) return undefined;
-    node = (node as Record<string, unknown>)[part];
+    if (!isObjectNotArray(node)) return undefined;
+    node = node[part];
   }
   return node;
 }

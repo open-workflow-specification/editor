@@ -206,7 +206,7 @@ describe("NodeDetailsView", () => {
               unplacedErrors: {},
               hasUnparseableValueMapPayload: false,
             },
-            true,
+            { attempted: true },
           );
         }, [recordValidationResult]);
         return <NodeDetailsView node={node} />;
@@ -278,7 +278,7 @@ describe("NodeDetailsView", () => {
               unplacedErrors: {},
               hasUnparseableValueMapPayload: false,
             },
-            true,
+            { attempted: true },
           );
         });
         return <NodeDetailsView node={node} />;

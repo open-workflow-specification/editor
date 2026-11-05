@@ -16,6 +16,8 @@
 
 import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
+import { useI18n } from "@openworkflowspec/i18n";
+import { getParentPath, isAtOrBelow } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenTask } from "@/core/taskDraft";
 import { collectSchemaFieldErrors } from "./collectSchemaFieldErrors";
@@ -27,7 +29,7 @@ import {
   type TaskValidationResult,
 } from "./taskLevelValidation";
 import { useTaskValidation } from "./taskValidationContext";
-import { SENTINEL_KEY } from "../sentinels";
+import { isReservedPath } from "../sentinels";
 
 export type FieldValidationHandler = (path: string) => void;
 
@@ -47,6 +49,7 @@ export function useFieldLevelValidation(
   isReadOnly: boolean,
   fields: FormFieldDescriptor[] = [],
 ): { validateField: FieldValidationHandler; revalidateIfAttempted: () => void } {
+  const { t } = useI18n();
   const { taskValidation, recordValidationResult } = useTaskValidation();
   const optionalSections = React.useMemo(() => buildOptionalSectionSet(fields), [fields]);
   const { hasWorkflowErrors, undeclaredProperties } = taskValidation;
@@ -59,27 +62,26 @@ export function useFieldLevelValidation(
     (result: TaskValidationResult) =>
       recordValidationResult(
         reconcileUndeclaredProperties(result, undeclaredProperties, form.getValues()),
-        undefined,
-        hasWorkflowErrors,
+        { hasWorkflowErrors },
       ),
     [recordValidationResult, hasWorkflowErrors, undeclaredProperties, form],
   );
 
   const revalidateIfAttempted = React.useCallback(() => {
     if (isReadOnly || !isCounting) return;
-    recordKeepingSource(validateTaskForm(nodeType, form, fields, { isReadOnly }));
-  }, [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource]);
+    recordKeepingSource(validateTaskForm(nodeType, form, fields, { t }));
+  }, [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource, t]);
 
   const validateField = React.useCallback<FieldValidationHandler>(
     (path: string) => {
-      if (isReadOnly || !path || path.startsWith(SENTINEL_KEY) || path.startsWith("__")) {
+      if (isReadOnly || !path || isReservedPath(path)) {
         return;
       }
 
       if (isCounting) {
         // Clear any error on the blurred field (including workflow) before running task validation
         form.clearErrors(path);
-        recordKeepingSource(validateTaskForm(nodeType, form, fields, { isReadOnly }));
+        recordKeepingSource(validateTaskForm(nodeType, form, fields, { t }));
         return;
       }
 
@@ -88,23 +90,21 @@ export function useFieldLevelValidation(
 
       // Required sections must still be validated when empty so a cleared required field
       // surfaces a missing-field error; only optional sections are skipped.
-      const parentSection = path.includes(".") ? path.slice(0, path.lastIndexOf(".")) : "";
+      const parentSection = getParentPath(path);
       if (
         parentSection &&
         optionalSections.has(parentSection) &&
         isSectionEmpty(parentSection, formValues)
       ) {
         // Clear errors for all paths under this now-empty optional section
-        const sectionPathsToClear = Object.keys(flat).filter(
-          (k) => k === parentSection || k.startsWith(`${parentSection}.`),
-        );
+        const sectionPathsToClear = Object.keys(flat).filter((k) => isAtOrBelow(k, parentSection));
         if (sectionPathsToClear.length > 0) {
           form.clearErrors(sectionPathsToClear);
         }
         return;
       }
 
-      const fieldErrors = collectSchemaFieldErrors(nodeType, formValues, fields, path);
+      const fieldErrors = collectSchemaFieldErrors(nodeType, formValues, fields, path, t);
 
       const errorMessage = fieldErrors[path];
       if (errorMessage) {
@@ -116,7 +116,7 @@ export function useFieldLevelValidation(
         form.clearErrors(path);
       }
     },
-    [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource, optionalSections],
+    [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource, optionalSections, t],
   );
 
   return { validateField, revalidateIfAttempted };

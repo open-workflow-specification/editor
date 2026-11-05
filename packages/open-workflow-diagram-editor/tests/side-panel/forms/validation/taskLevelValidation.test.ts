@@ -113,20 +113,6 @@ describe("validateTaskForm", () => {
     };
   }
 
-  it("does nothing in read-only mode", () => {
-    const { form, setError, clearErrors } = createMockForm({ wait: "invalid" });
-    const result = validateTaskForm("waitTask", form, waitFields, { isReadOnly: true });
-
-    expect(result).toEqual({
-      fieldErrors: {},
-      levelErrors: {},
-      unplacedErrors: {},
-      hasUnparseableValueMapPayload: false,
-    });
-    expect(setError).not.toHaveBeenCalled();
-    expect(clearErrors).not.toHaveBeenCalled();
-  });
-
   it("returns 0 errors for a schema-valid task", () => {
     const { form, setError, clearErrors } = createMockForm({ wait: "PT5S" });
     const result = validateTaskForm("waitTask", form, waitFields);

@@ -15,22 +15,36 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
+import { leaf } from "../../../test-utils/validation-helpers";
 import { renderHook } from "@testing-library/react";
+import type { UseFormReturn } from "react-hook-form";
 import type { SdkError } from "../../../../src/core";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
+import { useDiagramEditorContext } from "../../../../src/store/DiagramEditorContext";
+import {
+  INITIAL_TASK_VALIDATION_STATE,
+  useTaskValidation,
+} from "../../../../src/side-panel/forms/validation/taskValidationContext";
 import { useWorkflowErrorsForForm } from "../../../../src/side-panel/forms/validation/useWorkflowErrorsForForm";
+import { createMockContextValue } from "../../../test-utils/render-helpers";
+
+vi.mock("../../../../src/store/DiagramEditorContext", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../src/store/DiagramEditorContext")>()),
+  useDiagramEditorContext: vi.fn(),
+}));
+
+vi.mock(
+  "../../../../src/side-panel/forms/validation/taskValidationContext",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../src/side-panel/forms/validation/taskValidationContext")
+    >()),
+    useTaskValidation: vi.fn(),
+  }),
+);
 
 const taskRef = "/do/0/step1";
 const taskReferences = new Set(["/do/0/step1", "/do/1/step2"]);
-
-const leaf = (path: string): FormFieldDescriptor => ({
-  kind: "string",
-  path,
-  label: path,
-  required: false,
-  multiline: false,
-  isRuntimeExpression: false,
-});
 
 const fields: FormFieldDescriptor[] = [
   leaf("then"),
@@ -49,6 +63,7 @@ function setup() {
     clearErrors: vi.fn(),
     getValues: vi.fn(() => ({})),
     recordValidationResult: vi.fn(),
+    resetValidation: vi.fn(),
   };
 }
 
@@ -59,19 +74,27 @@ function useHook(
   key: string,
   isReadOnly = false,
 ) {
-  useWorkflowErrorsForForm(
-    errors,
-    reference,
-    taskReferences,
-    mocks.setError,
-    mocks.clearErrors,
-    key,
-    fields,
-    mocks.getValues as never,
-    mocks.recordValidationResult,
-    isReadOnly,
-    "test-node-type",
+  vi.mocked(useDiagramEditorContext).mockReturnValue(
+    createMockContextValue({ errors, taskReferences, isReadOnly }),
   );
+  vi.mocked(useTaskValidation).mockReturnValue({
+    taskValidation: INITIAL_TASK_VALIDATION_STATE,
+    errorCount: 0,
+    recordValidationResult: mocks.recordValidationResult,
+    resetValidation: mocks.resetValidation,
+  });
+  const form = {
+    setError: mocks.setError,
+    clearErrors: mocks.clearErrors,
+    getValues: mocks.getValues,
+  } as unknown as UseFormReturn<Record<string, unknown>>;
+  useWorkflowErrorsForForm({
+    form,
+    nodeType: "test-node-type",
+    taskReference: reference,
+    allFields: fields,
+    resetKey: key,
+  });
 }
 
 describe("useWorkflowErrorsForForm", () => {
@@ -113,8 +136,7 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: {},
         hasUnparseableValueMapPayload: false,
       },
-      undefined,
-      true,
+      { hasWorkflowErrors: true },
     );
   });
 
@@ -132,8 +154,7 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: { mystery: "Unknown" },
         levelErrors: { mystery: "Unknown" },
       }),
-      undefined,
-      true,
+      { hasWorkflowErrors: true },
     );
   });
 
@@ -146,8 +167,7 @@ describe("useWorkflowErrorsForForm", () => {
     expect(mocks.setError).not.toHaveBeenCalled();
     expect(mocks.recordValidationResult).toHaveBeenCalledWith(
       expect.objectContaining({ levelErrors: { "": "General" }, unplacedErrors: {} }),
-      undefined,
-      true,
+      { hasWorkflowErrors: true },
     );
   });
 
@@ -169,16 +189,12 @@ describe("useWorkflowErrorsForForm", () => {
     rerender({ errs: [], key: "node-1" });
 
     expect(mocks.clearErrors).toHaveBeenCalledWith(["then"]);
-    expect(mocks.recordValidationResult).toHaveBeenLastCalledWith(
-      {
-        fieldErrors: {},
-        levelErrors: {},
-        unplacedErrors: {},
-        hasUnparseableValueMapPayload: false,
-      },
-      undefined,
-      false,
-    );
+    expect(mocks.recordValidationResult).toHaveBeenLastCalledWith({
+      fieldErrors: {},
+      levelErrors: {},
+      unplacedErrors: {},
+      hasUnparseableValueMapPayload: false,
+    });
   });
 
   it("does not clear the context after a reset-key change when there are no errors", () => {
@@ -216,7 +232,7 @@ describe("useWorkflowErrorsForForm", () => {
   });
 
   describe("read-only mode", () => {
-    it("is a no-op — does not set field errors and leaves the context untouched", () => {
+    it("seeds nothing and clears the form errors and the context", () => {
       const mocks = setup();
       const errors: SdkError[] = [
         { path: `${taskRef}/call/endpoint`, errorType: "#/x/type", message: "Bad endpoint" },
@@ -226,6 +242,27 @@ describe("useWorkflowErrorsForForm", () => {
 
       expect(mocks.setError).not.toHaveBeenCalled();
       expect(mocks.recordValidationResult).not.toHaveBeenCalled();
+      expect(mocks.resetValidation).toHaveBeenCalledTimes(1);
+      expect(mocks.clearErrors).toHaveBeenCalledWith();
+    });
+
+    it("clears what edit mode seeded on a switch to read-only", () => {
+      const mocks = setup();
+      const errors: SdkError[] = [
+        { path: `${taskRef}/call/endpoint`, errorType: "#/x/type", message: "Bad endpoint" },
+      ];
+
+      const { rerender } = renderHook(
+        ({ readOnly }) => useHook(mocks, errors, taskRef, "node-1", readOnly),
+        { initialProps: { readOnly: false } },
+      );
+      expect(mocks.resetValidation).not.toHaveBeenCalled();
+
+      rerender({ readOnly: true });
+
+      expect(mocks.resetValidation).toHaveBeenCalledTimes(1);
+      expect(mocks.clearErrors).toHaveBeenCalledWith(["call.endpoint"]);
+      expect(mocks.clearErrors).toHaveBeenLastCalledWith();
     });
   });
 });

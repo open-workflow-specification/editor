@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { isAtOrBelow } from "@/core/paths";
+
 /**
  * The drill row's badge counts. What changed comes from `computeDraftChanges`
  * (`forms/draft.ts`), shared through `useDraftChanges`.
@@ -24,7 +26,7 @@
  * DrillRow shows "3 changed" badge for changes inside that section
  */
 export function countChangedUnder(paths: readonly string[], prefix: string): number {
-  return paths.filter((path) => path === prefix || path.startsWith(`${prefix}.`)).length;
+  return paths.filter((path) => isAtOrBelow(path, prefix)).length;
 }
 
 /**

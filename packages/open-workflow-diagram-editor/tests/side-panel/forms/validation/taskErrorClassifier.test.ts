@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { leaf } from "../../../test-utils/validation-helpers";
 import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { buildActiveFormView } from "../../../../src/side-panel/forms/validation/activeFormView";
@@ -22,20 +23,13 @@ import { GROUP_KEYWORD } from "../../../../src/side-panel/forms/validation/branc
 import {
   classifyErrorPath,
   classifyTaskErrors,
+  emptyClassifiedErrors,
+  mergeClassifiedErrors,
   recordClassification,
   UNDECLARED_PROPERTY_KEYWORDS,
   type ClassifiedTaskErrors,
   type Classification,
 } from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
-
-const leaf = (path: string, required = false): FormFieldDescriptor => ({
-  kind: "string",
-  path,
-  label: path,
-  required,
-  multiline: false,
-  isRuntimeExpression: false,
-});
 
 const fields: FormFieldDescriptor[] = [
   leaf("name", true),
@@ -340,12 +334,6 @@ describe("classifyErrorPath", () => {
 });
 
 describe("recordClassification", () => {
-  const emptyResult = (): ClassifiedTaskErrors => ({
-    fieldErrors: {},
-    levelErrors: {},
-    unplacedErrors: {},
-  });
-
   it.each([
     {
       name: "a field",
@@ -370,7 +358,7 @@ describe("recordClassification", () => {
   ] satisfies Array<{ name: string; placed: Classification; expected: ClassifiedTaskErrors }>)(
     "records $name",
     ({ placed, expected }) => {
-      const result = emptyResult();
+      const result = emptyClassifiedErrors();
 
       recordClassification(result, placed, "msg");
 
@@ -379,12 +367,46 @@ describe("recordClassification", () => {
   );
 
   it("keeps the first message of a path", () => {
-    const result = emptyResult();
+    const result = emptyClassifiedErrors();
 
     recordClassification(result, { kind: "field", path: "a" }, "first");
     recordClassification(result, { kind: "field", path: "a" }, "second");
 
     expect(result.fieldErrors).toEqual({ a: "first" });
+  });
+});
+
+describe("emptyClassifiedErrors", () => {
+  it("returns a fresh object each call", () => {
+    const first = emptyClassifiedErrors();
+    first.fieldErrors.a = "msg";
+
+    expect(emptyClassifiedErrors()).toEqual({
+      fieldErrors: {},
+      levelErrors: {},
+      unplacedErrors: {},
+    });
+  });
+});
+
+describe("mergeClassifiedErrors", () => {
+  it("unions every map, keeping the primary message on a path both hold", () => {
+    const primary: ClassifiedTaskErrors = {
+      fieldErrors: { a: "primary" },
+      levelErrors: { obj: "primary" },
+      unplacedErrors: {},
+    };
+    const secondary: ClassifiedTaskErrors = {
+      fieldErrors: { a: "secondary", b: "secondary" },
+      levelErrors: { x: "secondary" },
+      unplacedErrors: { x: "secondary" },
+    };
+
+    expect(mergeClassifiedErrors(primary, secondary)).toEqual({
+      fieldErrors: { a: "primary", b: "secondary" },
+      levelErrors: { obj: "primary", x: "secondary" },
+      unplacedErrors: { x: "secondary" },
+    });
   });
 });
 

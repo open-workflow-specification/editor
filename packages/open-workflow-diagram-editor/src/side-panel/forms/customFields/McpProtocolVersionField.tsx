@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import * as React from "react";
-import { Controller, useFormContext } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
-import { Input } from "../ui/input";
 import type { McpProtocolVersionField as McpProtocolVersionFieldDescriptor } from "../../../core/schemaToFormFields";
-import { useTaskFormContext } from "../taskFormContext";
-import { useFieldError, FieldWithError } from "./fieldHelpers";
+import { PatternTextControl } from "./PatternTextControl";
 
 // ---------------------------------------------------------------------------
 // ISO 8601 calendar-date pattern  (YYYY-MM-DD)
@@ -38,38 +33,13 @@ export type McpProtocolVersionFieldProps = {
 };
 
 export function McpProtocolVersionField({ field, id }: McpProtocolVersionFieldProps) {
-  const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
   const { t } = useI18n();
-  const errorMessage = useFieldError(field.path);
-
   return (
-    <Controller
-      name={field.path}
-      control={control}
-      render={({ field: rhfField }) => (
-        <FieldWithError errorMessage={errorMessage}>
-          <Input
-            id={id}
-            value={
-              rhfField.value == null || typeof rhfField.value === "object"
-                ? ""
-                : String(rhfField.value)
-            }
-            onChange={rhfField.onChange}
-            onBlur={() => {
-              rhfField.onBlur();
-              validateField?.(field.path);
-            }}
-            name={rhfField.name}
-            pattern={MCP_PROTOCOL_VERSION_PATTERN}
-            disabled={isReadOnly}
-            readOnly={isReadOnly}
-            placeholder={t("sidebar.mcpProtocolVersion.placeholder")}
-            aria-invalid={errorMessage !== undefined || undefined}
-          />
-        </FieldWithError>
-      )}
+    <PatternTextControl
+      path={field.path}
+      id={id}
+      pattern={MCP_PROTOCOL_VERSION_PATTERN}
+      placeholder={t("sidebar.mcpProtocolVersion.placeholder")}
     />
   );
 }

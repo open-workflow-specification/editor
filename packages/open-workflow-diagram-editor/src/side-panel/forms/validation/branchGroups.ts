@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { isPointerAtOrBelow, pointerToDotPath } from "@/core/paths";
 import type { PresenceKeys } from "./activeFormView";
 
 /**
@@ -37,15 +38,6 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function toDotPath(instancePath: string): string {
-  return instancePath === "" ? "" : instancePath.replace(/^\//, "").split("/").join(".");
-}
-
-/** Checks containment using `/` separators (Ajv JSON Pointer instance paths). */
-function isAtOrBelow(instancePath: string, base: string): boolean {
-  return instancePath === base || instancePath.startsWith(`${base}/`);
-}
-
 function collapseGroup(
   group: ErrorObject,
   errors: ErrorObject[],
@@ -59,11 +51,11 @@ function collapseGroup(
     (g) =>
       g.schemaPath === group.schemaPath &&
       g.instancePath !== group.instancePath &&
-      isAtOrBelow(g.instancePath, group.instancePath),
+      isPointerAtOrBelow(g.instancePath, group.instancePath),
   );
   const ownedBy = (e: ErrorObject): boolean =>
-    isAtOrBelow(e.instancePath, group.instancePath) &&
-    !shared.some((g) => isAtOrBelow(e.instancePath, g.instancePath));
+    isPointerAtOrBelow(e.instancePath, group.instancePath) &&
+    !shared.some((g) => isPointerAtOrBelow(e.instancePath, g.instancePath));
   const members = errors.filter(
     (e) => e !== group && e.schemaPath.startsWith(prefix) && ownedBy(e),
   );
@@ -152,7 +144,12 @@ export function collapseBranchGroups(
     );
   let current = [...ajvErrors];
   for (const group of groups) {
-    current = collapseGroup(group, current, presence.get(toDotPath(group.instancePath)), groups);
+    current = collapseGroup(
+      group,
+      current,
+      presence.get(pointerToDotPath(group.instancePath)),
+      groups,
+    );
   }
   return current;
 }

@@ -18,6 +18,7 @@ export * from "./workflowSdk";
 export * from "./workflowEditing";
 export * from "./validationErrors";
 export * from "./graph";
+export * from "./paths";
 export * from "./taskDraft";
 export * from "./taskSubType";
 export * from "./taskTypes";

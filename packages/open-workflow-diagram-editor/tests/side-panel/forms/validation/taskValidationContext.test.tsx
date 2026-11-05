@@ -52,7 +52,7 @@ describe("taskValidationContext", () => {
           unplacedErrors: {},
           hasUnparseableValueMapPayload: false,
         },
-        true,
+        { attempted: true },
       );
     });
 
@@ -75,7 +75,7 @@ describe("taskValidationContext", () => {
           unplacedErrors: {},
           hasUnparseableValueMapPayload: true,
         },
-        true,
+        { attempted: true },
       );
     });
 
@@ -100,7 +100,7 @@ describe("taskValidationContext", () => {
     };
 
     act(() => {
-      result.current.recordValidationResult(seeded, undefined, true);
+      result.current.recordValidationResult(seeded, { hasWorkflowErrors: true });
     });
 
     expect(result.current.taskValidation.hasWorkflowErrors).toBe(true);
@@ -108,7 +108,7 @@ describe("taskValidationContext", () => {
     expect(result.current.errorCount).toBe(1);
 
     act(() => {
-      result.current.recordValidationResult(seeded, true);
+      result.current.recordValidationResult(seeded, { attempted: true });
     });
 
     expect(result.current.taskValidation.hasWorkflowErrors).toBe(false);

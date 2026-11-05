@@ -28,12 +28,15 @@ export function sentinelPath(path: string): string {
   return `${SENTINEL_PREFIX}${path}${SENTINEL_SUFFIX}`;
 }
 
+/** The sentinel values in form `values`, flattened and keyed by full sentinel path (`sentinelPath`). */
+export function flattenSentinels(values: Record<string, unknown>): Record<string, unknown> {
+  return flattenTask({ [SENTINEL_KEY]: values[SENTINEL_KEY] ?? {} });
+}
+
 /** The selected variant's label of every one-of in `values`, keyed by path. */
 export function readSentinels(values: Record<string, unknown>): Record<string, string> {
   const labels: Record<string, string> = {};
-  for (const [path, value] of Object.entries(
-    flattenTask({ [SENTINEL_KEY]: values[SENTINEL_KEY] }),
-  )) {
+  for (const [path, value] of Object.entries(flattenSentinels(values))) {
     if (
       path.startsWith(SENTINEL_PREFIX) &&
       path.endsWith(SENTINEL_SUFFIX) &&

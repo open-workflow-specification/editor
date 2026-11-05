@@ -16,8 +16,40 @@
 
 import { dump, load } from "js-yaml";
 import type { ContentFormat, EnumField } from "../../../core/schemaToFormFields";
+import { isObjectNotArray } from "../../../core/utils";
 import { getNestedValue } from "../taskFormContext";
 import { innerTextPath } from "../sentinels";
+
+// ---------------------------------------------------------------------------
+// JSON/YAML text for the editor's structured-value textareas
+// ---------------------------------------------------------------------------
+
+/** Formats a value as indented JSON or block YAML. Throws when it cannot be serialised. */
+export function formatStructuredText(value: unknown, format: ContentFormat): string {
+  return format === "json"
+    ? JSON.stringify(value, null, 2)
+    : dump(value, { indent: 2, lineWidth: -1 }).trimEnd();
+}
+
+/** The text a structured-value textarea shows: `""` for no value, a string as itself. */
+export function valueToText(value: unknown, format: ContentFormat): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value;
+  try {
+    return formatStructuredText(value, format);
+  } catch {
+    return String(value);
+  }
+}
+
+/** Parses JSON or YAML text. Throws on malformed text. */
+export function parseText(text: string, format: ContentFormat): unknown {
+  if (format === "json") {
+    return JSON.parse(text);
+  }
+  // js-yaml's `load` is a superset of JSON, so YAML format also accepts JSON.
+  return load(text);
+}
 
 // ---------------------------------------------------------------------------
 // Value-map enum inner objects (e.g. `backoff: { exponential: {...} }`).
@@ -30,9 +62,7 @@ export function deriveInnerObject(value: unknown): Record<string, unknown> {
     const key = Object.keys(obj)[0];
     if (key !== undefined) {
       const inner = obj[key];
-      return inner !== null && typeof inner === "object" && !Array.isArray(inner)
-        ? (inner as Record<string, unknown>)
-        : {};
+      return isObjectNotArray(inner) ? inner : {};
     }
   }
   return {};
@@ -41,9 +71,7 @@ export function deriveInnerObject(value: unknown): Record<string, unknown> {
 export function serializeInnerObject(obj: Record<string, unknown>, format: ContentFormat): string {
   if (Object.keys(obj).length === 0) return "";
   try {
-    return format === "json"
-      ? JSON.stringify(obj, null, 2)
-      : dump(obj, { indent: 2, lineWidth: -1 }).trimEnd();
+    return formatStructuredText(obj, format);
   } catch {
     return "";
   }
@@ -60,10 +88,8 @@ export function parseInnerObject(
 ): Record<string, unknown> | null {
   if (!text || text.trim() === "") return {};
   try {
-    const parsed = format === "json" ? JSON.parse(text) : (load(text) as unknown);
-    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
+    const parsed = parseText(text, format);
+    return isObjectNotArray(parsed) ? parsed : null;
   } catch {
     return null;
   }

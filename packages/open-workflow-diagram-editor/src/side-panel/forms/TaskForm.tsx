@@ -39,8 +39,7 @@ import {
   useTaskValidation,
 } from "./validation";
 import { useEditSession } from "@/side-panel/EditSession";
-import { flattenTask } from "@/core/taskDraft";
-import { SENTINEL_KEY, readSentinels, sentinelPath } from "./sentinels";
+import { SENTINEL_KEY, flattenSentinels, readSentinels, sentinelPath } from "./sentinels";
 import { useDrillNavigation } from "./drill/useDrillNavigation";
 import { DrillContext, InlineLevelsContext } from "./drill/DrillContext";
 import type { VariantSelector } from "./drill/drill";
@@ -66,8 +65,10 @@ export type TaskFormProps = {
 };
 
 export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProps) {
+  // The form layer reads and writes the task by path, so it sees it as a plain record.
+  const taskData = task as Record<string, unknown>;
   const { t } = useI18n();
-  const { isReadOnly, model, errors, taskReferences, contentFormat } = useDiagramEditorContext();
+  const { isReadOnly, model, contentFormat } = useDiagramEditorContext();
   const { form, resetDraft, draftVersion } = useEditSession();
   const siblingTaskNames = useSiblingTaskNames(model, nodeId);
 
@@ -77,7 +78,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     [nodeType, contentFormat],
   );
 
-  const { resetValidation, recordValidationResult } = useTaskValidation();
+  const { resetValidation } = useTaskValidation();
 
   // ── Reset form on node change ─────────────────────────────────────────────
   // Runs whenever nodeId changes — covers initial mount and switching nodes.
@@ -89,7 +90,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // sibling fields dirty.
   React.useEffect(() => {
     resetValidation();
-    resetDraft(allFields, task as Record<string, unknown>);
+    resetDraft(allFields, taskData);
     // `task` is intentionally excluded: on node change we always reset to the
     // current task snapshot. External task mutations (undo/redo) are handled
     // by the effect below.
@@ -102,7 +103,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // Structural equality guards against spurious resets when the nodes array is
   // rebuilt with identical content. A format switch resets even for an equal task:
   // the draft's inner-object text is serialised in the format the fields parse.
-  const prevTaskRef = React.useRef<Specification.Task>(task);
+  const prevTaskRef = React.useRef(taskData);
   const prevNodeIdRef = React.useRef(nodeId);
   const prevAllFieldsRef = React.useRef(allFields);
   React.useEffect(() => {
@@ -110,20 +111,20 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     prevNodeIdRef.current = nodeId;
     const fieldsChanged = prevAllFieldsRef.current !== allFields;
     prevAllFieldsRef.current = allFields;
-    if (!fieldsChanged && structuralEqual(task, prevTaskRef.current)) return;
+    if (!fieldsChanged && structuralEqual(taskData, prevTaskRef.current)) return;
     const prevTask = prevTaskRef.current;
-    prevTaskRef.current = task;
+    prevTaskRef.current = taskData;
 
     if (nodeChanged) return;
     resetValidation();
     // Preserve the current sentinel selections (e.g. from a just-completed Apply)
     // so that variant combos stay on the user's chosen variant when the task has
     // no value for a field (cleared/empty).
-    resetDraft(allFields, task as Record<string, unknown>, {
-      previousTask: prevTask as Record<string, unknown>,
+    resetDraft(allFields, taskData, {
+      previousTask: prevTask,
       liveSentinels: readSentinels(form.getValues()),
     });
-  }, [task, nodeId, form, allFields, resetDraft, resetValidation]);
+  }, [taskData, nodeId, form, allFields, resetDraft, resetValidation]);
 
   // ── One-of variant snapshots ──────────────────────────────────────────────
   // Held at TaskForm level (survives drill unmount). Cleared on task change.
@@ -136,28 +137,14 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // Declared after the reset effects above: effects run in declaration order, so the
   // seed lands after `resetValidation()` and `resetDraft()`. `draftVersion` re-seeds after
   // every draft reset (Cancel, Apply, undo/redo), which wipes the form's errors.
-  useWorkflowErrorsForForm(
-    errors,
-    taskReference,
-    taskReferences,
-    form.setError,
-    form.clearErrors,
-    `${nodeId ?? ""}:${draftVersion}`,
-    allFields,
-    form.getValues,
-    recordValidationResult,
-    isReadOnly,
+  // In read-only mode it clears what it seeded instead: errors are listed at the top of the panel.
+  useWorkflowErrorsForForm({
+    form,
     nodeType,
-  );
-
-  // ── Read-only: errors are listed only at the top of the panel ─────────────
-  // Edit mode seeds its own copy of the errors (level + field errors) that the form renders
-  // inline. They survive a switch to read-only, where they would repeat the top list.
-  React.useEffect(() => {
-    if (!isReadOnly) return;
-    resetValidation();
-    form.clearErrors();
-  }, [isReadOnly, form, resetValidation]);
+    taskReference,
+    allFields,
+    resetKey: `${nodeId ?? ""}:${draftVersion}`,
+  });
 
   // ── Field-level schema validation on blur / edit ─────────────────────────
   const { validateField, revalidateIfAttempted } = useFieldLevelValidation(
@@ -170,8 +157,8 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   // ── Read-only: filter fields to only those with values ────────────────────
   const visibleFields = React.useMemo(() => {
     if (!isReadOnly) return allFields;
-    return filterReadOnlyFields(allFields, task as Record<string, unknown>);
-  }, [allFields, isReadOnly, task]);
+    return filterReadOnlyFields(allFields, taskData);
+  }, [allFields, isReadOnly, taskData]);
 
   //  ── Drill-in navigation  ────────────────────
   // Flattened via `compute` to create a new object reference on each change.
@@ -180,24 +167,18 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
   const sentinels = useWatch({
     control: form.control,
     name: SENTINEL_KEY,
-    compute: (value: unknown) => flattenTask({ [SENTINEL_KEY]: value ?? {} }),
+    compute: (value: unknown) => flattenSentinels({ [SENTINEL_KEY]: value }),
   }) as Record<string, unknown>;
   const selectVariant = React.useCallback<VariantSelector>(
     (field) =>
-      field.variants[
-        selectedVariantIndex(
-          field,
-          sentinels[sentinelPath(field.path)],
-          task as Record<string, unknown>,
-        )
-      ],
-    [sentinels, task],
+      field.variants[selectedVariantIndex(field, sentinels[sentinelPath(field.path)], taskData)],
+    [sentinels, taskData],
   );
   const navigation = useDrillNavigation({
     fields: visibleFields,
     nodeId,
     isReadOnly,
-    task: task as Record<string, unknown>,
+    task: taskData,
     selectVariant,
   });
 
@@ -208,7 +189,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
       value={{
         isReadOnly,
         siblingTaskNames,
-        taskData: task as Record<string, unknown>,
+        taskData,
         validateField,
         revalidateIfAttempted,
       }}

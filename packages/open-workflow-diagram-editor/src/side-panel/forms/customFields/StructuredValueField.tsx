@@ -16,10 +16,9 @@
 
 import * as React from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
-import { dump, load } from "js-yaml";
 import { Textarea } from "../ui/textarea";
 import { RUNTIME_EXPRESSION_PATTERN, type JsonField } from "../../../core/schemaToFormFields";
-import type { ContentFormat } from "../../../core/workflowSdk";
+import { parseText, valueToText } from "./innerObjectText";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 
@@ -31,26 +30,6 @@ export type StructuredValueFieldProps = {
   field: JsonField;
   id?: string | undefined;
 };
-
-export function valueToText(value: unknown, format: ContentFormat): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "string") return value;
-  try {
-    return format === "json"
-      ? JSON.stringify(value, null, 2)
-      : dump(value, { indent: 2, lineWidth: -1 }).trimEnd();
-  } catch {
-    return String(value);
-  }
-}
-
-export function parseText(text: string, format: ContentFormat): unknown {
-  if (format === "json") {
-    return JSON.parse(text);
-  }
-  // js-yaml's `load` is a superset of JSON, so YAML format also accepts JSON.
-  return load(text);
-}
 
 export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
   const { control, getValues, getFieldState } = useFormContext<Record<string, unknown>>();

@@ -15,7 +15,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as React from "react";
 import { renderHook, act } from "@testing-library/react";
+import { I18nProvider } from "@openworkflowspec/i18n";
 import type { UseFormReturn } from "react-hook-form";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { useFieldLevelValidation } from "../../../../src/side-panel/forms/validation/useFieldLevelValidation";
@@ -24,6 +26,16 @@ import {
   TaskValidationProvider,
   useTaskValidation,
 } from "../../../../src/side-panel/forms/validation/taskValidationContext";
+
+import { en } from "../../../../src/i18n/locales/en";
+
+function ValidationWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <I18nProvider locale="en" dictionaries={{ en }}>
+      <TaskValidationProvider>{children}</TaskValidationProvider>
+    </I18nProvider>
+  );
+}
 
 vi.mock("../../../../src/core/schemaValidator", () => ({
   validateTaskData: vi.fn().mockReturnValue(null),
@@ -76,7 +88,7 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("wait", form, true, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("wait");
@@ -106,7 +118,7 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("wait");
@@ -131,7 +143,7 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("wait");
@@ -150,7 +162,7 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("call", form, false, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("auth.token");
@@ -160,7 +172,7 @@ describe("useFieldLevelValidation", () => {
     expect(setError).not.toHaveBeenCalled();
   });
 
-  it("ignores empty paths and internal sentinel paths", () => {
+  it("ignores empty paths and reserved editor paths", () => {
     const setError = vi.fn();
     const clearErrors = vi.fn();
     const form = {
@@ -171,12 +183,12 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("");
     result.current.validateField("__oneof__.auth");
-    result.current.validateField("__internal");
+    result.current.validateField("__innertext__.body");
 
     expect(form.getValues).not.toHaveBeenCalled();
     expect(setError).not.toHaveBeenCalled();
@@ -224,7 +236,7 @@ describe("useFieldLevelValidation", () => {
 
     const { result } = renderHook(
       () => useFieldLevelValidation("callTask", form, false, requiredSectionFields),
-      { wrapper: TaskValidationProvider },
+      { wrapper: ValidationWrapper },
     );
 
     result.current.validateField("with.endpoint");
@@ -253,7 +265,7 @@ describe("useFieldLevelValidation", () => {
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
     const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: TaskValidationProvider,
+      wrapper: ValidationWrapper,
     });
 
     result.current.validateField("wait");
@@ -288,12 +300,12 @@ describe("useFieldLevelValidation", () => {
           const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
           return { validation, fieldValidation };
         },
-        { wrapper: TaskValidationProvider },
+        { wrapper: ValidationWrapper },
       );
 
       // Set attempted latch to true
       act(() => {
-        result.current.validation.recordValidationResult(EMPTY_RESULT, true);
+        result.current.validation.recordValidationResult(EMPTY_RESULT, { attempted: true });
       });
 
       // Blur field
@@ -323,11 +335,11 @@ describe("useFieldLevelValidation", () => {
           const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
           return { validation, fieldValidation };
         },
-        { wrapper: TaskValidationProvider },
+        { wrapper: ValidationWrapper },
       );
 
       act(() => {
-        result.current.validation.recordValidationResult(EMPTY_RESULT, true);
+        result.current.validation.recordValidationResult(EMPTY_RESULT, { attempted: true });
       });
 
       act(() => {
@@ -365,7 +377,7 @@ describe("useFieldLevelValidation", () => {
           const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
           return { validation, fieldValidation };
         },
-        { wrapper: TaskValidationProvider },
+        { wrapper: ValidationWrapper },
       );
 
       // When attempted is false, revalidateIfAttempted does nothing
@@ -376,7 +388,7 @@ describe("useFieldLevelValidation", () => {
 
       // When attempted is true, revalidateIfAttempted updates state
       act(() => {
-        result.current.validation.recordValidationResult(EMPTY_RESULT, true);
+        result.current.validation.recordValidationResult(EMPTY_RESULT, { attempted: true });
       });
       act(() => {
         result.current.fieldValidation.revalidateIfAttempted();
@@ -405,10 +417,10 @@ describe("useFieldLevelValidation", () => {
           validation: useTaskValidation(),
           fieldValidation: useFieldLevelValidation("wait", form, false, fields),
         }),
-        { wrapper: TaskValidationProvider },
+        { wrapper: ValidationWrapper },
       );
       act(() => {
-        result.current.validation.recordValidationResult(seeded, undefined, true);
+        result.current.validation.recordValidationResult(seeded, { hasWorkflowErrors: true });
       });
       return { result, clearErrors };
     }
@@ -480,10 +492,10 @@ describe("useFieldLevelValidation", () => {
           validation: useTaskValidation(),
           fieldValidation: useFieldLevelValidation("wait", form, false, fields),
         }),
-        { wrapper: TaskValidationProvider },
+        { wrapper: ValidationWrapper },
       );
       act(() => {
-        result.current.validation.recordValidationResult(seeded, undefined, true);
+        result.current.validation.recordValidationResult(seeded, { hasWorkflowErrors: true });
       });
       return result;
     }

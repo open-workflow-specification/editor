@@ -14,10 +14,40 @@
  * limitations under the License.
  */
 
+import type { ErrorObject } from "ajv/dist/2020";
+import type { ValidationError } from "../../src/core";
 import type { FormFieldDescriptor } from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
 import { SENTINEL_KEY } from "../../src/side-panel/forms/sentinels";
 import { computeSentinelDefaults, forEachField } from "../../src/side-panel/forms/taskFormContext";
+
+/** A plain string field descriptor at `path`, labelled by its path. */
+export const leaf = (path: string, required = false): FormFieldDescriptor => ({
+  kind: "string",
+  path,
+  label: path,
+  required,
+  multiline: false,
+  isRuntimeExpression: false,
+});
+
+/** An SDK validation error; the message defaults to "boom". */
+export const vErr = (partial: Partial<ValidationError>): ValidationError => ({
+  message: "boom",
+  ...partial,
+});
+
+/** An Ajv error; a root `required` error with the message "boom" unless overridden. */
+export function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
+  return {
+    keyword: "required",
+    instancePath: "",
+    schemaPath: "#/required",
+    params: {},
+    message: "boom",
+    ...overrides,
+  };
+}
 
 export interface TaskFormState {
   fields: FormFieldDescriptor[];

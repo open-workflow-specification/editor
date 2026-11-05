@@ -15,6 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { leaf } from "../../test-utils/validation-helpers";
 import {
   forEachField,
   computeSentinelDefaults,
@@ -315,15 +316,6 @@ describe("filterReadOnlyFields — one-of fields", () => {
 // ---------------------------------------------------------------------------
 
 describe("forEachField", () => {
-  const leaf = (path: string): FormFieldDescriptor => ({
-    kind: "string",
-    path,
-    label: path,
-    required: false,
-    multiline: false,
-    isRuntimeExpression: false,
-  });
-
   const tree: FormFieldDescriptor[] = [
     leaf("top"),
     {

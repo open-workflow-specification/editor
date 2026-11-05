@@ -17,6 +17,19 @@
 import * as React from "react";
 import { useFormState, get } from "react-hook-form";
 
+/** Generate a stable row id that does not collide across adds/deletes. */
+export function newId(): string {
+  return Math.random().toString(36).slice(2);
+}
+
+/** "1 entry" / "N entries", the count a map shows on its row and in its header. */
+export function formatEntryCount(
+  t: (key: "sidebar.drill.entry" | "sidebar.drill.entries") => string,
+  count: number,
+): string {
+  return `${count} ${t(count === 1 ? "sidebar.drill.entry" : "sidebar.drill.entries")}`;
+}
+
 // ---------------------------------------------------------------------------
 // useFieldError — resolve field-level error message from RHF form state
 // ---------------------------------------------------------------------------

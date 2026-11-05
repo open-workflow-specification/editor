@@ -18,16 +18,15 @@ import * as React from "react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { GraphNodeType } from "@openworkflowspec/sdk";
 import { getTaskTypeKey } from "../../../core/taskTypes";
+import { isObjectNotArray } from "../../../core/utils";
+import { readTaskEntry } from "../../../core/workflowEditing";
 
 // ---------------------------------------------------------------------------
 // TaskListDisplay
 // ---------------------------------------------------------------------------
 
-type TaskEntry = Record<string, unknown>;
-
-function deriveTaskType(taskBody: unknown): string | undefined {
-  if (!taskBody || typeof taskBody !== "object" || Array.isArray(taskBody)) return undefined;
-  const body = taskBody as Record<string, unknown>;
+function deriveTaskType(body: unknown): string | undefined {
+  if (!isObjectNotArray(body)) return undefined;
   const key = getTaskTypeKey(body);
   if (key === GraphNodeType.Call && typeof body[key] === "string") {
     return `${GraphNodeType.Call}: ${body[key] as string}`;
@@ -53,14 +52,12 @@ export function TaskListDisplay({ tasks }: TaskListDisplayProps) {
     );
   }
 
-  const entries = (tasks as unknown[]).map((entry, idx) => {
-    const isObj = entry !== null && typeof entry === "object" && !Array.isArray(entry);
-    const name = isObj ? Object.keys(entry as TaskEntry)[0] : undefined;
-    const body = name !== undefined ? (entry as TaskEntry)[name] : undefined;
+  const entries = (tasks as unknown[]).map((item, idx) => {
+    const entry = readTaskEntry(item);
     return {
-      key: name !== undefined ? `${name}-${idx}` : String(idx),
-      name,
-      type: deriveTaskType(body),
+      key: entry !== undefined ? `${entry.name}-${idx}` : String(idx),
+      name: entry?.name,
+      type: deriveTaskType(entry?.task),
     };
   });
 

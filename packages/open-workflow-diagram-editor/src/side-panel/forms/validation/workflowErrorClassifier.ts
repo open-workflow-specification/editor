@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { getErrorKeyword, type ValidationError } from "@/core";
+import {
+  getErrorKeyword,
+  isPointerAtOrBelow,
+  joinPath,
+  pointerToDotPath,
+  type ValidationError,
+} from "@/core";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD } from "./branchGroups";
@@ -22,6 +28,7 @@ import type { TaskValidationResult, UndeclaredPropertyError } from "./taskLevelV
 import {
   UNDECLARED_PROPERTY_KEYWORDS,
   classifyErrorPath,
+  emptyClassifiedErrors,
   recordClassification,
   type Classification,
   type ClassifiedTaskErrors,
@@ -34,23 +41,12 @@ import {
  */
 function toFormPath(error: ValidationError, taskReference: string): string | undefined {
   const path = error.path;
-  if (path === undefined) return undefined;
-
-  let relative: string;
-  if (path === taskReference) {
-    relative = "";
-  } else if (path.startsWith(`${taskReference}/`)) {
-    relative = path
-      .slice(taskReference.length + 1)
-      .split("/")
-      .join(".");
-  } else {
-    return undefined;
-  }
+  if (path === undefined || !isPointerAtOrBelow(path, taskReference)) return undefined;
+  const relative: string = pointerToDotPath(path.slice(taskReference.length));
 
   const missing: unknown = error.object?.["missingProperty"];
   if (getErrorKeyword(error) === "required" && typeof missing === "string" && missing !== "") {
-    return relative === "" ? missing : `${relative}.${missing}`;
+    return joinPath(relative, missing);
   }
   return relative;
 }
@@ -64,7 +60,7 @@ function undeclaredPropertyPath(error: ValidationError, containerPath: string): 
       keyword === "unevaluatedProperties" ? "unevaluatedProperty" : "additionalProperty"
     ];
   if (typeof property !== "string" || property === "") return undefined;
-  return containerPath === "" ? property : `${containerPath}.${property}`;
+  return joinPath(containerPath, property);
 }
 
 /**
@@ -85,7 +81,7 @@ export function classifyWorkflowErrors(
   formValues: Record<string, unknown>,
   sentinels: Record<string, unknown>,
 ): TaskValidationResult {
-  const classified: ClassifiedTaskErrors = { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
+  const classified: ClassifiedTaskErrors = emptyClassifiedErrors();
   const undeclaredProperties: UndeclaredPropertyError[] = [];
   const view: ActiveFormView = buildActiveFormView(fields, sentinels, formValues);
 

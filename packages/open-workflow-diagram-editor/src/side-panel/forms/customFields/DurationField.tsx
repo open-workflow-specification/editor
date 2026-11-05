@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import * as React from "react";
-import { Controller, useFormContext } from "react-hook-form";
 import { useI18n } from "@openworkflowspec/i18n";
-import { Input } from "../ui/input";
 import type { DurationField as DurationFieldDescriptor } from "../../../core/schemaToFormFields";
-import { useTaskFormContext } from "../taskFormContext";
-import { useFieldError, FieldWithError } from "./fieldHelpers";
+import { PatternTextControl } from "./PatternTextControl";
 
 // ---------------------------------------------------------------------------
 // ISO 8601 duration regex
@@ -39,39 +34,14 @@ export type DurationFieldProps = {
 };
 
 export function DurationField({ field, id }: DurationFieldProps) {
-  const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
   const { t } = useI18n();
-  const errorMessage = useFieldError(field.path);
-
   return (
-    <Controller
-      name={field.path}
-      control={control}
-      render={({ field: rhfField }) => (
-        <FieldWithError errorMessage={errorMessage}>
-          <Input
-            id={id}
-            value={
-              rhfField.value == null || typeof rhfField.value === "object"
-                ? ""
-                : String(rhfField.value)
-            }
-            onChange={rhfField.onChange}
-            onBlur={() => {
-              rhfField.onBlur();
-              validateField?.(field.path);
-            }}
-            name={rhfField.name}
-            pattern={ISO_8601_DURATION_PATTERN}
-            title={t("sidebar.duration.title")}
-            disabled={isReadOnly}
-            readOnly={isReadOnly}
-            placeholder={t("sidebar.duration.placeholder")}
-            aria-invalid={errorMessage !== undefined || undefined}
-          />
-        </FieldWithError>
-      )}
+    <PatternTextControl
+      path={field.path}
+      id={id}
+      pattern={ISO_8601_DURATION_PATTERN}
+      title={t("sidebar.duration.title")}
+      placeholder={t("sidebar.duration.placeholder")}
     />
   );
 }

@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { vErr } from "../test-utils/validation-helpers";
 import {
   parseWorkflow,
   buildFlatGraph,
@@ -24,14 +25,8 @@ import {
   stripSpecAheadOfSdkErrors,
   patchSchemaForSpecWorkarounds,
 } from "../../src/core";
-import type { ValidationError } from "../../src/core";
 
 /* TEMPORARY — delete this whole file with src/core/specWorkarounds.ts. */
-
-const vErr = (partial: Partial<ValidationError>): ValidationError => ({
-  message: "boom",
-  ...partial,
-});
 
 /* What the UI actually surfaces: the tasks that get an error badge plus the
  * workflow-level errors behind the side-panel count. Asserting here rather than on

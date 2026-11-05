@@ -55,7 +55,7 @@ describe("UnplacedErrors", () => {
   it("lists each unplaced error with its path once validation was attempted", () => {
     const ref = renderList();
 
-    act(() => ref.record(result({ "obj.zzz.y": "must be string" }), true));
+    act(() => ref.record(result({ "obj.zzz.y": "must be string" }), { attempted: true }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("obj.zzz.y: must be string");
   });
@@ -63,7 +63,7 @@ describe("UnplacedErrors", () => {
   it("shows a root error without a path prefix", () => {
     const ref = renderList();
 
-    act(() => ref.record(result({ "": "must be object" }), true));
+    act(() => ref.record(result({ "": "must be object" }), { attempted: true }));
 
     expect(screen.getByRole("alert")).toHaveTextContent(/^must be object$/);
   });
@@ -71,7 +71,7 @@ describe("UnplacedErrors", () => {
   it("renders nothing before validation was attempted", () => {
     const ref = renderList();
 
-    act(() => ref.record(result({ "obj.zzz.y": "must be string" }), false));
+    act(() => ref.record(result({ "obj.zzz.y": "must be string" }), { attempted: false }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -79,7 +79,7 @@ describe("UnplacedErrors", () => {
   it("renders nothing when every error has a place in the form", () => {
     const ref = renderList();
 
-    act(() => ref.record(result({}), true));
+    act(() => ref.record(result({}), { attempted: true }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { flattenTask } from "@/core/taskDraft";
-import { SENTINEL_KEY } from "../sentinels";
+import { flattenSentinels } from "../sentinels";
 import { collectValueMapFields, getNestedValue } from "../taskFormContext";
 import { getValueMapInnerObject } from "../customFields/innerObjectText";
 import { validateTaskData } from "@/core/schemaValidator";
@@ -24,18 +24,43 @@ import { prepareValuesForValidation, extractFieldErrors } from "./fieldErrorMapp
 import { buildActiveFormView } from "./activeFormView";
 import { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
 
+/** Translation function for localised messages. */
+export type Translate = (key: string) => string;
+
+/** Validates the form values, prepared as Apply would commit them, against the task schema. */
+function validateFormValues(
+  nodeType: string,
+  formValues: Record<string, unknown>,
+  fields: FormFieldDescriptor[],
+): { sentinels: Record<string, unknown>; ajvErrors: ErrorObject[] | null | undefined } {
+  const sentinels = flattenSentinels(formValues);
+  const preparedValues = prepareValuesForValidation(formValues, fields, sentinels);
+  return { sentinels, ajvErrors: validateTaskData(nodeType, preparedValues) };
+}
+
 /**
- * Flattens the live `__oneof__` form values into sentinel-prefixed paths.
+ * Field errors for the value-map enum payloads whose text does not parse, by field path.
+ * Apply cannot build such a payload, so these errors cannot be bypassed.
  */
-export function extractSentinels(formValues: Record<string, unknown>): Record<string, unknown> {
-  const sentinels: Record<string, unknown> = {};
-  const liveOneof = formValues.__oneof__ as Record<string, unknown> | undefined;
-  if (liveOneof) {
-    for (const [k, v] of Object.entries(flattenTask(liveOneof))) {
-      sentinels[`${SENTINEL_KEY}.${k}`] = v;
+export function collectValueMapParseErrors(
+  formValues: Record<string, unknown>,
+  fields: FormFieldDescriptor[],
+  t?: Translate,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const field of collectValueMapFields(fields)) {
+    const live = getNestedValue(formValues, field.path);
+    if (
+      typeof live === "string" &&
+      field.innerObjectFormat !== undefined &&
+      getValueMapInnerObject(field, live, formValues) === null
+    ) {
+      errors[field.path] = t
+        ? t("sidebar.form.innerObject.parseError")
+        : "Must be a valid YAML/JSON object";
     }
   }
-  return sentinels;
+  return errors;
 }
 
 /**
@@ -49,26 +74,20 @@ export function extractSentinels(formValues: Record<string, unknown>): Record<st
  * @param formValues - Current form values
  * @param fields - Form field descriptors for the task
  * @param scopedPath - Optional field path to restrict the result to
+ * @param t - Translation function for localised messages
  */
 export function collectSchemaFieldErrors(
   nodeType: string,
   formValues: Record<string, unknown>,
   fields: FormFieldDescriptor[] = [],
   scopedPath?: string,
+  t?: Translate,
 ): Record<string, string> {
-  const sentinels = extractSentinels(formValues);
-  const preparedValues = prepareValuesForValidation(formValues, fields, sentinels);
-  const ajvErrors = validateTaskData(nodeType, preparedValues);
+  const { sentinels, ajvErrors } = validateFormValues(nodeType, formValues, fields);
   const fieldErrors = extractFieldErrors(ajvErrors, formValues, fields, sentinels, scopedPath);
 
-  for (const field of collectValueMapFields(fields)) {
-    if (scopedPath && field.path !== scopedPath) continue;
-    const live = getNestedValue(formValues, field.path);
-    if (typeof live === "string" && field.innerObjectFormat !== undefined) {
-      if (getValueMapInnerObject(field, live, formValues) === null) {
-        fieldErrors[field.path] = "Must be a valid YAML/JSON object";
-      }
-    }
+  for (const [path, message] of Object.entries(collectValueMapParseErrors(formValues, fields, t))) {
+    if (!scopedPath || path === scopedPath) fieldErrors[path] = message;
   }
 
   return fieldErrors;
@@ -87,9 +106,7 @@ export function collectTaskErrors(
   formValues: Record<string, unknown>,
   fields: FormFieldDescriptor[] = [],
 ): ClassifiedTaskErrors {
-  const sentinels = extractSentinels(formValues);
-  const preparedValues = prepareValuesForValidation(formValues, fields, sentinels);
-  const ajvErrors = validateTaskData(nodeType, preparedValues);
+  const { sentinels, ajvErrors } = validateFormValues(nodeType, formValues, fields);
   const view = buildActiveFormView(fields, sentinels, formValues);
   return classifyTaskErrors(ajvErrors, view, formValues, fields);
 }

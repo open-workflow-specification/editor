@@ -15,10 +15,14 @@
  */
 
 import { describe, expect, it } from "vitest";
+import type { ContentFormat } from "../../../../src/core/workflowSdk";
 import type { EnumField } from "../../../../src/core/schemaToFormFields";
 import {
+  formatStructuredText,
   getValueMapInnerObject,
   parseInnerObject,
+  parseText,
+  valueToText,
 } from "../../../../src/side-panel/forms/customFields/innerObjectText";
 import { innerTextPath } from "../../../../src/side-panel/forms/sentinels";
 
@@ -61,5 +65,53 @@ describe("getValueMapInnerObject", () => {
 
   it("is empty when no option is selected", () => {
     expect(getValueMapInnerObject(backoff, "", values)).toEqual({});
+  });
+});
+
+describe("formatStructuredText", () => {
+  it.each<[string, unknown, ContentFormat, string]>([
+    [
+      "an object as indented JSON",
+      { a: 1, b: [true] },
+      "json",
+      '{\n  "a": 1,\n  "b": [\n    true\n  ]\n}',
+    ],
+    ["an object as block YAML", { a: 1, b: [true] }, "yaml", "a: 1\nb:\n  - true"],
+    ["a long string without folding", { s: "x".repeat(120) }, "yaml", `s: ${"x".repeat(120)}`],
+  ])("formats %s", (_name, value, format, expected) => {
+    expect(formatStructuredText(value, format)).toBe(expected);
+  });
+});
+
+describe("valueToText", () => {
+  it.each<[string, unknown, ContentFormat, string]>([
+    ["undefined as empty", undefined, "yaml", ""],
+    ["null as empty", null, "json", ""],
+    ["a string as itself", "${ .expr }", "json", "${ .expr }"],
+    ["a number", 3, "json", "3"],
+    ["an object", { a: 1 }, "yaml", "a: 1"],
+  ])("shows %s", (_name, value, format, expected) => {
+    expect(valueToText(value, format)).toBe(expected);
+  });
+
+  it("falls back to String() when the value cannot be serialised", () => {
+    expect(valueToText({ fn: () => 1 }, "yaml")).toBe("[object Object]");
+  });
+});
+
+describe("parseText", () => {
+  it.each<[string, string, ContentFormat, unknown]>([
+    ["JSON", '{"a": 1}', "json", { a: 1 }],
+    ["YAML", "a: 1", "yaml", { a: 1 }],
+    ["JSON as YAML", '{"a": 1}', "yaml", { a: 1 }],
+  ])("parses %s", (_name, text, format, expected) => {
+    expect(parseText(text, format)).toEqual(expected);
+  });
+
+  it.each<[ContentFormat, string]>([
+    ["json", "{"],
+    ["yaml", "[unclosed"],
+  ])("throws on malformed %s", (format, text) => {
+    expect(() => parseText(text, format)).toThrow();
   });
 });

@@ -24,6 +24,7 @@ import {
   type OneOfVariant,
 } from "../../core/schemaToFormFields";
 import { flattenTask, setNestedPath } from "../../core/taskDraft";
+import { isObjectNotArray } from "../../core/utils";
 import { SENTINEL_SELF_KEY, isReservedPath, sentinelPath } from "./sentinels";
 
 // ---------------------------------------------------------------------------
@@ -71,11 +72,13 @@ export function selectedVariantIndex(
     const chosen = field.variants.findIndex((v) => v.label === sentinelLabel);
     if (chosen !== -1) return chosen;
   }
-  // The root one-of's data is the whole task; a property-level one-of's is the value at its path.
-  const dataAtPath =
-    field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
-  const matched = field.variants.findIndex((v) => v.matchesData(dataAtPath));
+  const matched = field.variants.findIndex((v) => v.matchesData(oneOfData(field, taskData)));
   return matched === -1 ? 0 : matched;
+}
+
+/** The data a one-of's variants match against: the whole task for the root one-of, else the value at its path. */
+function oneOfData(field: OneOfField, taskData: Record<string, unknown>): unknown {
+  return field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
 }
 
 /**
@@ -161,8 +164,7 @@ export function hasValue(task: Record<string, unknown>, path: string): boolean {
  * whether to show an object group or one-of selector in read-only mode.
  */
 function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
-  const v = getNestedValue(task, path);
-  return v !== null && v !== undefined && typeof v === "object" && !Array.isArray(v);
+  return isObjectNotArray(getNestedValue(task, path));
 }
 
 // ---------------------------------------------------------------------------
@@ -315,8 +317,7 @@ export function collectWholeValuePaths(
         paths.add(field.path);
       else if (field.kind === "object" || field.kind === "section") walk(field.children);
       else if (field.kind === "one-of") {
-        const data =
-          field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
+        const data = oneOfData(field, taskData);
         const selected = field.variants.find((v) => v.matchesData(data));
         for (const v of selected ? [selected] : field.variants) walk(v.fields);
       }
@@ -480,7 +481,7 @@ function collectSentinelDefaults(
     if (f.kind === "object" || f.kind === "section") {
       collectSentinelDefaults(f.children, taskData, currentSentinels, result, overwrite);
     } else if (f.kind === "one-of") {
-      const dataAtPath = f.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, f.path);
+      const dataAtPath = oneOfData(f, taskData);
       const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
       let selectedIdx: number;
       if (idx >= 0) {
