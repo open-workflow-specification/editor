@@ -27,6 +27,12 @@ import {
 const getPluginInstance = () => createYamlSchemaLanguageServicePlugin().create(MINIMAL_CONTEXT);
 
 describe("createYamlSchemaLanguageServicePlugin", () => {
+  it("does not expose the native YAML CodeLenses (jumpToSchema is not supported)", () => {
+    const instance = getPluginInstance();
+    expect(instance.provideCodeLenses).toBeUndefined();
+    expect(instance.resolveCodeLens).toBeUndefined();
+  });
+
   describe("provideCompletionItems", () => {
     it("suggests top-level OWS properties on an empty document", async () => {
       const { doc, cursorPosition } = treat("🎯", "yaml", "file:///top-level.yaml");

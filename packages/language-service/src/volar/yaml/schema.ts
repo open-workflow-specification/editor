@@ -48,7 +48,7 @@ function createWorkspaceContextService(context: LanguageServiceContext) {
 }
 
 export function createYamlSchemaLanguageServicePlugin(): LanguageServicePlugin {
-  return create({
+  const plugin = create({
     getWorkspaceContextService: createWorkspaceContextService,
     getLanguageSettings() {
       return {
@@ -65,4 +65,13 @@ export function createYamlSchemaLanguageServicePlugin(): LanguageServicePlugin {
       };
     },
   });
+
+  return {
+    ...plugin,
+    create(context) {
+      // Drop the native YAML schema CodeLenses: their `jumpToSchema` command is not supported.
+      const { provideCodeLenses: _, resolveCodeLens: __, ...instance } = plugin.create(context);
+      return instance;
+    },
+  };
 }
