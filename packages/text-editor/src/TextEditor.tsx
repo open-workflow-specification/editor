@@ -36,6 +36,8 @@ jsonDefaults.setModeConfiguration({
   selectionRanges: false,
 });
 
+let nextModelId = 0;
+
 export type TextEditorLanguage = "json" | "yaml";
 
 export type TextEditorProps = {
@@ -46,6 +48,16 @@ export type TextEditorProps = {
   isReadOnly?: boolean;
   colorMode?: ColorMode;
 };
+
+function createModelUri(): monaco.Uri {
+  let uri: monaco.Uri;
+
+  do {
+    uri = monaco.Uri.parse(`inmemory://openworkflow/workflow-${nextModelId++}.json`);
+  } while (monaco.editor.getModel(uri));
+
+  return uri;
+}
 
 export const TextEditor = ({
   content,
@@ -65,11 +77,7 @@ export const TextEditor = ({
       return;
     }
 
-    const model = monaco.editor.createModel(
-      content,
-      language,
-      monaco.Uri.parse("inmemory://openworkflow/workflow.json"),
-    );
+    const model = monaco.editor.createModel(content, language, createModelUri());
 
     const editor = monaco.editor.create(containerRef.current, {
       model,

@@ -98,3 +98,18 @@ test("JSON mode provides Open Workflow schema diagnostics", async ({ page }) => 
 
   await expect(monacoEditor.locator(".squiggly-warning").first()).toBeVisible();
 });
+
+test("multiple custom element instances mount independent text editors", async ({ page }) => {
+  await page.goto("/");
+
+  await page.evaluate(() => {
+    const secondEditor = document.createElement("openworkflowspec-dual-editor") as HTMLElement & {
+      content: string;
+    };
+    secondEditor.content = `document:\n  dsl: '1.0.3'\n  namespace: examples\n  name: second-instance\ndo: []`;
+    document.body.appendChild(secondEditor);
+  });
+
+  await expect(page.locator(".monaco-editor")).toHaveCount(2);
+  await expect(page.locator(".monaco-editor").nth(1)).toContainText("second-instance");
+});
