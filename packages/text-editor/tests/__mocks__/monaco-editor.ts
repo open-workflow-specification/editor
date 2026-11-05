@@ -35,6 +35,7 @@ export const mockModelGetFullModelRange = vi.fn(() => ({
 
 export const mockModel = {
   getLanguageId: () => state.language,
+  isDisposed: () => false,
   uri: { toString: () => "file:///mock.json" },
   dispose: mockModelDispose,
   getFullModelRange: mockModelGetFullModelRange,
@@ -98,9 +99,12 @@ export const mockCreateWebWorker = vi.fn<
 }));
 
 export const mockCommandDispose = vi.fn();
-export const mockRegisterCommand = vi.fn(() => ({
-  dispose: mockCommandDispose,
-}));
+export const mockRegisterCommand = vi.fn<
+  (
+    commandId: string,
+    handler: (accessor: unknown, content: string, targetModelUri: string) => void,
+  ) => { dispose: typeof mockCommandDispose }
+>(() => ({ dispose: mockCommandDispose }));
 
 export default {
   Uri: {

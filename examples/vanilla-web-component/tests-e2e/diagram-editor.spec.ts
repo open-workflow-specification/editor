@@ -103,13 +103,29 @@ test("multiple custom element instances mount independent text editors", async (
   await page.goto("/");
 
   await page.evaluate(() => {
+    const firstEditor = document.querySelector("openworkflowspec-dual-editor") as
+      | (HTMLElement & { content: string })
+      | null;
+    if (!firstEditor) throw new Error("First Dual Editor custom element was not found");
+    firstEditor.setAttribute("language", "json");
+    firstEditor.content = "";
+
     const secondEditor = document.createElement("openworkflowspec-dual-editor") as HTMLElement & {
       content: string;
     };
-    secondEditor.content = `document:\n  dsl: '1.0.3'\n  namespace: examples\n  name: second-instance\ndo: []`;
+    secondEditor.setAttribute("language", "json");
+    secondEditor.content = "";
     document.body.appendChild(secondEditor);
   });
 
   await expect(page.locator(".monaco-editor")).toHaveCount(2);
-  await expect(page.locator(".monaco-editor").nth(1)).toContainText("second-instance");
+
+  const codeLens = page.locator(".codelens-decoration").getByText("Create an Open Workflow", {
+    exact: true,
+  });
+  await expect(codeLens).toHaveCount(2);
+  await codeLens.first().click();
+
+  await expect(page.locator(".monaco-editor").first()).toContainText('"name": "hello-world"');
+  await expect(page.locator(".monaco-editor").nth(1)).not.toContainText('"name": "hello-world"');
 });
