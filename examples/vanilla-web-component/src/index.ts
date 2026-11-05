@@ -15,7 +15,7 @@
  */
 
 import "@openworkflowspec/dual-editor/styles.css";
-import { DualEditorElement } from "./diagram-editor-element";
+import { DualEditorElement } from "./dual-editor-element";
 
 if (!customElements.get("openworkflowspec-dual-editor")) {
   customElements.define("openworkflowspec-dual-editor", DualEditorElement);

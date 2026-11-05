@@ -31,7 +31,7 @@ Browse http://localhost:6007
 
 ## How It Works
 
-The wrapper in `src/diagram-editor-element.ts` defines a custom element `<openworkflowspec-dual-editor>` that:
+The wrapper in `src/dual-editor-element.ts` defines a custom element `<openworkflowspec-dual-editor>` that:
 
 1. Creates a React root inside itself
 2. Renders the `DualEditor` React component and creates its language-service worker

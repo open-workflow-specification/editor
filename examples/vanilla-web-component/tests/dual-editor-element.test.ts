@@ -16,7 +16,7 @@
 
 import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { screen } from "@testing-library/dom";
-import { DualEditorElement } from "../src/diagram-editor-element";
+import { DualEditorElement } from "../src/dual-editor-element";
 
 let lastProps: Record<string, unknown> | null = null;
 
