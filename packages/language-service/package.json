@@ -40,7 +40,9 @@
   "dependencies": {
     "@openworkflowspec/sdk": "catalog:",
     "@volar/language-service": "catalog:",
-    "volar-service-json": "catalog:"
+    "volar-service-json": "catalog:",
+    "volar-service-yaml": "catalog:",
+    "vscode-uri": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

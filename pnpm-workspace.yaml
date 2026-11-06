@@ -52,8 +52,9 @@ catalog:
   use-sync-external-store: ^1.7.0
   vite: ^8.3.5
   vitest: ^5.0.5
-  volar-service-json: "0.0.71"
-  vscode-languageserver-textdocument: "^1.0.16"
+  volar-service-json: 0.0.71
+  volar-service-yaml: 0.0.71
+  vscode-languageserver-textdocument: ^1.0.16
   vscode-uri: ^3.2.0
 cleanupUnusedCatalogs: true
 onlyBuiltDependencies:
@@ -75,3 +76,6 @@ overrides:
   source-map-js@>=1.0.0 <1.2.2: ">=1.2.2"
   # Force a single TypeScript major across the dependency graph. To be removed when #508 is resolved.
   typescript: "catalog:"
+  # Temporary workaround for https://github.com/volarjs/services/pull/127
+  # Remove once a compatible volar-service-yaml release is available.
+  yaml-language-server: "1.24.0"

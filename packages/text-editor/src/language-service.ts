@@ -19,6 +19,8 @@ import type { WorkerLanguageService } from "@volar/monaco/worker";
 import * as monaco from "monaco-editor/editor";
 import { registerEditorCommands } from "./editor-commands";
 
+const LANGUAGES = ["json", "yaml"] as const;
+
 export function createTextEditorLanguageService(
   model: monaco.editor.ITextModel,
   createWorker: () => Worker,
@@ -29,31 +31,40 @@ export function createTextEditorLanguageService(
 
   const commands = registerEditorCommands(model);
 
-  const getSyncUris = () => (model.getLanguageId() === "json" ? [model.uri] : []);
+  const getSyncUris = () =>
+    (LANGUAGES as readonly string[]).includes(model.getLanguageId()) ? [model.uri] : [];
 
-  const markers = activateMarkers(worker, ["json"], "openworkflow", getSyncUris, monaco.editor);
+  const markers = activateMarkers(
+    worker,
+    [...LANGUAGES],
+    "openworkflow",
+    getSyncUris,
+    monaco.editor,
+  );
 
-  let providers: monaco.IDisposable | undefined;
+  const providers: monaco.IDisposable[] = [];
   let disposed = false;
 
-  void registerProviders(worker, "json", getSyncUris, monaco.languages)
-    .then((disposable) => {
-      if (disposed) {
-        disposable.dispose();
-      } else {
-        providers = disposable;
-      }
-    })
-    .catch((error) => {
-      if (!disposed) {
-        console.error("registerProviders failed", error);
-      }
-    });
+  for (const language of LANGUAGES) {
+    void registerProviders(worker, language, getSyncUris, monaco.languages)
+      .then((disposable) => {
+        if (disposed) {
+          disposable.dispose();
+        } else {
+          providers.push(disposable);
+        }
+      })
+      .catch((error) => {
+        if (!disposed) {
+          console.error(`registerProviders failed for ${language}`, error);
+        }
+      });
+  }
 
   return {
     dispose() {
       disposed = true;
-      providers?.dispose();
+      providers.forEach((provider) => provider.dispose());
       markers.dispose();
       commands.dispose();
       worker.dispose();

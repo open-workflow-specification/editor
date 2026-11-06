@@ -33,6 +33,23 @@ export const createLanguageServiceWorker = () =>
 export const TextEditor = ({ ...props }: TextEditorProps) => {
   const [languageOverride, setLanguageOverride] = React.useState<TextEditorProps["language"]>();
   const [isReadOnlyOverride, setIsReadOnlyOverride] = React.useState<boolean>();
+  const [content, setContent] = React.useState(props.content);
+  const [previousPropContent, setPreviousPropContent] = React.useState(props.content);
+
+  // Prevent content useEffects if content doesn't change.
+  if (props.content !== previousPropContent) {
+    setPreviousPropContent(props.content);
+    setContent(props.content);
+  }
+
+  const { onContentChange } = props;
+  const handleContentChange = React.useCallback(
+    (nextContent: string) => {
+      setContent(nextContent);
+      onContentChange?.(nextContent);
+    },
+    [onContentChange],
+  );
 
   React.useEffect(() => {
     // Expose React setters for E2E tests interactions.
@@ -49,6 +66,8 @@ export const TextEditor = ({ ...props }: TextEditorProps) => {
     <div style={{ height: "100vh" }}>
       <Component
         {...props}
+        content={content}
+        onContentChange={handleContentChange}
         createLanguageServiceWorker={createLanguageServiceWorker}
         language={languageOverride ?? props.language}
         isReadOnly={isReadOnlyOverride ?? props.isReadOnly}

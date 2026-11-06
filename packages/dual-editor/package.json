@@ -40,7 +40,8 @@
   "dependencies": {
     "@openworkflowspec/core": "workspace:*",
     "@openworkflowspec/diagram-editor": "workspace:*",
-    "@openworkflowspec/text-editor": "workspace:*"
+    "@openworkflowspec/text-editor": "workspace:*",
+    "path-browserify": "^1.0.1"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "catalog:",
