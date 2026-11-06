@@ -25,7 +25,6 @@ export default defineConfig({
 
   use: {
     baseURL: "http://localhost:6007",
-    permissions: ["clipboard-read", "clipboard-write"],
   },
 
   webServer: {

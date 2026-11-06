@@ -51,7 +51,6 @@ export const editorApi = {
     monacoState.value = value;
     return model;
   },
-  getModel: () => null,
   create: () => editorInstance,
   createWebWorker: () => ({ dispose: () => undefined }),
   registerCommand: () => ({ dispose: () => undefined }),

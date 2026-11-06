@@ -16,39 +16,21 @@
 
 import * as monaco from "monaco-editor/editor";
 
-const HELLO_WORLD_COMMAND = "openworkflow.insertHelloWorld";
-const models = new Map<string, monaco.editor.ITextModel>();
-let command: monaco.IDisposable | null = null;
-
 export function registerEditorCommands(model: monaco.editor.ITextModel): monaco.IDisposable {
-  const modelUri = model.uri.toString();
-  models.set(modelUri, model);
-
-  command ??= monaco.editor.registerCommand(
-    HELLO_WORLD_COMMAND,
-    (_accessor: unknown, content: string, targetModelUri: string) => {
-      const targetModel = models.get(targetModelUri);
-      if (!targetModel || targetModel.isDisposed()) return;
-
-      targetModel.pushEditOperations(
+  const insertHelloWorld = monaco.editor.registerCommand(
+    "openworkflow.insertHelloWorld",
+    (_accessor: unknown, content: string) => {
+      model.pushEditOperations(
         null,
-        [{ range: targetModel.getFullModelRange(), text: content }],
+        [{ range: model.getFullModelRange(), text: content }],
         () => null,
       );
     },
   );
 
-  let disposed = false;
   return {
     dispose() {
-      if (disposed) return;
-      disposed = true;
-      models.delete(modelUri);
-
-      if (models.size === 0) {
-        command?.dispose();
-        command = null;
-      }
+      insertHelloWorld.dispose();
     },
   };
 }

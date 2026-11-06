@@ -209,12 +209,9 @@ importers:
       '@openworkflowspec/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@openworkflowspec/dual-editor':
+      '@openworkflowspec/diagram-editor':
         specifier: workspace:*
-        version: link:../../packages/dual-editor
-      '@openworkflowspec/text-editor':
-        specifier: workspace:*
-        version: link:../../packages/text-editor
+        version: link:../../packages/open-workflow-diagram-editor
       react:
         specifier: 'catalog:'
         version: 19.3.1
