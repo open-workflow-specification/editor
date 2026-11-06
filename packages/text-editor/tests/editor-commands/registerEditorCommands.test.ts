@@ -25,49 +25,13 @@ describe("registerEditorCommands", () => {
 
   describe("registration", () => {
     it("registers the openworkflow.insertHelloWorld command", () => {
-      const commands = registerEditorCommands(mockModel as never);
+      registerEditorCommands(mockModel as never);
 
       expect(mockRegisterCommand).toHaveBeenCalledOnce();
       expect(mockRegisterCommand).toHaveBeenCalledWith(
         "openworkflow.insertHelloWorld",
         expect.any(Function),
       );
-
-      commands.dispose();
-    });
-
-    it("routes the command to the model identified by its URI", () => {
-      const firstModel = {
-        ...mockModel,
-        uri: { toString: () => "inmemory://first/workflow.json" },
-        pushEditOperations: vi.fn(),
-      };
-      const secondModel = {
-        ...mockModel,
-        uri: { toString: () => "inmemory://second/workflow.json" },
-        pushEditOperations: vi.fn(),
-      };
-      const firstCommands = registerEditorCommands(firstModel as never);
-      const secondCommands = registerEditorCommands(secondModel as never);
-      const handler = mockRegisterCommand.mock.calls[0]?.[1] as (
-        accessor: unknown,
-        content: string,
-        modelUri: string,
-      ) => void;
-
-      handler(undefined, "first workflow", firstModel.uri.toString());
-
-      expect(firstModel.pushEditOperations).toHaveBeenCalledOnce();
-      expect(firstModel.pushEditOperations).toHaveBeenCalledWith(
-        null,
-        [{ range: firstModel.getFullModelRange(), text: "first workflow" }],
-        expect.any(Function),
-      );
-      expect(secondModel.pushEditOperations).not.toHaveBeenCalled();
-      expect(mockRegisterCommand).toHaveBeenCalledOnce();
-
-      firstCommands.dispose();
-      secondCommands.dispose();
     });
   });
 

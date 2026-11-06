@@ -36,10 +36,9 @@ describe("createJsonCodeLensesPlugin", () => {
       const command = result?.[0]?.command;
       expect(result?.[0]?.command?.title).toBe("Create an Open Workflow");
       expect(command?.command).toBe("openworkflow.insertHelloWorld");
-      expect(command?.arguments).toHaveLength(2);
+      expect(command?.arguments).toHaveLength(1);
       expect(command?.arguments?.[0]).toBeTypeOf("string");
       expect(command?.arguments?.[0]).toContain("hello-world");
-      expect(command?.arguments?.[1]).toBe(doc.uri.toString());
     });
 
     it("does not provide a code lens on bare {}", async () => {
