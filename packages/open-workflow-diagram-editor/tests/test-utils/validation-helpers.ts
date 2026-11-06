@@ -49,6 +49,23 @@ export function ajvError(overrides: Partial<ErrorObject>): ErrorObject {
   };
 }
 
+/** An Ajv `required` error for the property `key`, with Ajv's own message. */
+export function missingPropertyError(
+  key: string,
+  overrides: Partial<ErrorObject> = {},
+): ErrorObject {
+  return ajvError({
+    params: { missingProperty: key },
+    message: `must have required property '${key}'`,
+    ...overrides,
+  });
+}
+
+/** The messages of Ajv errors, in order. */
+export function errorMessages(errors: ErrorObject[]): (string | undefined)[] {
+  return errors.map((e) => e.message);
+}
+
 export interface TaskFormState {
   fields: FormFieldDescriptor[];
   /** Form values as the task form holds them: the task plus the variant sentinels. */

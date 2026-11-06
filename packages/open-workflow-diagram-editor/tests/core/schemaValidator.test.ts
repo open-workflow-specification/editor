@@ -15,13 +15,16 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { ajvError } from "../test-utils/validation-helpers";
+import { ajvError, errorMessages, missingPropertyError } from "../test-utils/validation-helpers";
 import type { ErrorObject } from "ajv/dist/2020";
 import {
   getTaskSchemaValidator,
   validateTaskData,
   getDefinitionNameForNodeType,
   stripDiscriminatedCascade,
+  dropResolvedGroupSummaries,
+  dedupeEquivalentErrors,
+  cleanTaskAjvErrors,
 } from "../../src/core/schemaValidator";
 
 describe("schemaValidator", () => {
@@ -70,8 +73,6 @@ describe("schemaValidator", () => {
 });
 
 describe("stripDiscriminatedCascade", () => {
-  const messages = (errors: ErrorObject[]): (string | undefined)[] => errors.map((e) => e.message);
-
   it("returns the same array when no branch was rejected by its discriminator", () => {
     const errors = [ajvError({ schemaPath: "#/oneOf/0/required", message: "real" })];
     expect(stripDiscriminatedCascade(errors)).toBe(errors);
@@ -87,7 +88,7 @@ describe("stripDiscriminatedCascade", () => {
       ajvError({ schemaPath: "#/oneOf/0/required", message: "cascade" }),
       ajvError({ schemaPath: "#/oneOf/1/required", message: "real" }),
     ]);
-    expect(messages(result)).toEqual(["real"]);
+    expect(errorMessages(result)).toEqual(["real"]);
   });
 
   it("treats a failing `not` on a property as a discriminator mismatch", () => {
@@ -96,7 +97,7 @@ describe("stripDiscriminatedCascade", () => {
       ajvError({ schemaPath: "#/oneOf/0/required", message: "cascade" }),
       ajvError({ schemaPath: "#/oneOf/1/required", message: "real" }),
     ]);
-    expect(messages(result)).toEqual(["real"]);
+    expect(errorMessages(result)).toEqual(["real"]);
   });
 
   it.each([
@@ -138,6 +139,271 @@ describe("stripDiscriminatedCascade", () => {
         message: "http real",
       }),
     ]);
-    expect(messages(result)).toEqual(["http real"]);
+    expect(errorMessages(result)).toEqual(["http real"]);
+  });
+});
+
+describe("stripDiscriminatedCascade: missing task type key", () => {
+  it("keeps the missing-type-key marker and drops the branch's other errors", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("call", { schemaPath: "#/oneOf/0/required" }),
+      missingPropertyError("with", { schemaPath: "#/oneOf/0/required" }),
+      ajvError({
+        keyword: "unevaluatedProperties",
+        schemaPath: "#/oneOf/0/unevaluatedProperties",
+        message: "unevaluated",
+      }),
+    ]);
+    expect(errorMessages(result)).toEqual(["must have required property 'call'"]);
+  });
+
+  it("drops the branch's errors reported below the marker through properties/", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("call", { schemaPath: "#/oneOf/0/required" }),
+      missingPropertyError("document", {
+        schemaPath: "#/oneOf/0/properties/with/oneOf/0/required",
+        instancePath: "/with",
+      }),
+    ]);
+    expect(errorMessages(result)).toEqual(["must have required property 'call'"]);
+  });
+
+  it("keeps a nested task's own error that shares the branch prefix below the marker", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("call", { schemaPath: "#/oneOf/0/required", instancePath: "/do/0/a" }),
+      // $ref reset the schema path: same prefix, but two levels down with no properties/ step
+      missingPropertyError("endpoint", {
+        schemaPath: "#/oneOf/0/required",
+        instancePath: "/do/0/a/do/0/b",
+      }),
+    ]);
+    expect(errorMessages(result)).toEqual([
+      "must have required property 'call'",
+      "must have required property 'endpoint'",
+    ]);
+  });
+
+  it("does not let a marker on one task suppress the same branch of a sibling task", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("call", { schemaPath: "#/oneOf/0/required", instancePath: "/do/0/a" }),
+      missingPropertyError("with", { schemaPath: "#/oneOf/0/required", instancePath: "/do/1/b" }),
+    ]);
+    expect(errorMessages(result)).toEqual([
+      "must have required property 'call'",
+      "must have required property 'with'",
+    ]);
+  });
+
+  it("does not treat a missing non-type property as a marker", () => {
+    const errors = [
+      missingPropertyError("with", { schemaPath: "#/oneOf/0/required" }),
+      missingPropertyError("endpoint", {
+        schemaPath: "#/oneOf/0/properties/with/required",
+        instancePath: "/with",
+      }),
+    ];
+    expect(stripDiscriminatedCascade(errors)).toBe(errors);
+  });
+
+  it("drops 'catch' when 'try' is reported missing at the same path", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("try"),
+      missingPropertyError("catch"),
+    ]);
+    expect(errorMessages(result)).toEqual(["must have required property 'try'"]);
+  });
+
+  it("keeps 'catch' when 'try' is present", () => {
+    const errors = [missingPropertyError("catch")];
+    expect(stripDiscriminatedCascade(errors)).toBe(errors);
+  });
+
+  it("keeps 'catch' of another task when 'try' is missing only at a different path", () => {
+    const result = stripDiscriminatedCascade([
+      missingPropertyError("try", { instancePath: "/do/0/a" }),
+      missingPropertyError("catch", { instancePath: "/do/1/b" }),
+    ]);
+    expect(errorMessages(result)).toEqual([
+      "must have required property 'try'",
+      "must have required property 'catch'",
+    ]);
+  });
+
+  it("reduces a call task without its call key to the missing-key errors", () => {
+    const result = stripDiscriminatedCascade(validateTaskData("call", { with: {} }) ?? []);
+    expect(result.filter((e) => e.keyword === "required")).toHaveLength(7);
+    expect(
+      result.every(
+        (e) =>
+          e.keyword === "oneOf" ||
+          (e.params as { missingProperty?: string }).missingProperty === "call",
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("dedupeEquivalentErrors", () => {
+  const dupe = (schemaPath: string, overrides: Partial<ErrorObject> = {}): ErrorObject =>
+    missingPropertyError("document", { instancePath: "/with", schemaPath, ...overrides });
+
+  it("returns the same array when nothing is repeated", () => {
+    const errors = [dupe("#/oneOf/0/required"), dupe("#/oneOf/1/required", { instancePath: "/x" })];
+    expect(dedupeEquivalentErrors(errors)).toBe(errors);
+  });
+
+  it("keeps the first of errors that differ only in schemaPath", () => {
+    const first = dupe("#/oneOf/0/required");
+    const result = dedupeEquivalentErrors([
+      first,
+      dupe("#/oneOf/1/required"),
+      dupe("#/oneOf/2/required"),
+    ]);
+    expect(result).toEqual([first]);
+  });
+
+  it("keeps errors with the same message but different params", () => {
+    const patternA = ajvError({
+      keyword: "pattern",
+      instancePath: "/wait",
+      message: 'must match pattern "a"',
+      params: { pattern: "a" },
+      schemaPath: "#/oneOf/0/pattern",
+    });
+    const patternB = { ...patternA, params: { pattern: "b" }, schemaPath: "#/oneOf/1/pattern" };
+    expect(dedupeEquivalentErrors([patternA, patternB])).toEqual([patternA, patternB]);
+  });
+
+  it("keeps the same error reported at different instance paths", () => {
+    const result = dedupeEquivalentErrors([
+      dupe("#/oneOf/0/required", { instancePath: "/do/0/a" }),
+      dupe("#/oneOf/0/required", { instancePath: "/do/1/b" }),
+    ]);
+    expect(result).toHaveLength(2);
+  });
+
+  it("keeps errors of a different keyword at the same path", () => {
+    const result = dedupeEquivalentErrors([
+      dupe("#/oneOf/0/required"),
+      dupe("#/oneOf/0/type", { keyword: "type" }),
+    ]);
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe("dropResolvedGroupSummaries", () => {
+  const summary = (overrides: Partial<ErrorObject> = {}): ErrorObject =>
+    ajvError({ keyword: "oneOf", schemaPath: "#/oneOf", message: "summary", ...overrides });
+
+  it("drops the summary when a single branch has errors", () => {
+    const result = dropResolvedGroupSummaries([
+      ajvError({
+        schemaPath: "#/oneOf/2/properties/with/required",
+        instancePath: "/with",
+        message: "real",
+      }),
+      summary(),
+    ]);
+    expect(errorMessages(result)).toEqual(["real"]);
+  });
+
+  it("drops an anyOf summary the same way", () => {
+    const result = dropResolvedGroupSummaries([
+      ajvError({ schemaPath: "#/anyOf/1/required", message: "real" }),
+      summary({ keyword: "anyOf", schemaPath: "#/anyOf" }),
+    ]);
+    expect(errorMessages(result)).toEqual(["real"]);
+  });
+
+  it.each([
+    { name: "there is no oneOf/anyOf error", errors: [ajvError({ message: "real" })] },
+    {
+      name: "several branches have errors",
+      errors: [
+        ajvError({ schemaPath: "#/oneOf/0/type", keyword: "type", message: "branch 0" }),
+        ajvError({ schemaPath: "#/oneOf/2/pattern", keyword: "pattern", message: "branch 2" }),
+        summary(),
+      ],
+    },
+    { name: "no branch error is left", errors: [summary()] },
+    {
+      name: "several branches matched",
+      errors: [
+        ajvError({ schemaPath: "#/oneOf/0/required", message: "real" }),
+        summary({ params: { passingSchemas: [0, 1] } }),
+      ],
+    },
+  ])("returns the same array when $name", ({ errors }) => {
+    expect(dropResolvedGroupSummaries(errors)).toBe(errors);
+  });
+
+  it("keeps the summary when a $ref branch reports at the group's own path", () => {
+    const errors = [
+      ajvError({
+        schemaPath: "#/oneOf/2/pattern",
+        keyword: "pattern",
+        instancePath: "/wait",
+        message: "branch",
+      }),
+      ajvError({
+        schemaPath: "#/$defs/runtimeExpression/pattern",
+        keyword: "pattern",
+        instancePath: "/wait",
+        message: "ref",
+      }),
+      summary({ instancePath: "/wait" }),
+    ];
+    expect(dropResolvedGroupSummaries(errors)).toBe(errors);
+  });
+
+  it("does not count the errors of a nested group sharing the schema path as a branch", () => {
+    const result = dropResolvedGroupSummaries([
+      // outer group at /do/0/a, one real branch error of its own
+      ajvError({
+        schemaPath: "#/oneOf/2/required",
+        instancePath: "/do/0/a",
+        message: "outer real",
+      }),
+      summary({ instancePath: "/do/0/a", message: "outer summary" }),
+      // nested group at /do/0/a/b reuses the same schema path with two branches failing
+      ajvError({ schemaPath: "#/oneOf/0/required", instancePath: "/do/0/a/b", message: "inner 0" }),
+      ajvError({ schemaPath: "#/oneOf/1/required", instancePath: "/do/0/a/b", message: "inner 1" }),
+      summary({ instancePath: "/do/0/a/b", message: "inner summary" }),
+    ]);
+    // outer is resolved (only branch 2 is its own); inner is ambiguous and keeps everything
+    expect(errorMessages(result)).toEqual(["outer real", "inner 0", "inner 1", "inner summary"]);
+  });
+
+  it("only removes the summary, never another error", () => {
+    const input = [
+      ajvError({ schemaPath: "#/oneOf/2/required", message: "a" }),
+      ajvError({ schemaPath: "#/properties/x/type", keyword: "type", message: "b" }),
+      summary(),
+    ];
+    expect(errorMessages(dropResolvedGroupSummaries(input))).toEqual(["a", "b"]);
+  });
+});
+
+describe("cleanTaskAjvErrors", () => {
+  const clean = (type: string, data: unknown): ErrorObject[] =>
+    cleanTaskAjvErrors(validateTaskData(type, data) ?? []);
+  const stripped = (type: string, data: unknown): ErrorObject[] =>
+    stripDiscriminatedCascade(validateTaskData(type, data) ?? []);
+
+  it("call http with a missing endpoint keeps only the real error", () => {
+    const result = clean("call", { call: "http", with: { method: "get" } });
+    expect(errorMessages(result)).toEqual(["must have required property 'endpoint'"]);
+  });
+
+  it("call http with a wrong type keeps only the real error", () => {
+    const result = clean("call", { call: "http", with: { method: 5, endpoint: "http://x" } });
+    expect(errorMessages(result)).toEqual(["must be string"]);
+  });
+
+  it.each([
+    { name: "wait", type: "wait", data: { wait: "invalid-duration" } },
+    { name: "set", type: "set", data: { set: 5 } },
+    { name: "run", type: "run", data: { run: { shell: {} } } },
+  ])("$name keeps every error it had (ambiguous alternatives)", ({ type, data }) => {
+    expect(clean(type, data)).toEqual(stripped(type, data));
   });
 });

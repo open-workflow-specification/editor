@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { findBranchGhosts, ONE_OF_BRANCH_PREFIX } from "./branchGhosts";
 import { TASK_TYPE_KEYS } from "./taskTypes";
 import type { SdkError, ValidationError } from "./workflowSdk";
 
@@ -25,8 +26,7 @@ export function isValidationError(error: SdkError): error is ValidationError {
   return !(error instanceof Error);
 }
 
-/* Matches the `oneOf/N/` segment of a schema path at any depth, capturing the prefix up to and including it */
-export const ONE_OF_BRANCH_PREFIX: RegExp = /^(.*\/oneOf\/\d+\/)/;
+export { ONE_OF_BRANCH_PREFIX };
 
 /* Get the last segment as keyword eg #/oneOf/2/allOf/1/properties/with/required returns 'required'  */
 export function getErrorKeyword(error: ValidationError): string | undefined {
@@ -57,52 +57,20 @@ function isNodeError(error: SdkError): error is NodeError {
   return isValidationError(error) && error.path !== undefined && !isNoiseError(error);
 }
 
-/* Returns the `oneOf/N/` prefix when the error is the `required` keyword of that branch itself. */
-function getBranchRequiredPrefix(error: ValidationError): string | undefined {
-  const errorType: string = error.errorType ?? "";
-  const prefix: string | undefined = ONE_OF_BRANCH_PREFIX.exec(errorType)?.[1];
-  return prefix !== undefined && errorType === `${prefix}required` ? prefix : undefined;
-}
-
-/* A `oneOf` branch that fails with `required <task type key>` such as `call` was never selected by the task. The other errors that branch reports at the same path (`required 'with'`, `unevaluatedProperties`, ...) are ghosts: the task is not that kind of task, so they say nothing the user can act on. A `try` task missing `catch` is only real when `try` itself is present, so `catch` is a ghost when `try` is reported missing. */
+/* Drops the ghosts of `oneOf` branches that the task never selected, see `findBranchGhosts`. */
 function removeBranchGhosts(errors: SdkError[]): SdkError[] {
-  const ghostBranches: Set<string> = new Set<string>();
-  const missingTryPaths: Set<string> = new Set<string>();
-
-  for (const error of errors) {
+  const ghosts: Set<SdkError> = findBranchGhosts(errors, (error) => {
     if (!isValidationError(error) || error.path === undefined) {
-      continue;
+      return undefined;
     }
     const missingProperty: unknown = error.object?.["missingProperty"];
-    if (typeof missingProperty !== "string" || !TASK_TYPE_KEYS.has(missingProperty)) {
-      continue;
-    }
-    const branchPrefix: string | undefined = getBranchRequiredPrefix(error);
-    if (branchPrefix !== undefined) {
-      ghostBranches.add(`${error.path}|${branchPrefix}`);
-    } else if (missingProperty === "try" && error.errorType === "#/required") {
-      missingTryPaths.add(error.path);
-    }
-  }
-
-  if (ghostBranches.size === 0 && missingTryPaths.size === 0) {
-    return errors;
-  }
-
-  return errors.filter((error) => {
-    if (!isValidationError(error) || error.path === undefined) {
-      return true;
-    }
-    if (
-      missingTryPaths.has(error.path) &&
-      error.errorType === "#/required" &&
-      error.object?.["missingProperty"] === "catch"
-    ) {
-      return false;
-    }
-    const branch: RegExpExecArray | null = ONE_OF_BRANCH_PREFIX.exec(error.errorType ?? "");
-    return !(branch && ghostBranches.has(`${error.path}|${branch[1]}`));
+    return {
+      path: error.path,
+      schemaPath: error.errorType ?? "",
+      missingProperty: typeof missingProperty === "string" ? missingProperty : undefined,
+    };
   });
+  return ghosts.size === 0 ? errors : errors.filter((error) => !ghosts.has(error));
 }
 
 /* Find the task owning this error path. Both sides are JSON pointers, so the longest matching taskReference is found by dropping trailing segments until one is known. */

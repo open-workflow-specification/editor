@@ -170,7 +170,7 @@ describe("validateWorkflow per-task validation", () => {
     expect(error!.message).toBe("required");
   });
 
-  it("drops exact duplicates but keeps sibling oneOf branches that differ by errorType", () => {
+  it("drops exact duplicates and sibling oneOf branches that report the same error", () => {
     vi.mocked(validateTaskData).mockReturnValue([
       ajvError({ schemaPath: "#/oneOf/0/required" }),
       ajvError({ schemaPath: "#/oneOf/0/required" }),
@@ -179,9 +179,30 @@ describe("validateWorkflow per-task validation", () => {
 
     const errors = validationErrors(validateWorkflow(workflowWith([{ step: { wait: "x" } }])));
 
+    expect(errors.map((error) => error.errorType)).toEqual(["#/oneOf/0/required"]);
+  });
+
+  it("keeps sibling oneOf branches whose errors differ in their params", () => {
+    vi.mocked(validateTaskData).mockReturnValue([
+      ajvError({
+        keyword: "pattern",
+        schemaPath: "#/oneOf/0/pattern",
+        message: "must match pattern",
+        params: { pattern: "^a$" },
+      }),
+      ajvError({
+        keyword: "pattern",
+        schemaPath: "#/oneOf/1/pattern",
+        message: "must match pattern",
+        params: { pattern: "^b$" },
+      }),
+    ]);
+
+    const errors = validationErrors(validateWorkflow(workflowWith([{ step: { wait: "x" } }])));
+
     expect(errors.map((error) => error.errorType)).toEqual([
-      "#/oneOf/0/required",
-      "#/oneOf/1/required",
+      "#/oneOf/0/pattern",
+      "#/oneOf/1/pattern",
     ]);
   });
 

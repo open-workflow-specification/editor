@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { getMissingProperty } from "@/core/ajvErrorUtils";
 import { getParentPath, isAtOrBelow, joinPath, pointerToDotPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenTask, unflattenValues } from "@/core/taskDraft";
@@ -234,7 +235,7 @@ export function ajvErrorToFieldPath(error: ErrorObject): string | undefined {
   let path = pointerToDotPath(error.instancePath);
 
   if (error.keyword === "required") {
-    const missingProp = (error.params as { missingProperty?: string }).missingProperty;
+    const missingProp = getMissingProperty(error);
     if (missingProp) {
       path = joinPath(path, missingProp);
     }
