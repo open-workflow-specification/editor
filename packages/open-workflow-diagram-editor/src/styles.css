@@ -82,6 +82,10 @@
 
     --dec-success-text: #047857;
 
+    /* Side panel: "add" actions, disclosures and runtime-expression values */
+    --dec-teal-text: #0d9488;
+    --dec-teal-text-hover: #047857;
+
     /* node hover glow */
     --dec-node-hover-glow: rgba(0, 65, 208, 0.3);
 
@@ -120,6 +124,8 @@
     --dec-selected-rgb: 96 165 250;
     --dec-accent-text: #60a5fa;
     --dec-success-text: #34d399;
+    --dec-teal-text: #2dd4bf;
+    --dec-teal-text-hover: #5eead4;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
     --dec-node-hover-glow: rgba(255, 255, 255, 0.3);
 

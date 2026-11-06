@@ -29,7 +29,8 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const SIDEBAR_WIDTH = "20rem";
+// Diverges from shadcn's 16rem.
+const SIDEBAR_WIDTH = "22.5rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 
 type SidebarContextProps = {

@@ -27,14 +27,21 @@ export function FieldLabel({
   label,
   required,
   description,
+  changed = false,
 }: {
   htmlFor?: string;
   label: string;
   required: boolean;
   description?: string;
+  changed?: boolean;
 }) {
   return (
     <div className="dec-form-field-label-row">
+      {changed && (
+        <span className="dec-form-field-gutter-dot">
+          <ChangedDot />
+        </span>
+      )}
       <label htmlFor={htmlFor} className="dec-form-field-label">
         {label}
       </label>
@@ -45,6 +52,19 @@ export function FieldLabel({
       )}
       {description && <HelpTooltip label={label} description={description} />}
     </div>
+  );
+}
+
+/** The dot after a changed field's label, or beside a changed map entry. */
+export function ChangedDot() {
+  const { t } = useI18n();
+  return (
+    <span
+      className="dec-form-field-changed"
+      role="img"
+      aria-label={t("sidebar.form.fieldChanged")}
+      title={t("sidebar.form.fieldChanged")}
+    />
   );
 }
 
