@@ -16,10 +16,16 @@
 
 import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
+import { findNestedGroups, getMissingProperty, isGroupError } from "./ajvErrorUtils";
+import {
+  countPropertySegments,
+  findBranchGhosts,
+  ONE_OF_BRANCH_PREFIX,
+  type BranchErrorView,
+} from "./branchGhosts";
 import { isPointerAtOrBelow } from "./paths";
 import { getSchemaForDefinition } from "./schemaFilter";
 import { NODE_TYPE_TO_DEF } from "./schemaWalker";
-import { ONE_OF_BRANCH_PREFIX } from "./validationErrors";
 
 // ---------------------------------------------------------------------------
 // Node-type to schema definition name mapping
@@ -98,27 +104,35 @@ interface ScopedGhostBranch {
 
 function getOneOfInstancePath(instancePath: string, schemaSuffix: string): string {
   if (!instancePath) return "";
-  const depth: number = (schemaSuffix.match(/(?:^|\/)properties\//g) ?? []).length;
+  const depth: number = countPropertySegments(schemaSuffix);
   if (depth === 0) return instancePath;
   const segments: string[] = instancePath.split("/");
   const remaining: string[] = segments.slice(0, Math.max(1, segments.length - depth));
   return remaining.join("/");
 }
 
+/** The parts of an Ajv error that `findBranchGhosts` reads. */
+function toBranchErrorView(error: ErrorObject): BranchErrorView {
+  return {
+    path: error.instancePath,
+    schemaPath: error.schemaPath,
+    missingProperty: error.keyword === "required" ? getMissingProperty(error) : undefined,
+  };
+}
+
 /**
- * Strips `oneOf` cascade noise from Ajv errors using the discriminator
- * pattern. When a `oneOf` branch has a `const` or `not` failure on a
- * property (its discriminator doesn't match), ALL errors from that
- * branch are secondary noise — the branch was never a candidate.
+ * Strips `oneOf` cascade noise from Ajv errors using two discriminator patterns:
  *
- * Ghost branches are scoped to their evaluated instance path so that
- * sibling or nested tasks sharing the same referenced schema definition
- * (such as heterogeneous call tasks in a `do` or `for` container) do not
- * suppress valid diagnostics on other task instances.
+ * - A branch with a `const` or `not` failure on a property: all errors from that branch are
+ *   noise, the branch was never a candidate.
+ * - A branch that fails with `required <task type key>`: the branch's other errors are noise,
+ *   and `required catch` is noise when `required try` is reported at the same path.
  *
- * This is the structural equivalent of what `collapseBranchGroups` does
- * for the form layer, but operates on raw Ajv errors without needing
- * form-level context.
+ * Ghost branches are scoped to their evaluated instance path so that sibling or nested tasks
+ * sharing the same referenced schema definition do not suppress each other's diagnostics.
+ *
+ * This is the structural equivalent of what `collapseBranchGroups` does for the form layer,
+ * but operates on raw Ajv errors without needing form-level context.
  */
 export function stripDiscriminatedCascade(errors: ErrorObject[]): ErrorObject[] {
   const ghostBranches: ScopedGhostBranch[] = [];
@@ -131,25 +145,90 @@ export function stripDiscriminatedCascade(errors: ErrorObject[]): ErrorObject[] 
 
     const prefix: string = match[1]!;
     const suffix: string = error.schemaPath.slice(match[0].length);
-    const instancePath: string = getOneOfInstancePath(error.instancePath ?? "", suffix);
+    const instancePath: string = getOneOfInstancePath(error.instancePath, suffix);
 
     if (!ghostBranches.some((g) => g.prefix === prefix && g.instancePath === instancePath)) {
       ghostBranches.push({ prefix, instancePath });
     }
   }
 
-  if (ghostBranches.length === 0) return errors;
+  const typeKeyGhosts: Set<ErrorObject> = findBranchGhosts(errors, toBranchErrorView);
+
+  if (ghostBranches.length === 0 && typeKeyGhosts.size === 0) {
+    return errors;
+  }
 
   return errors.filter((error) => {
-    const errorInstancePath: string = error.instancePath ?? "";
-    for (const ghost of ghostBranches) {
-      if (
+    if (typeKeyGhosts.has(error)) return false;
+    return !ghostBranches.some(
+      (ghost) =>
         error.schemaPath.startsWith(ghost.prefix) &&
-        isPointerAtOrBelow(errorInstancePath, ghost.instancePath)
+        isPointerAtOrBelow(error.instancePath, ghost.instancePath),
+    );
+  });
+}
+
+/**
+ * Drops the `oneOf`/`anyOf` summary when the errors of exactly one branch explain the failure.
+ * The summary stays when no branch error is left, when several branches have errors, when
+ * several branches matched (`passingSchemas`), and when a `$ref` branch reports at the group's
+ * own path, since its errors carry no `oneOf/N` prefix. Nothing else is ever removed.
+ */
+export function dropResolvedGroupSummaries(errors: ErrorObject[]): ErrorObject[] {
+  const groups: ErrorObject[] = errors.filter(isGroupError);
+  if (groups.length === 0) return errors;
+
+  const resolved: Set<ErrorObject> = new Set<ErrorObject>();
+  for (const group of groups) {
+    if ((group.params as { passingSchemas?: unknown }).passingSchemas != null) continue;
+
+    const prefix: string = `${group.schemaPath}/`;
+    const nested: ErrorObject[] = findNestedGroups(group, groups);
+
+    const branches: Set<string> = new Set<string>();
+    let refBranchReported: boolean = false;
+    for (const error of errors) {
+      if (error === group) continue;
+      if (
+        error.instancePath === group.instancePath &&
+        error.schemaPath.startsWith("#/$defs/") &&
+        !error.schemaPath.startsWith(prefix)
       ) {
-        return false;
+        refBranchReported = true;
       }
+      if (!error.schemaPath.startsWith(prefix)) continue;
+      if (!isPointerAtOrBelow(error.instancePath, group.instancePath)) continue;
+      if (nested.some((g) => isPointerAtOrBelow(error.instancePath, g.instancePath))) continue;
+      branches.add(error.schemaPath.slice(prefix.length).split("/")[0]!);
     }
+
+    if (branches.size === 1 && !refBranchReported) resolved.add(group);
+  }
+
+  return resolved.size === 0 ? errors : errors.filter((e) => !resolved.has(e));
+}
+
+/**
+ * Collapses errors that differ only in `schemaPath`, keeping the first. Errors are the same
+ * only when `instancePath`, `keyword`, `message` and the complete `params` are equal.
+ */
+export function dedupeEquivalentErrors(errors: ErrorObject[]): ErrorObject[] {
+  const seen: Set<string> = new Set<string>();
+  const result: ErrorObject[] = errors.filter((error) => {
+    const key: string = JSON.stringify([
+      error.instancePath,
+      error.keyword,
+      error.message,
+      error.params,
+    ]);
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
+  return result.length === errors.length ? errors : result;
+}
+
+/** Runs the Ajv error cleanup steps in the order they depend on. */
+export function cleanTaskAjvErrors(errors: ErrorObject[]): ErrorObject[] {
+  return dedupeEquivalentErrors(dropResolvedGroupSummaries(stripDiscriminatedCascade(errors)));
 }
