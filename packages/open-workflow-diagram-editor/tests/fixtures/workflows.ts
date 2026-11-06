@@ -920,3 +920,29 @@ export const COMMON_FIELDS_WORKFLOW = {
     },
   ],
 };
+
+/*
+ * Optional fields set and unset side by side: an http call with headers but no body, query or
+ * output, and a listen with an input schema (a presence-keyed one-of).
+ */
+export const ADD_FIELDS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "add-fields", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      createPet: {
+        call: "http",
+        with: {
+          method: "post",
+          endpoint: "https://petstore.example.com/pets",
+          headers: { "content-type": "application/json" },
+        },
+      },
+    },
+    {
+      awaitPayment: {
+        listen: { to: { one: { with: { type: "com.example.payment.settled" } } } },
+        input: { schema: { format: "json", document: { type: "object" } } },
+      },
+    },
+  ],
+};

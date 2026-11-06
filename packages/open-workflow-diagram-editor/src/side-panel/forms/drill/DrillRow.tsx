@@ -27,6 +27,7 @@ import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
 import { formatEntryCount } from "../customFields/fieldHelpers";
 import { countLevelErrorsUnder, useTaskValidation } from "../validation";
 import { COMMON_FIELDS_PATH } from "@/core/schemaToFormFields";
+import { RemoveFieldButton, useRemoveField } from "../removeField";
 
 /**
  * Displays a clickable row for a section, object, map or one-of, showing:
@@ -55,6 +56,7 @@ export function DrillRow({
   const { open } = useDrill();
   const { isReadOnly, taskData } = useTaskFormContext();
   const { control } = useFormContext<Record<string, unknown>>();
+  const removable = useRemoveField(field.path) !== null;
 
   const variantValue = useWatch({
     control,
@@ -119,7 +121,7 @@ export function DrillRow({
     ...(errorCount > 0 ? [errorText] : []),
   ].join(", ");
 
-  return (
+  const row = (
     <button
       type="button"
       className={`dec-form-drill-row${errorCount > 0 ? " has-error" : ""}`}
@@ -145,5 +147,14 @@ export function DrillRow({
       </span>
       <ChevronRight className="dec-form-drill-row-chevron" aria-hidden="true" />
     </button>
+  );
+  // The ✕ sits beside the row, never inside its button.
+  return removable ? (
+    <div className="dec-form-drill-row-wrap">
+      {row}
+      <RemoveFieldButton path={field.path} />
+    </div>
+  ) : (
+    row
   );
 }

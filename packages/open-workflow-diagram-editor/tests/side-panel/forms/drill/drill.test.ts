@@ -67,6 +67,8 @@ describe("resolveDrillStack", () => {
     ["a missing first level", ["gone", "inner"], []],
     ["a missing second level", ["outer", "gone"], [outer]],
     ["a field that is not a drill target", ["a"], []],
+    // `open()` always stacks the section first; a stack without it still finds what it names.
+    ["a level inside a section, without the section", ["inner"], [inner]],
   ] as const)("%s", (_name, stack, expected) => {
     expect(resolveDrillStack(root, stack, firstVariant)).toEqual(expected);
   });

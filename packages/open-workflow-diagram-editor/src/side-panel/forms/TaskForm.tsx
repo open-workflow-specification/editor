@@ -21,7 +21,8 @@ import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
 import { getFormFieldsForNodeType, structuralEqual } from "@/core";
 import { COMMON_FIELDS_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { FormField, GroupHeading } from "./FormField";
+import { GroupHeading } from "./FormField";
+import { FieldList } from "./FieldList";
 import { VariantPicker } from "./VariantPicker";
 import { useSiblingTaskNames } from "./useSiblingTaskNames";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
@@ -218,12 +219,13 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
                 {navigation.levelOneOf !== undefined && (
                   <VariantPicker field={navigation.levelOneOf} />
                 )}
-                {navigation.levelFields.map((field) => (
-                  <React.Fragment key={field.path}>
-                    {navigation.trail.length === 0 && <TopLevelHeading field={field} />}
-                    <FormField field={field} />
-                  </React.Fragment>
-                ))}
+                <FieldList
+                  key={navigation.drill.levelPath ?? ""}
+                  fields={navigation.levelFields}
+                  ownerPath={navigation.drill.levelPath}
+                  atLeastOne={navigation.levelNeedsAtLeastOne}
+                  before={navigation.trail.length === 0 ? topLevelHeading : undefined}
+                />
               </div>
             </InlineLevelsContext.Provider>
           </form>
@@ -232,6 +234,8 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     </TaskFormContext.Provider>
   );
 }
+
+const topLevelHeading = (field: FormFieldDescriptor) => <TopLevelHeading field={field} />;
 
 /** The top level's groups after the task's own fields: Flow (`then`), then Task settings. */
 function TopLevelHeading({ field }: { field: FormFieldDescriptor }) {

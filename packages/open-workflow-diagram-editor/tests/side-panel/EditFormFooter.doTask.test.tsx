@@ -28,6 +28,7 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
 import { openCommonFields } from "../test-utils/drill-helpers";
+import { panel } from "../test-utils/panel-helpers";
 
 vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
   const { createComboboxStub } = await import("../test-utils/combobox-stub");
@@ -102,6 +103,7 @@ describe("do task form", () => {
     const { commitWorkflow, user } = renderPanel(doTaskOf(model));
     await act(async () => {});
     await openCommonFields(user);
+    await panel.add(user, "if");
 
     await user.type(screen.getByLabelText("if"), literal("${ .ready }"));
     await user.click(applyButton());
@@ -152,6 +154,7 @@ describe("do task form", () => {
       rerender(changedChildren());
       await act(async () => {});
       await openCommonFields(user);
+      await panel.add(user, "if");
       await user.type(screen.getByLabelText("if"), literal("${ .ready }"));
       await user.click(applyButton());
 

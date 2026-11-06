@@ -29,6 +29,7 @@ import {
   collectWholeValuePaths,
   computeSentinelDefaults,
 } from "../../../src/side-panel/forms/taskFormContext";
+import { findShownField } from "../../../src/side-panel/forms/drill/drill";
 
 const NODE_TYPES = [...TASK_TYPE_KEYS];
 
@@ -56,6 +57,11 @@ const WALKERS: [string, Walker][] = [
   [
     "collectSelectedVariants",
     (fields, values) => [...collectSelectedVariants(fields, values).keys()],
+  ],
+  [
+    "findShownField",
+    (fields) =>
+      ["if", "timeout", "metadata"].map((path) => findShownField(fields, path, () => undefined)),
   ],
   [
     "collectVariantFieldPaths",

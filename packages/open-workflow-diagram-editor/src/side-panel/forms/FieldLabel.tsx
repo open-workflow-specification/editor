@@ -17,6 +17,7 @@
 import { HelpCircle } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { RemoveFieldButton } from "./removeField";
 
 // ---------------------------------------------------------------------------
 // FieldLabel — label text + optional description tooltip
@@ -28,12 +29,15 @@ export function FieldLabel({
   required,
   description,
   changed = false,
+  fieldPath,
 }: {
   htmlFor?: string;
   label: string;
   required: boolean;
   description?: string;
   changed?: boolean;
+  /** The field this label names: its ✕ goes at the row's end when it is removable. */
+  fieldPath?: string;
 }) {
   return (
     <div className="dec-form-field-label-row">
@@ -51,6 +55,7 @@ export function FieldLabel({
         </span>
       )}
       {description && <HelpTooltip label={label} description={description} />}
+      <RemoveFieldButton path={fieldPath} />
     </div>
   );
 }

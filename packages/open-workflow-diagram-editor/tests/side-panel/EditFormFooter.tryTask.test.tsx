@@ -312,7 +312,9 @@ describe("try task — backoff enum field", () => {
     expect(retry["backoff"]).toBeUndefined();
   });
 
-  it("after clearing backoff and applying, the combobox input shows '—'", async () => {
+  // The footer's task never updates here, as between Apply and the canvas layout: the panel must
+  // already show what the live re-render below shows.
+  it("after clearing backoff and applying, backoff is offered again before the task re-renders", async () => {
     const { user } = renderTryFooter();
     await act(async () => {});
     await openRetry(user);
@@ -322,7 +324,7 @@ describe("try task — backoff enum field", () => {
     await user.click(backoffClear);
     await user.click(applyButton());
 
-    expect(screen.getAllByDisplayValue("—").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /^Add backoff$/i })).toBeInTheDocument();
   });
 });
 
@@ -368,7 +370,8 @@ describe("try task — backoff clear with live re-render", () => {
     await user.click(applyButton());
 
     await act(async () => {});
-    expect(screen.getAllByDisplayValue("—").length).toBeGreaterThan(0);
+    // Cleared and applied, backoff is gone from the task: it is offered again under Fields you can add.
+    expect(screen.getByRole("button", { name: /^Add backoff$/i })).toBeInTheDocument();
   });
 
   it("clearing backoff and applying stays cleared after task re-render (rich inner object)", async () => {
@@ -413,9 +416,9 @@ describe("try task — backoff clear with live re-render", () => {
 
     // With a rich inner object (rate, max.seconds), padRemovedPaths creates
     // leaf-level padding that reconstructs the backoff structure. The cleanup
-    // loop must flatten it back to "" so the combobox stays on "—".
+    // loop must flatten it back to "", so backoff stays cleared: offered again as a chip.
     await act(async () => {});
-    expect(screen.getAllByDisplayValue("—").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /^Add backoff$/i })).toBeInTheDocument();
   });
 });
 

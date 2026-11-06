@@ -18,7 +18,7 @@ import { describe, expect, it } from "vitest";
 import { unflattenValues, applyDirtyValues, flattenTask } from "../../src/core/taskDraft";
 import { switchCase } from "../test-utils";
 import { ROOT_ONE_OF_PATH } from "../../src/core";
-import { SET_EXAMPLE_WORKFLOW } from "../fixtures/workflows";
+import { ADD_FIELDS_WORKFLOW, SET_EXAMPLE_WORKFLOW } from "../fixtures/workflows";
 
 describe("unflattenValues", () => {
   it.each(["__proto__.polluted", "a.__proto__.polluted", "a.prototype.x", "constructor.x"])(
@@ -543,5 +543,44 @@ describe("flattenTask", () => {
     ],
   ] as const)("flattens %s", (_name, value, prefix, expected) => {
     expect(flattenTask(value, prefix)).toEqual(expected);
+  });
+});
+
+describe("applyDirtyValues: removed fields", () => {
+  const awaitPayment = ADD_FIELDS_WORKFLOW.do[1]!.awaitPayment as Record<string, unknown>;
+  const createPet = ADD_FIELDS_WORKFLOW.do[0]!.createPet as Record<string, unknown>;
+  const removed = { input: undefined };
+  const dirty = new Set(["input"]);
+
+  it("deletes an object removed with undefined", () => {
+    expect(applyDirtyValues(awaitPayment, removed, dirty)).not.toHaveProperty("input");
+  });
+
+  it("does not revive a presence key under a removed path", () => {
+    const result = applyDirtyValues(awaitPayment, removed, dirty, {
+      sentinelPaths: new Set(["input.schema"]),
+      sentinelPresenceKeys: new Map([["input.schema", "document"]]),
+    });
+    expect(result).not.toHaveProperty("input");
+  });
+
+  it("does not revive a selected variant's presence key when its one-of was not switched", () => {
+    const result = applyDirtyValues(awaitPayment, removed, dirty, {
+      sentinelPresenceKeys: new Map([["input.schema", "document"]]),
+    });
+    expect(result).not.toHaveProperty("input");
+  });
+
+  it("does not write const discriminators under a removed path", () => {
+    const result = applyDirtyValues(awaitPayment, removed, dirty, {
+      sentinelPaths: new Set(["input.schema"]),
+      sentinelConstWrites: new Map([["input.schema", { format: "json" }]]),
+    });
+    expect(result).not.toHaveProperty("input");
+  });
+
+  it("never deletes the task type key", () => {
+    const result = applyDirtyValues(createPet, { with: undefined }, new Set(["with"]));
+    expect(result).toHaveProperty("call", "http");
   });
 });

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { joinPath } from "./paths";
+import { getParentPath, joinPath } from "./paths";
 import { ROOT_ONE_OF_PATH } from "./schemaToFormFields";
 import { getTaskTypeKey } from "./taskTypes";
 import { isObjectNotArray, isSafeKey } from "./utils";
@@ -202,6 +202,8 @@ export function applyDirtyValues(
   // For sentinel paths: write const discriminators, delete stale variant paths,
   // and delete the model path itself unless a dirty field supplied a value.
   for (const sentinelPath of sentinelPaths) {
+    // A one-of inside a field the user removed keeps nothing: no discriminator, no presence key.
+    if (isRemovedPath(sentinelPath, allValues, dirtyPaths)) continue;
     const prefix = sentinelPath + ".";
     const baseParts = sentinelPath === ROOT_ONE_OF_PATH ? [] : sentinelPath.split(".");
 
@@ -254,7 +256,7 @@ export function applyDirtyValues(
 
   // Restore a selected variant's key that an edit emptied, so the selection survives
   for (const [oneOfPath, presenceKey] of sentinelPresenceKeys) {
-    if (sentinelPaths.has(oneOfPath)) continue;
+    if (sentinelPaths.has(oneOfPath) || isRemovedPath(oneOfPath, allValues, dirtyPaths)) continue;
     const keyParts = [...(oneOfPath === ROOT_ONE_OF_PATH ? [] : oneOfPath.split(".")), presenceKey];
     if (getPath(original, keyParts) !== undefined && getPath(result, keyParts) === undefined) {
       setPath(result, keyParts, {});
@@ -289,6 +291,25 @@ function isDirtyPath(dotPath: string, dirtyPaths: Set<string>): boolean {
     if (dotPath.startsWith(dirty + ".")) return true;
     // Case 2: a dirty leaf is nested under dotPath
     if (dirty.startsWith(dotPath + ".")) return true;
+  }
+  return false;
+}
+
+// True when `path` or an ancestor was removed: dirty, and `undefined` in the form values.
+function isRemovedPath(
+  path: string,
+  allValues: Record<string, unknown>,
+  dirtyPaths: Set<string>,
+): boolean {
+  if (path === ROOT_ONE_OF_PATH) return false;
+  for (let current = path; current !== ""; current = getParentPath(current)) {
+    if (
+      Object.prototype.hasOwnProperty.call(allValues, current) &&
+      allValues[current] === undefined &&
+      dirtyPaths.has(current)
+    ) {
+      return true;
+    }
   }
   return false;
 }
@@ -337,7 +358,7 @@ function setPath(obj: Record<string, unknown>, parts: string[], value: unknown):
  * @param options.prune        - Whether parents emptied by the deletion are removed too.
  * @param options.protectedKey - A top-level key that is never pruned
  */
-function deletePath(
+export function deletePath(
   obj: Record<string, unknown>,
   parts: string[],
   options: { prune: boolean; protectedKey?: string | undefined } = { prune: true },

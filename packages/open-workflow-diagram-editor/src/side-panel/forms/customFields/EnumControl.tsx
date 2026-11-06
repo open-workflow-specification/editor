@@ -29,6 +29,7 @@ import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 import { Textarea } from "../ui/textarea";
 import { innerTextPath } from "../sentinels";
+import { useRemoveField } from "../removeField";
 import { deriveInnerObject, serializeInnerObject } from "./innerObjectText";
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ export function EnumControl({ field, id }: EnumControlProps) {
   const { isReadOnly, taskData, validateField } = useTaskFormContext();
   const { t } = useI18n();
   const errorMessage = useFieldError(field.path);
+  const removeField = useRemoveField(field.path);
   const hasValueMap = field.valueMap !== undefined;
   const hasInnerObject = field.innerObjectFormat !== undefined;
 
@@ -112,7 +114,6 @@ export function EnumControl({ field, id }: EnumControlProps) {
   const setInnerText = (text: string) =>
     setValue(textPath as never, text as never, { shouldDirty: true });
 
-
   // Re-sync when the form resets (apply, cancel, node switch, undo/redo).
   // defaultValues identity changes on every form.reset() call.
   // Track the previous snapshot in state (not a ref) so the state derivation can happen
@@ -140,6 +141,11 @@ export function EnumControl({ field, id }: EnumControlProps) {
           : ((rhfField.value as string | undefined) ?? "");
 
         function handleValueChange(val: string | null) {
+          // Clearing an optional plain enum removes it, as its ✕ does: back to a chip, focus on it
+          if (!hasValueMap && (val === null || val === "") && removeField !== null) {
+            removeField.remove();
+            return;
+          }
           // Always store the plain string key in RHF — storing an object breaks
           // RHF's dirty-field tracking (dirtyFields ends up empty for object-valued
           // Controllers). The valueMap→object conversion happens in handleApply.

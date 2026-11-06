@@ -23,6 +23,7 @@ import {
 } from "../../../src/side-panel/forms/draft";
 import { getNestedValue } from "../../../src/side-panel/forms/taskFormContext";
 import {
+  ADD_FIELDS_WORKFLOW,
   EMPTY_MAPS_WORKFLOW,
   RUN_PROCESS_TYPES_WORKFLOW,
   TRY_CATCH_BACKOFF_RICH_WORKFLOW,
@@ -293,5 +294,89 @@ describe("computeDraftChanges at a one-of's own path", () => {
       liveValue: (path) => getNestedValue(values, path),
     });
     expect(result.paths).toEqual(["with.proto.endpoint"]);
+  });
+});
+
+describe("computeDraftChanges for removed and added fields", () => {
+  const listenFields = getFormFieldsForNodeType("listen");
+  const awaitPayment = nodeAt(parseFixture(ADD_FIELDS_WORKFLOW), "/do/awaitPayment").data
+    .task as Task;
+  const changes = (values: Record<string, unknown>, dirtyFields: object) => {
+    const defaultValues = buildFormValues(listenFields, awaitPayment);
+    return computeDraftChanges({
+      task: awaitPayment,
+      fields: listenFields,
+      values,
+      dirtyFields,
+      defaultValues,
+      liveValue: (path) => getNestedValue(values, path),
+    });
+  };
+
+  it("a removed object counts as one change", () => {
+    const values = { ...buildFormValues(listenFields, awaitPayment), input: undefined };
+    expect(changes(values, { input: true })).toEqual({ hasChanges: true, paths: ["input"] });
+  });
+
+  it("an untouched added field is no change", () => {
+    expect(changes(buildFormValues(listenFields, awaitPayment), {}).hasChanges).toBe(false);
+  });
+});
+
+describe("buildTaskFromDraft: added fields left empty", () => {
+  const callFields = getFormFieldsForNodeType("call");
+  const createPet = nodeAt(parseFixture(ADD_FIELDS_WORKFLOW), "/do/createPet").data.task as Task;
+  const build = (added: string[]) => {
+    const values = buildFormValues(callFields, createPet);
+    return buildTaskFromDraft({
+      task: createPet,
+      fields: callFields,
+      values,
+      dirtyFields: {},
+      liveValue: (path) => getNestedValue(values, path),
+      added,
+    }).task;
+  };
+
+  it("writes nothing for an added field with nothing required inside", () => {
+    expect(build(["with.query", "export"])).toEqual(createPet);
+  });
+
+  it("commits an added one-of whose option requires a field, so the SDK reports it", () => {
+    expect(build(["input", "input.schema"])).toHaveProperty("input.schema", {});
+  });
+
+  // A ✕ then a re-add restores the committed value: an explicit `{}` the task had stays.
+  it("keeps an empty value the task already had", () => {
+    const greet = nodeAt(parseFixture(EMPTY_MAPS_WORKFLOW), "/do/greet").data.task as Task;
+    const grpcFields = getFormFieldsForNodeType("call");
+    const values = buildFormValues(grpcFields, greet);
+    const built = buildTaskFromDraft({
+      task: greet,
+      fields: grpcFields,
+      values,
+      dirtyFields: {},
+      liveValue: (path) => getNestedValue(values, path),
+      added: ["with.arguments"],
+    }).task;
+    expect(built).toHaveProperty("with.arguments", {});
+  });
+
+  // `lifetime` (required `cleanup`) exists only in run's Container option: added there, then
+  // the option switched to Script, it must not come back under a container the task no longer has.
+  it("never commits an added field of an option no longer chosen", () => {
+    const runFields = getFormFieldsForNodeType("run");
+    const transform = nodeAt(parseFixture(RUN_PROCESS_TYPES_WORKFLOW), "/do/transform").data
+      .task as Task;
+    const values = buildFormValues(runFields, transform);
+    const built = buildTaskFromDraft({
+      task: transform,
+      fields: runFields,
+      values,
+      dirtyFields: {},
+      liveValue: (path) => getNestedValue(values, path),
+      added: ["run.container.lifetime"],
+    }).task;
+    expect(built).toEqual(transform);
   });
 });

@@ -23,13 +23,20 @@ import * as React from "react";
  */
 
 export type DrillContextValue = {
-  open: (path: string, label: string) => void;
+  /**
+   * Opens the level at `path`. Focus lands on its back button, or with `focus: "first"` (a field
+   * just added) on the first thing to fill in it.
+   */
+  open: (path: string, label: string, options?: { focus?: "back" | "first" }) => void;
+  /** Says `text` in the form's polite live region (an added or removed field). */
+  announce: (text: string) => void;
   /** The open level's path; undefined at the task's top level. */
   levelPath: string | undefined;
 };
 
 export const DrillContext = React.createContext<DrillContextValue>({
   open: () => {},
+  announce: () => {},
   levelPath: undefined,
 });
 

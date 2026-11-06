@@ -18,6 +18,7 @@ import * as React from "react";
 import { useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
 import { X, Plus } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
+import { RemoveFieldButton } from "../removeField";
 import { Input } from "../ui/input";
 import type { MapField } from "../../../core/schemaToFormFields";
 import { isObjectNotArray } from "../../../core/utils";
@@ -268,6 +269,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
         <div className="dec-map-header">
           {label}
           {filledCount > 0 && <span className="dec-map-count">{countLabel}</span>}
+          {label !== null && <RemoveFieldButton path={field.path} />}
         </div>
       )}
 
