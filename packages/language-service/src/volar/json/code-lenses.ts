@@ -39,7 +39,7 @@ export function createJsonCodeLensesPlugin(): LanguageServicePlugin {
               command: {
                 title: "Create an Open Workflow",
                 command: "openworkflow.insertHelloWorld",
-                arguments: [HELLO_WORLD_SAMPLE],
+                arguments: [HELLO_WORLD_SAMPLE, document.uri.toString()],
               },
             },
           ];

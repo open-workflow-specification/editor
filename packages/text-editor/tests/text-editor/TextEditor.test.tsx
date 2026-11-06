@@ -99,6 +99,19 @@ describe("TextEditor", () => {
       );
     });
 
+    it("assigns a unique model URI to each editor instance", () => {
+      render(
+        <>
+          <TextEditor {...defaultProps} />
+          <TextEditor {...defaultProps} />
+        </>,
+      );
+
+      const modelUris = mockCreateModel.mock.calls.map(([, , uri]) => uri?.toString());
+      expect(modelUris).toHaveLength(2);
+      expect(new Set(modelUris).size).toBe(2);
+    });
+
     it("calls createLanguageServiceWorker once on mount", () => {
       renderEditor();
 
