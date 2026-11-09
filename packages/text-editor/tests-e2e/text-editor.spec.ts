@@ -42,8 +42,12 @@ const EMPTY_JSON_READ_ONLY_URL = storyUrl("text-editor--empty-json", "isReadOnly
 const EMPTY_YAML_URL = storyUrl("text-editor--empty-yaml");
 const EMPTY_YAML_READ_ONLY_URL = storyUrl("text-editor--empty-yaml", "isReadOnly:!true");
 
+const waitForLanguageServiceReady = (page: Page) =>
+  page.waitForFunction(() => window.textEditorLanguageServiceReady === true);
+
 async function openTextEditor(page: Page, url = EMPTY_JSON_URL) {
   await page.goto(url);
+  await waitForLanguageServiceReady(page);
 
   const monacoContainer = page.locator(".monaco-editor").first();
   await monacoContainer.waitFor({ state: "visible" });
@@ -62,10 +66,14 @@ const expectModelUri = (monacoContainer: Locator, language: Language) =>
     `inmemory://openworkflow/workflow.${language}`,
   );
 
-/** Changes the language through the story, waits for the recreated editor and focuses it. */
+/** Changes the language through the story, waits for the recreated editor and language service, and focuses it. */
 async function switchLanguage(page: Page, monacoContainer: Locator, language: Language) {
-  await page.evaluate((value) => window.textEditorSetLanguage?.(value), language);
+  await page.evaluate((value) => {
+    window.textEditorLanguageServiceReady = false;
+    window.textEditorSetLanguage?.(value);
+  }, language);
   await expectModelUri(monacoContainer, language);
+  await waitForLanguageServiceReady(page);
   await monacoContainer.click();
 }
 
@@ -332,7 +340,7 @@ test.describe("TextEditor", () => {
     test("JSON → YAML: the content synchronized by the consumer is preserved", async ({ page }) => {
       const monacoContainer = await openTextEditor(page, EMPTY_JSON_URL);
 
-      await page.keyboard.type("Lorem ipsum");
+      await pasteText(page, "Lorem ipsum");
       await expect(monacoContainer).toContainText("Lorem ipsum");
 
       await switchLanguage(page, monacoContainer, "yaml");

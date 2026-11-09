@@ -104,6 +104,14 @@ describe("TextEditor", () => {
 
       expect(createLanguageServiceWorker).toHaveBeenCalledOnce();
     });
+
+    it("calls onLanguageServiceReady once the language service is ready", async () => {
+      const onLanguageServiceReady = vi.fn();
+
+      renderEditor({ onLanguageServiceReady });
+
+      await vi.waitFor(() => expect(onLanguageServiceReady).toHaveBeenCalledOnce());
+    });
   });
 
   describe("controlled content", () => {

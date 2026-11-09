@@ -24,6 +24,7 @@ const LANGUAGES = ["json", "yaml"] as const;
 export function createTextEditorLanguageService(
   model: monaco.editor.ITextModel,
   createWorker: () => Worker,
+  onReady?: () => void,
 ): monaco.IDisposable {
   const worker = monaco.editor.createWebWorker<WorkerLanguageService>({
     worker: Promise.resolve(createWorker()),
@@ -45,21 +46,27 @@ export function createTextEditorLanguageService(
   const providers: monaco.IDisposable[] = [];
   let disposed = false;
 
-  for (const language of LANGUAGES) {
-    void registerProviders(worker, language, getSyncUris, monaco.languages)
-      .then((disposable) => {
-        if (disposed) {
-          disposable.dispose();
-        } else {
-          providers.push(disposable);
-        }
-      })
-      .catch((error) => {
-        if (!disposed) {
-          console.error(`registerProviders failed for ${language}`, error);
-        }
-      });
-  }
+  const registrations = LANGUAGES.map((language) =>
+    registerProviders(worker, language, getSyncUris, monaco.languages).then((disposable) => {
+      if (disposed) {
+        disposable.dispose();
+      } else {
+        providers.push(disposable);
+      }
+    }),
+  );
+
+  Promise.all(registrations)
+    .then(() => {
+      if (!disposed) {
+        onReady?.();
+      }
+    })
+    .catch((error) => {
+      if (!disposed) {
+        console.error("Language service initialization failed", error);
+      }
+    });
 
   return {
     dispose() {

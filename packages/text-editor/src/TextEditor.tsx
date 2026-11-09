@@ -42,6 +42,7 @@ export type TextEditorProps = {
   content: string;
   language: TextEditorLanguage;
   createLanguageServiceWorker: () => Worker;
+  onLanguageServiceReady?: () => void;
   onContentChange?: (content: string) => void;
   isReadOnly?: boolean;
   colorMode?: ColorMode;
@@ -51,6 +52,7 @@ export const TextEditor = ({
   content,
   language,
   createLanguageServiceWorker,
+  onLanguageServiceReady,
   onContentChange,
   isReadOnly = false,
   colorMode = "system",
@@ -82,7 +84,11 @@ export const TextEditor = ({
       }),
     });
 
-    const languageService = createTextEditorLanguageService(model, createLanguageServiceWorker);
+    const languageService = createTextEditorLanguageService(
+      model,
+      createLanguageServiceWorker,
+      onLanguageServiceReady,
+    );
 
     editorRef.current = editor;
 

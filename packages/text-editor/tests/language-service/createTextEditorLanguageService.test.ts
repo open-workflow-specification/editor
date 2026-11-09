@@ -113,6 +113,30 @@ describe("createTextEditorLanguageService", () => {
     });
   });
 
+  describe("onReady", () => {
+    it("is called once after the providers of both languages are registered", async () => {
+      const onReady = vi.fn();
+
+      createTextEditorLanguageService(mockModel as never, makeWorker, onReady);
+      expect(onReady).not.toHaveBeenCalled();
+
+      await vi.waitFor(() => expect(onReady).toHaveBeenCalledOnce());
+      expect(mockRegisterProviders).toHaveBeenCalledTimes(2);
+    });
+
+    it("is not called when disposed before the registrations complete", async () => {
+      const onReady = vi.fn();
+
+      const ls = createTextEditorLanguageService(mockModel as never, makeWorker, onReady);
+      ls.dispose();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(onReady).not.toHaveBeenCalled();
+      expect(mockProvidersDispose).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("dispose", () => {
     it("disposes all registered providers on dispose", async () => {
       const ls = createTextEditorLanguageService(mockModel as never, makeWorker);

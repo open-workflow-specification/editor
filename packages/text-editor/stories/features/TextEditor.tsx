@@ -23,11 +23,17 @@ declare global {
       React.SetStateAction<TextEditorProps["language"] | undefined>
     >;
     textEditorSetIsReadOnly?: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+    textEditorLanguageServiceReady?: boolean;
   }
 }
 
 export const createLanguageServiceWorker = () =>
   new Worker(new URL("../../src/worker/language.worker.ts", import.meta.url), { type: "module" });
+
+// Exposed for E2E tests, which wait for the language service before interacting with Monaco.
+const onLanguageServiceReady = () => {
+  window.textEditorLanguageServiceReady = true;
+};
 
 /** Primary UI component for user interaction */
 export const TextEditor = ({ ...props }: TextEditorProps) => {
@@ -55,10 +61,12 @@ export const TextEditor = ({ ...props }: TextEditorProps) => {
     // Expose React setters for E2E tests interactions.
     window.textEditorSetLanguage = setLanguageOverride;
     window.textEditorSetIsReadOnly = setIsReadOnlyOverride;
+    window.textEditorLanguageServiceReady = false;
 
     return () => {
       delete window.textEditorSetLanguage;
       delete window.textEditorSetIsReadOnly;
+      delete window.textEditorLanguageServiceReady;
     };
   }, []);
 
@@ -69,6 +77,7 @@ export const TextEditor = ({ ...props }: TextEditorProps) => {
         content={content}
         onContentChange={handleContentChange}
         createLanguageServiceWorker={createLanguageServiceWorker}
+        onLanguageServiceReady={onLanguageServiceReady}
         language={languageOverride ?? props.language}
         isReadOnly={isReadOnlyOverride ?? props.isReadOnly}
       />
