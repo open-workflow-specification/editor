@@ -34,6 +34,7 @@ import {
   variantFieldsOf,
 } from "./taskFormContext";
 import { LevelErrors } from "./validation";
+import { useFieldChanged } from "../EditSession";
 import { FieldLabel, HelpTooltip } from "./FieldLabel";
 import { VariantPicker } from "./VariantPicker";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
@@ -77,12 +78,14 @@ function PlainFieldRow({ field }: { field: PlainField }) {
   // not a valid DOM association. Skip the id linkage for booleans.
   const controlId =
     field.kind === "boolean" ? undefined : `field-${field.path.replace(/\./g, "-")}`;
+  const changed = useFieldChanged(field.path);
   return (
     <div className="dec-form-field">
       <FieldLabel
         {...(controlId !== undefined ? { htmlFor: controlId } : {})}
         label={field.label}
         required={field.required}
+        changed={changed}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
       <div className="dec-form-field-control">
@@ -300,12 +303,15 @@ function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainFie
       ? undefined
       : `field-${value.path.replace(/\./g, "-")}`;
 
+  const changed = useFieldChanged(field.path);
+
   return (
     <div className="dec-form-field">
       <FieldLabel
         {...(controlId !== undefined ? { htmlFor: controlId } : {})}
         label={field.label}
         required={field.required}
+        changed={changed}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
       <div className="dec-form-field-control dec-form-single-value-oneof">

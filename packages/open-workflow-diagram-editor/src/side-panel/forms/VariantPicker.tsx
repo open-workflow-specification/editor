@@ -35,6 +35,7 @@ import {
 } from "./ui/combobox";
 import { sentinelPath as toSentinelPath } from "./sentinels";
 import { FieldLabel } from "./FieldLabel";
+import { useFieldChanged } from "../EditSession";
 
 // ---------------------------------------------------------------------------
 // VariantPicker — a one-of's type combobox; switching saves and restores values
@@ -52,6 +53,8 @@ export function VariantPicker({
   const { getValues, setValue, register, clearErrors } = useFormContext<Record<string, unknown>>();
   const sentinelPath = toSentinelPath(field.path);
   const selectedVariantIdx = useSelectedVariant(field);
+  // Only the switch itself: the chosen variant's fields mark their own changes below the picker.
+  const switched = useFieldChanged(field.path, { exact: true });
 
   // Variant snapshots: owned by TaskForm (survives drill unmount), cleared on task change.
   const variantSnapshots = useVariantSnapshots();
@@ -185,6 +188,7 @@ export function VariantPicker({
           <FieldLabel
             label={field.label}
             required={field.required}
+            changed={switched}
             {...(field.description !== undefined ? { description: field.description } : {})}
           />
           <div className="dec-form-field-control">{picker}</div>

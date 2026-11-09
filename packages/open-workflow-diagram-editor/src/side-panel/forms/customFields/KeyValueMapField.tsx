@@ -21,7 +21,10 @@ import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { MapField } from "../../../core/schemaToFormFields";
 import { isObjectNotArray } from "../../../core/utils";
+import { structuralEqual } from "../../../core/structuralEqual";
 import { getNestedValue, useTaskFormContext } from "../taskFormContext";
+import { ChangedDot } from "../FieldLabel";
+import { useFieldChanged } from "../../EditSession";
 import { useFieldError, FieldWithError, formatEntryCount, newId } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
@@ -209,7 +212,31 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   // ── Count badge ───────────────────────────────────────────────────────────
   const filledCount = rows.filter((r) => r.key !== "").length;
   const countLabel = formatEntryCount(t, filledCount);
-  const label = showLabel ? <span className="dec-map-label">{field.label}</span> : null;
+  // ── Changed markers ───────────────────────────────────────────────────────
+  // The map counts as one change; each entry that differs from the reset baseline gets a dot.
+  const changed = useFieldChanged(field.path);
+  const baselineMap = defaultValues ? getNestedValue(defaultValues, field.path) : undefined;
+  const currentMap = getValues(field.path as never) as unknown;
+  const isEntryChanged = (row: MapEntry) =>
+    changed &&
+    row.key !== "" &&
+    !(
+      isObjectNotArray(baselineMap) &&
+      isObjectNotArray(currentMap) &&
+      row.key in baselineMap &&
+      structuralEqual(baselineMap[row.key], currentMap[row.key])
+    );
+
+  const label = showLabel ? (
+    <span className="dec-map-label">
+      {changed && (
+        <span className="dec-map-gutter-dot">
+          <ChangedDot />
+        </span>
+      )}
+      {field.label}
+    </span>
+  ) : null;
 
   // ── Read-only mode ────────────────────────────────────────────────────────
   if (isReadOnly) {
@@ -236,7 +263,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
 
   // ── Edit mode ─────────────────────────────────────────────────────────────
   return (
-    <div className="dec-map-group">
+    <div className="dec-map-group dec-map-group-gutter">
       {(label !== null || filledCount > 0) && (
         <div className="dec-map-header">
           {label}
@@ -251,6 +278,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
               <MapRow
                 key={row.id}
                 row={row}
+                changed={isEntryChanged(row)}
                 onUpdate={(newKey, newValue) => updateRow(row.id, newKey, newValue)}
                 onDelete={() => deleteRow(row.id)}
                 onBlur={() => {
@@ -292,8 +320,10 @@ export function MapRow({
   onBlur,
   hasError,
   valueClassName,
+  changed = false,
 }: {
   row: MapEntry;
+  changed?: boolean;
   onUpdate: (key: string, value: string) => void;
   onDelete: () => void;
   /** Called when either input loses focus; triggers validation for this entry. */
@@ -308,6 +338,11 @@ export function MapRow({
 
   return (
     <div className="dec-map-row">
+      {changed && (
+        <span className="dec-map-gutter-dot">
+          <ChangedDot />
+        </span>
+      )}
       <Input
         className="dec-map-key-input"
         value={row.key}
