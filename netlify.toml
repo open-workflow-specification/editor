@@ -17,7 +17,7 @@
 [build.environment]
   NODE_VERSION = "24"
   PNPM_VERSION = "10.31.0"
-  PREVIEW_PACKAGE_NAME = "@openworkflowspec/diagram-editor"
+  PREVIEW_PACKAGE_NAME = "@openworkflowspec/dual-editor"
 
 [build]
   command = """
@@ -25,7 +25,7 @@
     pnpm -F "${PREVIEW_PACKAGE_NAME}..." --workspace-concurrency=1 build:dev
     pnpm -F "$PREVIEW_PACKAGE_NAME" build:storybook
   """
-  publish = "packages/open-workflow-diagram-editor/dist-storybook"
+  publish = "packages/dual-editor/dist-storybook"
   ignore = """
     set -e -o pipefail
 
