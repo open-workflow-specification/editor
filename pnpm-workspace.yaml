@@ -41,6 +41,7 @@ catalog:
   monaco-editor: ^0.57.0
   oxfmt: ^0.75.0
   oxlint: ^1.90.0
+  path-browserify: ^1.0.1
   radix-ui: ^1.8.1
   react: ^19.3.1
   react-dom: ^19.3.1

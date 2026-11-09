@@ -123,6 +123,9 @@ catalogs:
     oxlint:
       specifier: ^1.90.0
       version: 1.90.0
+    path-browserify:
+      specifier: ^1.0.1
+      version: 1.0.1
     radix-ui:
       specifier: ^1.8.1
       version: 1.8.1
@@ -296,7 +299,7 @@ importers:
         specifier: workspace:*
         version: link:../text-editor
       path-browserify:
-        specifier: ^1.0.1
+        specifier: 'catalog:'
         version: 1.0.1
     devDependencies:
       '@chromatic-com/storybook':
@@ -596,7 +599,7 @@ importers:
         specifier: 'catalog:'
         version: 0.57.0
       path-browserify:
-        specifier: ^1.0.1
+        specifier: 'catalog:'
         version: 1.0.1
       vscode-uri:
         specifier: 'catalog:'

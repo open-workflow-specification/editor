@@ -41,7 +41,7 @@
     "@openworkflowspec/core": "workspace:*",
     "@openworkflowspec/diagram-editor": "workspace:*",
     "@openworkflowspec/text-editor": "workspace:*",
-    "path-browserify": "^1.0.1"
+    "path-browserify": "catalog:"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "catalog:",
