@@ -101,6 +101,22 @@ describe("DualEditorElement", () => {
     await vi.waitFor(() => expect(lastProps?.contentResetKey).toBe(2));
   });
 
+  it("ignores an edit callback from before a host reset when disconnected", async () => {
+    const el = createElement();
+    el.content = "original workflow";
+    await vi.waitFor(() => expect(lastProps?.content).toBe("original workflow"));
+    const staleOnContentChange = lastProps?.onContentChange as (content: string) => void;
+
+    el.content = "replacement workflow";
+    el.remove();
+    staleOnContentChange("stale pending edit");
+
+    expect(el.content).toBe("replacement workflow");
+
+    document.body.appendChild(el);
+    await vi.waitFor(() => expect(lastProps?.content).toBe("replacement workflow"));
+  });
+
   it("re-renders after edits so external content resets reach the editor", async () => {
     const el = createElement();
     const originalContent = "document:\n  dsl: '1.0.3'\n  name: workflow-a";

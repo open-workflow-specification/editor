@@ -68,15 +68,17 @@ export class DualEditorElement extends HTMLElement {
   private render(): void {
     if (!this._root) return;
 
+    const contentResetKey = this._contentResetKey;
     const props: DualEditorProps = {
       content: this._content,
-      contentResetKey: this._contentResetKey,
+      contentResetKey,
       locale: this.getAttribute("locale") ?? "en",
       isReadOnly: this.hasAttribute("read-only"),
       colorMode: (this.getAttribute("color-mode") as ColorMode) ?? "system",
       language: this.getAttribute("language") === "yaml" ? "yaml" : "json",
       createLanguageServiceWorker: () => new LanguageServiceWorker(),
       onContentChange: (content) => {
+        if (contentResetKey !== this._contentResetKey) return;
         this._content = content;
         this.render();
       },
