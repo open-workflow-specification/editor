@@ -111,7 +111,7 @@ export function unflattenValues(flat: Record<string, unknown>): Record<string, u
 /* Removes empty values (null, undefined, "") from objects and arrays.
  * Used to clean up ordered maps where clearing a field means deleting it.
  */
-function pruneEmptyLeaves<T>(value: T): T {
+export function pruneEmptyLeaves<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((entry) => pruneEmptyLeaves(entry)) as T;
   }

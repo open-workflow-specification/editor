@@ -18,7 +18,10 @@ import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormF
 import { collectLeafKinds, selectedVariantIndex } from "../taskFormContext";
 import { sentinelPath } from "../sentinels";
 
-/** Presence keys of a one-of: the selected variant's, and those of its other variants. */
+/**
+ * Keys that identify the variants of a one-of: the selected variant's, and those of its other
+ * variants. A variant is identified by its presence key, or else by its only required property.
+ */
 export interface PresenceKeys {
   active: Set<string>;
   other: Set<string>;
@@ -42,6 +45,8 @@ export interface ActiveFormView {
   taskLists: Set<string>;
   /** Ordered maps: the container that shows them and the item-relative leaf paths each entry renders. */
   orderedMaps: Map<string, OrderedMapView>;
+  /** Event-filter lists: they render each item's `with` and `correlate` themselves. */
+  eventFilterLists: Set<string>;
   /** Presence keys by one-of path (`""` for the root one-of). */
   presence: Map<string, PresenceKeys>;
 }
@@ -60,6 +65,7 @@ export function buildActiveFormView(
     containers: new Set([""]),
     taskLists: new Set(),
     orderedMaps: new Map(),
+    eventFilterLists: new Set(),
     presence: new Map(),
   };
 
@@ -80,8 +86,9 @@ export function buildActiveFormView(
         );
         const entry = view.presence.get(key) ?? { active: new Set(), other: new Set() };
         field.variants.forEach((variant, index) => {
-          if (variant.presenceKey !== undefined) {
-            (index === selected ? entry.active : entry.other).add(variant.presenceKey);
+          const identifier = variant.requiredKey ?? variant.presenceKey;
+          if (identifier !== undefined) {
+            (index === selected ? entry.active : entry.other).add(identifier);
           }
         });
         view.presence.set(key, entry);
@@ -96,6 +103,7 @@ export function buildActiveFormView(
         });
       } else if (!isInternalPath(field.path) && !view.leaves.has(field.path)) {
         view.leaves.set(field.path, field);
+        if (field.kind === "event-filter-list") view.eventFilterLists.add(field.path);
       }
     }
   };

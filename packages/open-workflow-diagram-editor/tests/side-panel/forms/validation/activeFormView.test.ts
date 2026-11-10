@@ -118,4 +118,27 @@ describe("buildActiveFormView", () => {
     expect(view.leaves.has("run.shell.command")).toBe(true);
     expect(view.leaves.has("run.container.image")).toBe(false);
   });
+
+  it("identifies the variants of listen's `to` by their only required key", () => {
+    const { fields: listenFields, values } = buildTaskFormState("listen", {
+      listen: { to: { any: [{ with: { type: "t" } }] } },
+    });
+
+    const view = buildActiveFormView(listenFields, {}, values);
+
+    expect(view.presence.get("listen.to")).toEqual({
+      active: new Set(["any"]),
+      other: new Set(["all", "one"]),
+    });
+  });
+
+  it("collects the event-filter lists of the selected variant", () => {
+    const { fields: listenFields, values } = buildTaskFormState("listen", {
+      listen: { to: { any: [{ with: { type: "t" } }] } },
+    });
+
+    expect([...buildActiveFormView(listenFields, {}, values).eventFilterLists]).toEqual([
+      "listen.to.any",
+    ]);
+  });
 });

@@ -26,7 +26,7 @@ import {
   emptyClassifiedErrors,
   mergeClassifiedErrors,
   recordClassification,
-  UNDECLARED_PROPERTY_KEYWORDS,
+  NOISE_KEYWORDS,
   type ClassifiedTaskErrors,
   type Classification,
 } from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
@@ -410,11 +410,44 @@ describe("mergeClassifiedErrors", () => {
   });
 });
 
-describe("UNDECLARED_PROPERTY_KEYWORDS", () => {
-  it("lists the keywords that report a property the schema does not allow", () => {
-    expect([...UNDECLARED_PROPERTY_KEYWORDS].sort()).toEqual([
+describe("NOISE_KEYWORDS", () => {
+  it("lists the keywords that are dropped as noise across all validation passes", () => {
+    expect([...NOISE_KEYWORDS].sort()).toEqual([
       "additionalProperties",
+      "if",
       "unevaluatedProperties",
     ]);
+  });
+});
+
+describe("classifyErrorPath in an event-filter list", () => {
+  const listFields: FormFieldDescriptor[] = [
+    { kind: "event-filter-list", path: "to.any", label: "any", required: true, itemFields: [] },
+  ];
+  const view = buildActiveFormView(listFields, {}, {});
+  const place = (path: string) => classifyErrorPath(path, "required", {}, view);
+
+  it.each([
+    { name: "an item", path: "to.any.0", placed: "to.any.0" },
+    { name: "the with of an item", path: "to.any.1.with", placed: "to.any.1.with" },
+    { name: "a shown event property", path: "to.any.1.with.type", placed: "to.any.1.with.type" },
+    {
+      name: "an event property with no input",
+      path: "to.any.0.with.time",
+      placed: "to.any.0.with",
+    },
+    { name: "a value inside the data", path: "to.any.0.with.data.x", placed: "to.any.0.with.data" },
+    { name: "the correlate of an item", path: "to.any.0.correlate", placed: "to.any.0.correlate" },
+    {
+      name: "a correlation key",
+      path: "to.any.0.correlate.id.from",
+      placed: "to.any.0.correlate",
+    },
+  ])("places an error on $name where the list shows it", ({ path, placed }) => {
+    expect(place(path)).toEqual({ kind: "field", path: placed });
+  });
+
+  it("places an error on the list itself on the list", () => {
+    expect(place("to.any")).toEqual({ kind: "field", path: "to.any" });
   });
 });

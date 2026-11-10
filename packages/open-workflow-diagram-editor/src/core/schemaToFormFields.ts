@@ -218,6 +218,8 @@ export interface OneOfVariant {
   constWrites: Record<string, unknown>;
   /** Key whose presence selects this variant (e.g., run.container). */
   presenceKey?: string;
+  /** The variant's only required property, validation reads it to tell which `oneOf` branch the user is editing. */
+  requiredKey?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -1167,6 +1169,13 @@ function singleRequiredKey(resolved: Record<string, unknown>): string | undefine
   return properties && key !== undefined && key in properties ? key : undefined;
 }
 
+/** Returns the variant's single required property, for variants that no `const` identifies. */
+function withRequiredKey(resolved: Record<string, unknown>): { requiredKey?: string } {
+  if (Object.keys(buildConstWrites(resolved)).length > 0) return {};
+  const key = singleRequiredKey(resolved);
+  return key === undefined ? {} : { requiredKey: key };
+}
+
 /**
  * Returns presence key for variants identified by a single required object property
  */
@@ -1591,6 +1600,7 @@ function buildOneOfVariants(
         matchesData: item.matchesData,
         constWrites: buildConstWrites(item.resolved),
         ...withPresenceKey(item.resolved, defs),
+        ...withRequiredKey(item.resolved),
       });
     }
   }

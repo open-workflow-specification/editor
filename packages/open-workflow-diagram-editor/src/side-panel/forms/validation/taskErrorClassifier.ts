@@ -15,8 +15,9 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
-import { getParentPath, isAtOrBelow } from "@/core/paths";
+import { getParentPath, isAtOrBelow, joinPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
+import { EVENT_PROPERTY_KEYS } from "../customFields/eventFilterProperties";
 import type { ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD, collapseBranchGroups } from "./branchGroups";
 import { ajvErrorToFieldPath, buildOptionalSectionSet, isSectionEmpty } from "./fieldErrorMapper";
@@ -61,14 +62,12 @@ const CONTAINER_KEYWORDS: ReadonlySet<string> = new Set([
   GROUP_KEYWORD,
 ]);
 
-/** Keywords reporting a property the schema does not allow; task-level validation drops them. */
-export const UNDECLARED_PROPERTY_KEYWORDS: ReadonlySet<string> = new Set([
+/** Keywords that never point at something the user can edit or act upon; dropped across all validation passes. */
+export const NOISE_KEYWORDS: ReadonlySet<string> = new Set([
   "unevaluatedProperties",
   "additionalProperties",
+  "if",
 ]);
-
-/** Keywords that never point at something the user can edit or act upon. */
-const NOISE_KEYWORDS: ReadonlySet<string> = new Set([...UNDECLARED_PROPERTY_KEYWORDS, "if"]);
 
 /**
  * A `type` error saying a container's value is not an object (a scalar where an object belongs,
@@ -99,6 +98,27 @@ export type Classification =
 const DROP: Classification = { kind: "drop" };
 
 /**
+ * An event-filter list renders each item itself, so an error inside an item belongs to the part
+ * of the item the list shows. The list itself is not a place for an error that names an item.
+ */
+function classifyInEventFilterList(path: string, view: ActiveFormView): Classification | undefined {
+  for (const listPath of view.eventFilterLists) {
+    if (path === listPath || !isAtOrBelow(path, listPath)) continue;
+    const [index, part, property] = path.slice(listPath.length + 1).split(".");
+    const item = joinPath(listPath, index ?? "");
+    if (part === "with") {
+      const shown = property !== undefined && EVENT_PROPERTY_KEYS.has(property);
+      return {
+        kind: "field",
+        path: shown ? joinPath(joinPath(item, part), property) : `${item}.with`,
+      };
+    }
+    return { kind: "field", path: part === undefined ? item : joinPath(item, part) };
+  }
+  return undefined;
+}
+
+/**
  * An ordered-map entry renders at `<map>.<index>.<name>.<item path>`. An error on the entry itself
  * has no field of its own, so it belongs to the level that shows the map.
  */
@@ -126,6 +146,9 @@ export function classifyErrorPath(
   params: ErrorObject["params"],
   view: ActiveFormView,
 ): Classification {
+  const inList = classifyInEventFilterList(path, view);
+  if (inList !== undefined) return inList;
+
   const leaf = findLeaf(path, view);
   if (leaf !== undefined) return { kind: "field", path: leaf };
 

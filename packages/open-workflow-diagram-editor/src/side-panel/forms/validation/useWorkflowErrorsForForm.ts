@@ -41,7 +41,6 @@ function mergeResults(
   return {
     ...mergeClassifiedErrors(primary, secondary),
     hasUnparseableValueMapPayload: false,
-    ...(primary.undeclaredProperties ? { undeclaredProperties: primary.undeclaredProperties } : {}),
   };
 }
 

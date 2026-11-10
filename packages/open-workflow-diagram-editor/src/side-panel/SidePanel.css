@@ -1134,6 +1134,11 @@
     @apply dec:h-3 dec:w-3 dec:shrink-0;
   }
 
+  /* Error of a part of a filter item, shown under its row */
+  .dec-root .dec-filter-item-error {
+    @apply dec:px-2 dec:pb-1.5;
+  }
+
   /* Event properties sub-panel (expanded inline beneath "with" row) */
   .dec-root .dec-event-props-panel {
     @apply dec:flex dec:flex-col dec:gap-2

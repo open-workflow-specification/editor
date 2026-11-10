@@ -16,6 +16,7 @@
 
 import {
   getErrorKeyword,
+  getParentPath,
   isPointerAtOrBelow,
   joinPath,
   pointerToDotPath,
@@ -24,9 +25,9 @@ import {
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD } from "./branchGroups";
-import type { TaskValidationResult, UndeclaredPropertyError } from "./taskLevelValidation";
+import type { TaskValidationResult } from "./taskLevelValidation";
 import {
-  UNDECLARED_PROPERTY_KEYWORDS,
+  NOISE_KEYWORDS,
   classifyErrorPath,
   emptyClassifiedErrors,
   recordClassification,
@@ -51,16 +52,20 @@ function toFormPath(error: ValidationError, taskReference: string): string | und
   return relative;
 }
 
-/** The form path of the property an `unevaluatedProperties` / `additionalProperties` error names. */
-function undeclaredPropertyPath(error: ValidationError, containerPath: string): string | undefined {
-  const keyword: string | undefined = getErrorKeyword(error);
-  if (keyword === undefined || !UNDECLARED_PROPERTY_KEYWORDS.has(keyword)) return undefined;
-  const property: unknown =
-    error.object?.[
-      keyword === "unevaluatedProperties" ? "unevaluatedProperty" : "additionalProperty"
-    ];
-  if (typeof property !== "string" || property === "") return undefined;
-  return joinPath(containerPath, property);
+/**
+ * Whether the error only repeats the failure of a `oneOf` branch the user is not editing: a
+ * missing key that identifies another variant.
+ */
+function isInactiveBranchEcho(error: ValidationError, path: string, view: ActiveFormView): boolean {
+  const missing: unknown = error.object?.["missingProperty"];
+  if (getErrorKeyword(error) !== "required" || typeof missing !== "string") return false;
+  const presence = view.presence.get(getParentPath(path));
+  return (
+    presence !== undefined &&
+    presence.active.size > 0 &&
+    presence.other.has(missing) &&
+    !presence.active.has(missing)
+  );
 }
 
 /**
@@ -82,28 +87,23 @@ export function classifyWorkflowErrors(
   sentinels: Record<string, unknown>,
 ): TaskValidationResult {
   const classified: ClassifiedTaskErrors = emptyClassifiedErrors();
-  const undeclaredProperties: UndeclaredPropertyError[] = [];
   const view: ActiveFormView = buildActiveFormView(fields, sentinels, formValues);
 
   for (const error of nodeErrors) {
+    const keyword = getErrorKeyword(error);
+    if (keyword !== undefined && NOISE_KEYWORDS.has(keyword)) continue;
+
     const path: string | undefined = toFormPath(error, taskReference);
     if (path === undefined) continue;
 
-    // GROUP_KEYWORD is always in CONTAINER_KEYWORDS, so any container path is kept as a level error.
-    // The SDK errors are already noise-filtered upstream; no keyword-based dropping is needed here.
+    if (isInactiveBranchEcho(error, path, view)) continue;
+
     const placed: Classification = classifyErrorPath(path, GROUP_KEYWORD, {}, view);
     recordClassification(classified, placed, error.message);
-
-    // Task-level validation drops these, so remember them to keep them while the property is in the draft.
-    const property: string | undefined = undeclaredPropertyPath(error, path);
-    if (property !== undefined && (placed.kind === "level" || placed.kind === "unplaced")) {
-      undeclaredProperties.push({ property, placed, message: error.message });
-    }
   }
 
   return {
     ...classified,
     hasUnparseableValueMapPayload: false,
-    ...(undeclaredProperties.length > 0 ? { undeclaredProperties } : {}),
   };
 }

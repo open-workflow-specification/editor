@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
+import { get, useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
 import { X, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
@@ -29,7 +29,8 @@ import { isObjectNotArray } from "../../../core/utils";
 import { useTaskFormContext, getNestedValue } from "../taskFormContext";
 import { MapRow } from "./KeyValueMapField";
 import type { MapEntry } from "./KeyValueMapField";
-import { newId } from "./fieldHelpers";
+import { EVENT_PROPERTY_KEYS } from "./eventFilterProperties";
+import { newId, useFieldError, FieldWithError } from "./fieldHelpers";
 import { parseText, valueToText } from "./innerObjectText";
 
 // ---------------------------------------------------------------------------
@@ -197,11 +198,13 @@ function EventPropertiesPanel({
   onChange,
   idPrefix,
   labels,
+  errors,
 }: {
   eventProps: Record<string, unknown>;
   onChange: (updated: Record<string, unknown>) => void;
   idPrefix: string;
   labels: Record<string, string>;
+  errors: Record<string, string | undefined>;
 }) {
   const [dataText, setDataText] = React.useState(() => valueToText(eventProps["data"], "yaml"));
 
@@ -224,6 +227,13 @@ function EventPropertiesPanel({
 
   const fieldId = (key: string) => `${idPrefix}-evtprop-${key}`;
   const label = (key: string) => labels[key] ?? key;
+  const invalid = (key: string) => errors[key] !== undefined || undefined;
+  const error = (key: string) =>
+    errors[key] !== undefined ? (
+      <p className="dec-form-field-error" role="alert">
+        {errors[key]}
+      </p>
+    ) : null;
 
   return (
     <div className="dec-event-props-panel">
@@ -236,7 +246,9 @@ function EventPropertiesPanel({
           className="dec-event-props-input"
           value={str("type")}
           onChange={(e) => set("type", e.target.value)}
+          aria-invalid={invalid("type")}
         />
+        {error("type")}
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("source")} className="dec-event-props-label">
@@ -247,7 +259,9 @@ function EventPropertiesPanel({
           className="dec-event-props-input"
           value={str("source")}
           onChange={(e) => set("source", e.target.value)}
+          aria-invalid={invalid("source")}
         />
+        {error("source")}
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("data")} className="dec-event-props-label">
@@ -274,7 +288,9 @@ function EventPropertiesPanel({
               onChange({ ...eventProps, data: raw });
             }
           }}
+          aria-invalid={invalid("data")}
         />
+        {error("data")}
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("subject")} className="dec-event-props-label">
@@ -285,7 +301,9 @@ function EventPropertiesPanel({
           className="dec-event-props-input"
           value={str("subject")}
           onChange={(e) => set("subject", e.target.value)}
+          aria-invalid={invalid("subject")}
         />
+        {error("subject")}
       </div>
       <div className="dec-event-props-row">
         <label htmlFor={fieldId("id")} className="dec-event-props-label">
@@ -296,7 +314,9 @@ function EventPropertiesPanel({
           className="dec-event-props-input"
           value={str("id")}
           onChange={(e) => set("id", e.target.value)}
+          aria-invalid={invalid("id")}
         />
+        {error("id")}
       </div>
     </div>
   );
@@ -307,17 +327,23 @@ function EventPropertiesPanel({
 // ---------------------------------------------------------------------------
 
 function EditableFilterList({
+  listPath,
   items,
   setItems,
   commitToForm,
   withFieldLabels,
 }: {
+  listPath: string;
   items: FilterItem[];
   setItems: React.Dispatch<React.SetStateAction<FilterItem[]>>;
   commitToForm: (next: FilterItem[]) => void;
   withFieldLabels: Record<string, string>;
 }) {
   const { t } = useI18n();
+  const { errors } = useFormState<Record<string, unknown>>();
+  /** The message of the error validation placed on a part of an item (`with`, `with.type`, `correlate`). */
+  const itemError = (index: number, part: string): string | undefined =>
+    (get(errors, `${listPath}.${index}.${part}`) as { message?: string } | undefined)?.message;
 
   const update = (updater: (prev: FilterItem[]) => FilterItem[]) => {
     const next = updater(items);
@@ -397,6 +423,11 @@ function EditableFilterList({
               t("sidebar.eventFilter.correlate.key"),
               t("sidebar.eventFilter.correlate.keys"),
             );
+            const withError = itemError(idx, "with");
+            const propertyErrors = Object.fromEntries(
+              [...EVENT_PROPERTY_KEYS].map((key) => [key, itemError(idx, `with.${key}`)]),
+            );
+            const correlateError = itemError(idx, "correlate");
 
             return (
               <div key={item.id} className="dec-filter-item">
@@ -438,12 +469,19 @@ function EditableFilterList({
                   </button>
                 </div>
 
+                {withError !== undefined && (
+                  <p className="dec-form-field-error dec-filter-item-error" role="alert">
+                    {withError}
+                  </p>
+                )}
+
                 {item.withExpanded && (
                   <EventPropertiesPanel
                     eventProps={eventProps}
                     onChange={(updated) => updateWith(item.id, updated)}
                     idPrefix={item.id}
                     labels={withFieldLabels}
+                    errors={propertyErrors}
                   />
                 )}
 
@@ -474,6 +512,11 @@ function EditableFilterList({
                     />
                   )}
                 </div>
+                {correlateError !== undefined && (
+                  <p className="dec-form-field-error dec-filter-item-error" role="alert">
+                    {correlateError}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -594,7 +637,8 @@ function deriveWithFieldLabels(field: EventFilterListFieldDescriptor): Record<st
 }
 
 export function EventFilterListField({ field }: EventFilterListFieldProps) {
-  const { isReadOnly, taskData } = useTaskFormContext();
+  const { isReadOnly, taskData, revalidateIfAttempted } = useTaskFormContext();
+  const errorMessage = useFieldError(field.path);
   const form = useFormContext() as UseFormReturn<Record<string, unknown>>;
   const { setValue, getValues } = form;
   const withFieldLabels = React.useMemo(() => deriveWithFieldLabels(field), [field]);
@@ -624,8 +668,10 @@ export function EventFilterListField({ field }: EventFilterListFieldProps) {
         next.map((i) => i.data),
         { shouldDirty: true },
       );
+      // Items hold the errors of their parts, so the count follows every change once errors show.
+      revalidateIfAttempted?.();
     },
-    [field.path, setValue],
+    [field.path, setValue, revalidateIfAttempted],
   );
 
   if (isReadOnly) {
@@ -633,11 +679,14 @@ export function EventFilterListField({ field }: EventFilterListFieldProps) {
   }
 
   return (
-    <EditableFilterList
-      items={items}
-      setItems={setItems}
-      commitToForm={commitToForm}
-      withFieldLabels={withFieldLabels}
-    />
+    <FieldWithError errorMessage={errorMessage}>
+      <EditableFilterList
+        listPath={field.path}
+        items={items}
+        setItems={setItems}
+        commitToForm={commitToForm}
+        withFieldLabels={withFieldLabels}
+      />
+    </FieldWithError>
   );
 }

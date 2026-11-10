@@ -84,6 +84,7 @@ function collapseGroup(
       ghosts.add(`b${branchOf(e)}`);
     }
   }
+  const otherVariantGhosts = new Set(ghosts);
 
   // A JSON type mismatch or a failed discriminator rules a branch out, as long as another
   // branch accepts the value.
@@ -102,6 +103,18 @@ function collapseGroup(
   // Multiple matching branches violate oneOf exclusivity.
   if ((group.params as { passingSchemas?: unknown }).passingSchemas != null) {
     return [...rest, { ...group, keyword: GROUP_KEYWORD }];
+  }
+
+  // Every branch with errors belongs to another variant, so the variant the user is editing has
+  // none of its own here: whatever fails in it is reported at its own paths, in `rest`.
+  if (
+    remaining.length === 0 &&
+    candidates.size > 0 &&
+    presence !== undefined &&
+    presence.active.size > 0 &&
+    [...candidates].every((id) => otherVariantGhosts.has(id))
+  ) {
+    return rest;
   }
 
   const [only] = remaining;
