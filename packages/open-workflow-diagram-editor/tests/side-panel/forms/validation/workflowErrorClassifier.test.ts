@@ -15,7 +15,9 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { leaf } from "../../../test-utils/validation-helpers";
+import { buildTaskFormState, leaf } from "../../../test-utils/validation-helpers";
+import { getFormFieldsForNodeType } from "../../../../src/core/schemaWalker";
+import { flattenSentinels } from "../../../../src/side-panel/forms/sentinels";
 import type { ValidationError } from "../../../../src/core";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { classifyWorkflowErrors } from "../../../../src/side-panel/forms/validation/workflowErrorClassifier";
@@ -48,6 +50,21 @@ function workflowError(
 ): ValidationError {
   return {
     path: relativePath === "" ? TASK_REFERENCE : `${TASK_REFERENCE}/${relativePath}`,
+    errorType: "#/properties/x/type",
+    message,
+    object: {},
+    ...extra,
+  };
+}
+
+function workflowErrorAt(
+  reference: string,
+  relativePath: string,
+  message: string,
+  extra: Partial<ValidationError> = {},
+): ValidationError {
+  return {
+    path: `${reference}/${relativePath}`,
     errorType: "#/properties/x/type",
     message,
     object: {},
@@ -182,7 +199,7 @@ describe("classifyWorkflowErrors", () => {
     expect(result.fieldErrors).toEqual({ name: "first" });
   });
 
-  it("records an unevaluated property so it can be kept while it is in the draft", () => {
+  it("drops unevaluatedProperties and additionalProperties as noise", () => {
     const result = classify([
       workflowError("", "must NOT have unevaluated properties", {
         errorType: "#/oneOf/2/unevaluatedProperties",
@@ -194,22 +211,9 @@ describe("classifyWorkflowErrors", () => {
       }),
     ]);
 
-    expect(result.undeclaredProperties).toEqual([
-      {
-        property: "typo",
-        placed: { kind: "level", path: "" },
-        message: "must NOT have unevaluated properties",
-      },
-      {
-        property: "obj.extra",
-        placed: { kind: "level", path: "obj" },
-        message: "must NOT have additional properties",
-      },
-    ]);
-  });
-
-  it("records no undeclared properties for other errors", () => {
-    expect(classify([workflowError("name", "bad value")]).undeclaredProperties).toBeUndefined();
+    expect(result.levelErrors).toEqual({});
+    expect(result.unplacedErrors).toEqual({});
+    expect(result.fieldErrors).toEqual({});
   });
 
   it("skips errors with no path or outside the task", () => {
@@ -223,6 +227,83 @@ describe("classifyWorkflowErrors", () => {
       levelErrors: {},
       unplacedErrors: {},
       hasUnparseableValueMapPayload: false,
+    });
+  });
+});
+
+describe("classifyWorkflowErrors on a one-of with an active variant", () => {
+  const listenFields = getFormFieldsForNodeType("listen");
+  const task = { listen: { to: { any: [{ with: {} }] } } };
+  const reference = "/do/0/wait";
+
+  function classifyListen(errors: ValidationError[]) {
+    const { values } = buildTaskFormState("listen", task);
+    return classifyWorkflowErrors(
+      errors,
+      reference,
+      listenFields,
+      values,
+      flattenSentinels(values),
+    );
+  }
+
+  const listenError = (relative: string, message: string, extra: Partial<ValidationError> = {}) =>
+    workflowErrorAt(reference, relative, message, extra);
+
+  it("drops the required keys of the other variants", () => {
+    const result = classifyListen([
+      listenError("listen/to", "must have required property 'all'", {
+        errorType: "#/oneOf/0/required",
+        object: { missingProperty: "all" },
+      }),
+      listenError("listen/to", "must have required property 'one'", {
+        errorType: "#/oneOf/2/required",
+        object: { missingProperty: "one" },
+      }),
+    ]);
+
+    expect(result.levelErrors).toEqual({});
+    expect(result.unplacedErrors).toEqual({});
+    expect(result.fieldErrors).toEqual({});
+  });
+
+  it("keeps a required key of the active variant", () => {
+    const result = classifyListen([
+      listenError("listen/to", "must have required property 'any'", {
+        errorType: "#/oneOf/1/required",
+        object: { missingProperty: "any" },
+      }),
+    ]);
+
+    expect(result.fieldErrors).toEqual({ "listen.to.any": "must have required property 'any'" });
+  });
+
+  it("drops unevaluatedProperties errors as noise", () => {
+    const result = classifyListen([
+      listenError("listen/to", "must NOT have unevaluated properties", {
+        errorType: "#/unevaluatedProperties",
+        object: { unevaluatedProperty: "any" },
+      }),
+      listenError("listen/to", "must NOT have unevaluated properties", {
+        errorType: "#/unevaluatedProperties",
+        object: { unevaluatedProperty: "typo" },
+      }),
+    ]);
+
+    expect(result.levelErrors).toEqual({});
+    expect(result.unplacedErrors).toEqual({});
+    expect(result.fieldErrors).toEqual({});
+  });
+
+  it("places an error inside an event filter on that item", () => {
+    const result = classifyListen([
+      listenError("listen/to/any/0/with", "must NOT have fewer than 1 properties", {
+        errorType: "#/properties/with/minProperties",
+      }),
+    ]);
+
+    expect(result.fieldErrors).toEqual({
+      "listen.to.any.0.with": "must NOT have fewer than 1 properties",
     });
   });
 });

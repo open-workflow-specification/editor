@@ -173,4 +173,27 @@ describe("collapseBranchGroups", () => {
 
     expect(errors).toEqual(copy);
   });
+
+  it("drops the branches of the other variants when the active variant has no error here", () => {
+    const errors = [
+      required("/run", "#/properties/run/oneOf/0/required", "container"),
+      required("/run", "#/properties/run/oneOf/1/required", "script"),
+      group("/run", "#/properties/run/oneOf"),
+    ];
+
+    const result = collapseBranchGroups(errors, presence(["shell"], ["container", "script"]));
+
+    expect(result).toEqual([]);
+  });
+
+  it("keeps collapsing into a group error when no variant is active", () => {
+    const errors = [
+      required("/run", "#/properties/run/oneOf/0/required", "container"),
+      group("/run", "#/properties/run/oneOf"),
+    ];
+
+    const result = collapseBranchGroups(errors, presence([], ["container"]));
+
+    expect(result.map((e) => e.keyword)).toEqual([GROUP_KEYWORD]);
+  });
 });

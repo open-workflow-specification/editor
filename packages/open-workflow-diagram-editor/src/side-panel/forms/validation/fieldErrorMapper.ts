@@ -15,11 +15,13 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { getMissingProperty } from "@/core/ajvErrorUtils";
 import { getParentPath, isAtOrBelow, joinPath, pointerToDotPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { flattenTask, unflattenValues } from "@/core/taskDraft";
+import { flattenTask, pruneEmptyLeaves, unflattenValues } from "@/core/taskDraft";
 import { isReservedPath, sentinelPath } from "../sentinels";
 import {
+  collectFormListPaths,
   collectLeafKinds,
   collectValueMapFields,
   forEachField,
@@ -54,6 +56,12 @@ export function prepareValuesForValidation(
     if (val !== "" && val !== null && val !== undefined) {
       cleanedFlat[key] = val;
     }
+  }
+
+  // Apply prunes the empty leaves of the lists edited through form controls.
+  for (const listPath of collectFormListPaths(fields)) {
+    const list = cleanedFlat[listPath];
+    if (Array.isArray(list)) cleanedFlat[listPath] = pruneEmptyLeaves(list);
   }
 
   // valueMap-backed enums hold a string key in the form; Apply rebuilds the model shape
@@ -234,7 +242,7 @@ export function ajvErrorToFieldPath(error: ErrorObject): string | undefined {
   let path = pointerToDotPath(error.instancePath);
 
   if (error.keyword === "required") {
-    const missingProp = (error.params as { missingProperty?: string }).missingProperty;
+    const missingProp = getMissingProperty(error);
     if (missingProp) {
       path = joinPath(path, missingProp);
     }

@@ -31,7 +31,7 @@
  *   getByRole("textbox", { name: "type" })
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -806,5 +806,112 @@ describe("EventFilterListField — read mode: correlate count excludes empty-key
     // Correlate section should show "1 key", not "2 keys"
     expect(screen.getByText(/1 key/i)).toBeInTheDocument();
     expect(screen.queryByText(/2 key/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("EventFilterListField — field-level validation", () => {
+  function ErrorTester({ isReadOnly = false }: { isReadOnly?: boolean }) {
+    const form = useForm<Record<string, unknown>>({
+      defaultValues: { all: [{ with: {} }] },
+    });
+    React.useLayoutEffect(() => {
+      form.setError("all", { type: "schema", message: "must NOT have fewer than 1 properties" });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return (
+      <I18nProvider locale="en" dictionaries={{ en }}>
+        <TaskFormContext.Provider
+          value={{ isReadOnly, siblingTaskNames: [], taskData: { all: [{ with: {} }] } }}
+        >
+          <FormProvider {...form}>
+            <EventFilterListField field={{ ...allField, path: "all" }} />
+          </FormProvider>
+        </TaskFormContext.Provider>
+      </I18nProvider>
+    );
+  }
+
+  it("shows the error counted for the list in edit mode", async () => {
+    render(<ErrorTester />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "must NOT have fewer than 1 properties",
+    );
+  });
+
+  it("shows no inline error in read-only mode", () => {
+    render(<ErrorTester isReadOnly />);
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("EventFilterListField — errors of the parts of an item", () => {
+  function ItemErrorTester({
+    errors,
+    revalidateIfAttempted,
+  }: {
+    errors: Record<string, string>;
+    revalidateIfAttempted?: () => void;
+  }) {
+    const form = useForm<Record<string, unknown>>({
+      defaultValues: { all: [{ with: {}, correlate: { id: { from: ".a" } } }] },
+    });
+    React.useLayoutEffect(() => {
+      for (const [path, message] of Object.entries(errors)) {
+        form.setError(path, { type: "schema", message });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return (
+      <I18nProvider locale="en" dictionaries={{ en }}>
+        <TaskFormContext.Provider
+          value={{
+            isReadOnly: false,
+            siblingTaskNames: [],
+            taskData: { all: [{ with: {}, correlate: { id: { from: ".a" } } }] },
+            ...(revalidateIfAttempted ? { revalidateIfAttempted } : {}),
+          }}
+        >
+          <FormProvider {...form}>
+            <EventFilterListField field={{ ...allField, path: "all" }} />
+          </FormProvider>
+        </TaskFormContext.Provider>
+      </I18nProvider>
+    );
+  }
+
+  it("shows the error of the with row of an item even when it is collapsed", async () => {
+    render(<ItemErrorTester errors={{ "all.0.with": "with is empty" }} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("with is empty");
+  });
+
+  it("shows the error of an event property on its input", async () => {
+    const user = userEvent.setup();
+    render(<ItemErrorTester errors={{ "all.0.with.type": "type is bad" }} />);
+
+    await user.click(screen.getByRole("button", { name: /event properties/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("type is bad");
+    expect(screen.getByRole("textbox", { name: "type" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "source" })).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("shows the error of the correlate group of an item", async () => {
+    render(<ItemErrorTester errors={{ "all.0.correlate": "correlate is bad" }} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("correlate is bad");
+  });
+
+  it("revalidates after every change so the count follows the edit", async () => {
+    const revalidateIfAttempted = vi.fn();
+    const user = userEvent.setup();
+    render(<ItemErrorTester errors={{}} revalidateIfAttempted={revalidateIfAttempted} />);
+
+    await user.click(screen.getByRole("button", { name: /event properties/i }));
+    await user.type(screen.getByRole("textbox", { name: "type" }), "x");
+
+    expect(revalidateIfAttempted).toHaveBeenCalled();
   });
 });

@@ -340,8 +340,8 @@ export const INVALID_TASKS: InvalidTaskCase[] = [
     name: "listen without events",
     nodeType: "listen",
     task: { listen: { to: {} } },
-    fieldPaths: [],
-    levelPaths: ["listen.to"],
+    fieldPaths: ["listen.to.all"],
+    levelPaths: [],
   },
   {
     name: "emit with a source that is not a uri",

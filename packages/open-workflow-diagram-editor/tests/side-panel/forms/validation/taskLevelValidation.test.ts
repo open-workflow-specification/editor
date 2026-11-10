@@ -21,9 +21,6 @@ import {
   validateTaskForm,
   collectSchemaErrorPaths,
   emptyValidationResult,
-  reconcileUndeclaredProperties,
-  type TaskValidationResult,
-  type UndeclaredPropertyError,
 } from "../../../../src/side-panel/forms/validation/taskLevelValidation";
 import { INNER_TEXT_KEY } from "../../../../src/side-panel/forms/sentinels";
 
@@ -240,95 +237,5 @@ describe("emptyValidationResult", () => {
 
     expect(emptyValidationResult().fieldErrors).toEqual({});
     expect(emptyValidationResult()).not.toBe(emptyValidationResult());
-  });
-});
-
-describe("reconcileUndeclaredProperties", () => {
-  const levelError: UndeclaredPropertyError = {
-    property: "typo",
-    placed: { kind: "level", path: "" },
-    message: "must NOT have unevaluated properties",
-  };
-  const unplacedError: UndeclaredPropertyError = {
-    property: "obj.extra",
-    placed: { kind: "unplaced", path: "obj" },
-    message: "must NOT have additional properties",
-  };
-
-  it("returns the same result when there are no undeclared properties", () => {
-    const result: TaskValidationResult = emptyValidationResult();
-
-    expect(reconcileUndeclaredProperties(result, [], { typo: true })).toBe(result);
-  });
-
-  it("returns the same result when no property is in the draft any more", () => {
-    const result: TaskValidationResult = emptyValidationResult();
-
-    expect(reconcileUndeclaredProperties(result, [levelError], { wait: "PT1S" })).toBe(result);
-  });
-
-  it.each([
-    { description: "an empty string", value: "" },
-    { description: "null", value: null },
-    { description: "undefined", value: undefined },
-  ])("treats $description as no longer in the draft", ({ value }) => {
-    const result: TaskValidationResult = emptyValidationResult();
-
-    expect(reconcileUndeclaredProperties(result, [levelError], { typo: value })).toBe(result);
-  });
-
-  it("re-adds a level error for a property still in the draft", () => {
-    const reconciled: TaskValidationResult = reconcileUndeclaredProperties(
-      emptyValidationResult(),
-      [levelError],
-      { typo: true },
-    );
-
-    expect(reconciled.levelErrors).toEqual({ "": levelError.message });
-    expect(reconciled.unplacedErrors).toEqual({});
-    expect(reconciled.undeclaredProperties).toEqual([levelError]);
-  });
-
-  it("re-adds an unplaced error to both the level and unplaced maps, resolving nested properties", () => {
-    const reconciled: TaskValidationResult = reconcileUndeclaredProperties(
-      emptyValidationResult(),
-      [unplacedError],
-      { obj: { extra: 1 } },
-    );
-
-    expect(reconciled.levelErrors).toEqual({ obj: unplacedError.message });
-    expect(reconciled.unplacedErrors).toEqual({ obj: unplacedError.message });
-  });
-
-  it("keeps only the errors whose property is still in the draft", () => {
-    const reconciled: TaskValidationResult = reconcileUndeclaredProperties(
-      emptyValidationResult(),
-      [levelError, unplacedError],
-      { typo: true },
-    );
-
-    expect(reconciled.undeclaredProperties).toEqual([levelError]);
-    expect(reconciled.unplacedErrors).toEqual({});
-  });
-
-  it("keeps the message the task result already holds for the same path", () => {
-    const result: TaskValidationResult = {
-      ...emptyValidationResult(),
-      levelErrors: { "": "task-level message" },
-    };
-
-    const reconciled: TaskValidationResult = reconcileUndeclaredProperties(result, [levelError], {
-      typo: true,
-    });
-
-    expect(reconciled.levelErrors).toEqual({ "": "task-level message" });
-  });
-
-  it("does not mutate the result it is given", () => {
-    const result: TaskValidationResult = emptyValidationResult();
-
-    reconcileUndeclaredProperties(result, [levelError], { typo: true });
-
-    expect(result).toEqual(emptyValidationResult());
   });
 });

@@ -17,32 +17,12 @@
 import type { UseFormReturn } from "react-hook-form";
 import { joinPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { hasValue } from "../taskFormContext";
 import {
   collectTaskErrors,
   collectValueMapParseErrors,
   type Translate,
 } from "./collectSchemaFieldErrors";
-import {
-  emptyClassifiedErrors,
-  mergeClassifiedErrors,
-  recordClassification,
-  type Classification,
-  type ClassifiedTaskErrors,
-} from "./taskErrorClassifier";
-
-/**
- * A property the workflow validator reports as not allowed on the task (`unevaluatedProperties` /
- * `additionalProperties`). Task-level validation drops these on purpose, so the seeded workflow
- * diagnostic is kept while the property is still in the draft.
- */
-export interface UndeclaredPropertyError {
-  /** Dot-notation form path of the offending property. */
-  property: string;
-  /** Where the workflow classifier placed the error; always a level or unplaced slot. */
-  placed: Classification;
-  message: string;
-}
+import { emptyClassifiedErrors } from "./taskErrorClassifier";
 
 /**
  * Result of whole-task schema validation.
@@ -56,28 +36,6 @@ export interface TaskValidationResult {
   unplacedErrors: Record<string, string>;
   /** True when a valueMap-backed enum payload failed to parse (non-bypassable). */
   hasUnparseableValueMapPayload: boolean;
-  /** Seeded workflow diagnostics that task-level validation cannot judge; see `UndeclaredPropertyError`. */
-  undeclaredProperties?: UndeclaredPropertyError[];
-}
-
-/**
- * Merges the seeded undeclared-property diagnostics whose property is still in the draft into a
- * fresh task-level result, which drops them by design. A fixed property leaves the result, so
- * its error leaves the counter. On a path both report, the task result keeps its message.
- */
-export function reconcileUndeclaredProperties(
-  result: TaskValidationResult,
-  undeclared: UndeclaredPropertyError[],
-  formValues: Record<string, unknown>,
-): TaskValidationResult {
-  const kept: UndeclaredPropertyError[] = undeclared.filter((error) =>
-    hasValue(formValues, error.property),
-  );
-  if (kept.length === 0) return result;
-
-  const seeded: ClassifiedTaskErrors = emptyClassifiedErrors();
-  for (const error of kept) recordClassification(seeded, error.placed, error.message);
-  return { ...result, ...mergeClassifiedErrors(result, seeded), undeclaredProperties: kept };
 }
 
 /** A result with no errors. A fresh object each call, as results are stored in state. */

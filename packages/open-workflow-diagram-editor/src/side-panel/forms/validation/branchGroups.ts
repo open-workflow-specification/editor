@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { findNestedGroups, getMissingProperty, isGroupError } from "@/core/ajvErrorUtils";
 import { isPointerAtOrBelow, pointerToDotPath } from "@/core/paths";
 import type { PresenceKeys } from "./activeFormView";
 
@@ -30,10 +31,6 @@ import type { PresenceKeys } from "./activeFormView";
 /** Keyword of the error that stands for a group whose branch could not be identified. */
 export const GROUP_KEYWORD = "group";
 
-function isGroup(error: ErrorObject): boolean {
-  return error.keyword === "oneOf" || error.keyword === "anyOf";
-}
-
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -45,14 +42,7 @@ function collapseGroup(
   allGroups: ErrorObject[],
 ): ErrorObject[] {
   const prefix = `${group.schemaPath}/`;
-  // A `$ref` resets schema paths, so a group nested at another instance path can share this
-  // group's schema path. Its errors belong to it, not to a branch of this group.
-  const shared = allGroups.filter(
-    (g) =>
-      g.schemaPath === group.schemaPath &&
-      g.instancePath !== group.instancePath &&
-      isPointerAtOrBelow(g.instancePath, group.instancePath),
-  );
+  const shared = findNestedGroups(group, allGroups);
   const ownedBy = (e: ErrorObject): boolean =>
     isPointerAtOrBelow(e.instancePath, group.instancePath) &&
     !shared.some((g) => isPointerAtOrBelow(e.instancePath, g.instancePath));
@@ -89,11 +79,12 @@ function collapseGroup(
   const ghosts = new Set<string>();
   for (const e of members) {
     if (!isDirect(e, "required")) continue;
-    const missing = (e.params as { missingProperty?: string }).missingProperty;
+    const missing = getMissingProperty(e);
     if (missing !== undefined && presence?.other.has(missing) && !presence.active.has(missing)) {
       ghosts.add(`b${branchOf(e)}`);
     }
   }
+  const otherVariantGhosts = new Set(ghosts);
 
   // A JSON type mismatch or a failed discriminator rules a branch out, as long as another
   // branch accepts the value.
@@ -112,6 +103,18 @@ function collapseGroup(
   // Multiple matching branches violate oneOf exclusivity.
   if ((group.params as { passingSchemas?: unknown }).passingSchemas != null) {
     return [...rest, { ...group, keyword: GROUP_KEYWORD }];
+  }
+
+  // Every branch with errors belongs to another variant, so the variant the user is editing has
+  // none of its own here: whatever fails in it is reported at its own paths, in `rest`.
+  if (
+    remaining.length === 0 &&
+    candidates.size > 0 &&
+    presence !== undefined &&
+    presence.active.size > 0 &&
+    [...candidates].every((id) => otherVariantGhosts.has(id))
+  ) {
+    return rest;
   }
 
   const [only] = remaining;
@@ -136,7 +139,7 @@ export function collapseBranchGroups(
   presence: ReadonlyMap<string, PresenceKeys>,
 ): ErrorObject[] {
   const groups = ajvErrors
-    .filter(isGroup)
+    .filter(isGroupError)
     .sort(
       (a, b) =>
         b.instancePath.split("/").length - a.instancePath.split("/").length ||
