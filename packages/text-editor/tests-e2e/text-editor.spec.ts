@@ -185,6 +185,8 @@ test.describe("TextEditor JSON", () => {
       await page.keyboard.press("ControlOrMeta+v");
 
       await expect(monacoContainer.locator(".squiggly-warning").first()).not.toBeVisible();
+
+      expect(true, "Intentional failure to verify Playwright artifacts for #524").toBe(false);
     });
   });
 });

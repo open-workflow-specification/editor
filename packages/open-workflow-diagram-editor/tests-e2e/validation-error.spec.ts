@@ -70,4 +70,6 @@ test("a nested task's error marks the child node, not its container", async ({ p
   await expect(errors).toBeVisible();
   await expect(errors.getByText("must have required property 'endpoint'")).toBeVisible();
   await expect(errors.locator(".dec-sidebar-error-field")).toHaveText("with");
+
+  expect(true, "Intentional failure to verify Playwright artifacts for #524").toBe(false);
 });
