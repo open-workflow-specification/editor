@@ -32,6 +32,7 @@ export class DualEditorElement extends HTMLElement {
   private _root: Root | null = null;
   private _mountPoint: HTMLDivElement | null = null;
   private _content = "";
+  private _contentResetKey = 0;
 
   get content(): string {
     return this._content;
@@ -39,6 +40,7 @@ export class DualEditorElement extends HTMLElement {
 
   set content(value: string) {
     this._content = value;
+    this._contentResetKey += 1;
     this.render();
   }
 
@@ -68,6 +70,7 @@ export class DualEditorElement extends HTMLElement {
 
     const props: DualEditorProps = {
       content: this._content,
+      contentResetKey: this._contentResetKey,
       locale: this.getAttribute("locale") ?? "en",
       isReadOnly: this.hasAttribute("read-only"),
       colorMode: (this.getAttribute("color-mode") as ColorMode) ?? "system",

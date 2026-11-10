@@ -66,6 +66,7 @@ describe("DualEditorElement", () => {
     expect(lastProps).toEqual(
       expect.objectContaining({
         content: "",
+        contentResetKey: 0,
         locale: "en",
         isReadOnly: false,
         colorMode: "system",
@@ -79,6 +80,7 @@ describe("DualEditorElement", () => {
     const el = createElement();
     el.content = "document:\n  dsl: '1.0.3'";
     await vi.waitFor(() => expect(lastProps?.content).toBe("document:\n  dsl: '1.0.3'"));
+    expect(lastProps?.contentResetKey).toBe(1);
   });
 
   it("re-renders when content is replaced with a different workflow", async () => {
@@ -88,6 +90,15 @@ describe("DualEditorElement", () => {
 
     el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-b";
     await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-b"));
+  });
+
+  it("increments the content reset key when the host reassigns the same content", async () => {
+    const el = createElement();
+    el.content = "workflow-a";
+    await vi.waitFor(() => expect(lastProps?.contentResetKey).toBe(1));
+
+    el.content = "workflow-a";
+    await vi.waitFor(() => expect(lastProps?.contentResetKey).toBe(2));
   });
 
   it("re-renders after edits so external content resets reach the editor", async () => {

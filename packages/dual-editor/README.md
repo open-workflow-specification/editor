@@ -45,6 +45,7 @@ The component fills its parent. Give the parent a definite height. Edits in eith
 | Prop                          | Type                        | Required | Default    | Description                                                   |
 | ----------------------------- | --------------------------- | -------- | ---------- | ------------------------------------------------------------- |
 | `content`                     | `string`                    | Yes      | —          | Workflow definition as JSON or YAML.                          |
+| `contentResetKey`             | `number`                    | No       | —          | Reapplies host content and cancels pending text edits.        |
 | `onContentChange`             | `(content: string) => void` | No       | —          | Called when either editor changes the workflow content.       |
 | `createLanguageServiceWorker` | `() => Worker`              | Yes      | —          | Creates the language service worker for the text editor.      |
 | `language`                    | `TextEditorLanguage`        | No       | `"json"`   | Sets text syntax and diagram output format; defaults to JSON. |
