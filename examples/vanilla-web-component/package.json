@@ -2,7 +2,7 @@
   "name": "@openworkflowspec/vanilla-web-component-example",
   "version": "1.1.0",
   "private": true,
-  "description": "non-React example embedding the open workflow diagram component",
+  "description": "non-React example embedding the Open Workflow dual editor",
   "keywords": [],
   "homepage": "https://github.com/open-workflow-specification/editor",
   "bugs": {
@@ -30,7 +30,8 @@
   },
   "dependencies": {
     "@openworkflowspec/core": "workspace:*",
-    "@openworkflowspec/diagram-editor": "workspace:*",
+    "@openworkflowspec/dual-editor": "workspace:*",
+    "@openworkflowspec/text-editor": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"
   },

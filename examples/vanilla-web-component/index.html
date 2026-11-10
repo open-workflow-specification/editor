@@ -18,7 +18,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Diagram Editor — Web Component Example</title>
+    <title>Dual Editor — Web Component Example</title>
     <style>
       body {
         height: 100vh;
@@ -31,7 +31,7 @@
         text-align: center;
       }
 
-      openworkflowspec-diagram-editor {
+      openworkflowspec-dual-editor {
         display: block;
         width: 80%;
         height: 80%;
@@ -43,14 +43,14 @@
     </style>
   </head>
   <body>
-    <h1>Diagram Editor — Web Component Example</h1>
-    <openworkflowspec-diagram-editor locale="en" read-only></openworkflowspec-diagram-editor>
+    <h1>Dual Editor — Web Component Example</h1>
+    <openworkflowspec-dual-editor locale="en" language="yaml"></openworkflowspec-dual-editor>
 
     <script type="module">
       import "./src/index.ts";
       import { sampleWorkflow } from "./src/sample-workflow.ts";
 
-      const editor = document.querySelector("openworkflowspec-diagram-editor");
+      const editor = document.querySelector("openworkflowspec-dual-editor");
       editor.content = sampleWorkflow;
     </script>
   </body>
