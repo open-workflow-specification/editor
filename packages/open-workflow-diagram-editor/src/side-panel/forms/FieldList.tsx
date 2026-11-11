@@ -24,7 +24,7 @@ import { FormField } from "./FormField";
 import { useAddedFields } from "./addedFields";
 import { holdsValue } from "./draft";
 import { forEachField, useTaskFormContext } from "./taskFormContext";
-import { innerTextPath, sentinelPath } from "./sentinels";
+import { MAP_ROWS_KEY, innerTextPath, sentinelPath, withoutMapRows } from "./sentinels";
 import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
 import {
   drillLabel,
@@ -165,7 +165,9 @@ function EditableFieldList({ fields, before, ownerPath, atLeastOne }: FieldListP
     // Reset nested one-ofs (else a field revives on Apply) and option payload texts (else a
     // re-add restores the committed value under the removed text)
     const { defaultValues } = liveFormState();
+    const maps: string[] = [];
     forEachField([field], (inner) => {
+      if (inner.kind === "map") maps.push(inner.path);
       const editorPath =
         inner.kind === "one-of"
           ? sentinelPath(inner.path)
@@ -175,6 +177,7 @@ function EditableFieldList({ fields, before, ownerPath, atLeastOne }: FieldListP
       if (editorPath === undefined) return;
       setValue(editorPath, get(defaultValues, editorPath), { shouldDirty: true });
     });
+    if (maps.length > 0) setValue(MAP_ROWS_KEY, withoutMapRows(getValues(), maps));
     setValue(field.path, undefined, { shouldDirty: true });
     clearErrors(field.path);
     drop(field.path);
