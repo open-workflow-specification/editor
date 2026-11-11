@@ -42,6 +42,7 @@ export type TextEditorProps = {
   content: string;
   language: TextEditorLanguage;
   createLanguageServiceWorker: () => Worker;
+  onLanguageServiceReady?: () => void;
   onContentChange?: (content: string) => void;
   isReadOnly?: boolean;
   colorMode?: ColorMode;
@@ -51,6 +52,7 @@ export const TextEditor = ({
   content,
   language,
   createLanguageServiceWorker,
+  onLanguageServiceReady,
   onContentChange,
   isReadOnly = false,
   colorMode = "system",
@@ -68,13 +70,13 @@ export const TextEditor = ({
     const model = monaco.editor.createModel(
       content,
       language,
-      monaco.Uri.parse("inmemory://openworkflow/workflow.json"),
+      monaco.Uri.parse(`inmemory://openworkflow/workflow.${language}`),
     );
 
     const editor = monaco.editor.create(containerRef.current, {
       model,
       readOnly: isReadOnly,
-      codeLens: language === "json" && !isReadOnly,
+      codeLens: !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
       ...(resolvedColorMode && {
@@ -82,7 +84,11 @@ export const TextEditor = ({
       }),
     });
 
-    const languageService = createTextEditorLanguageService(model, createLanguageServiceWorker);
+    const languageService = createTextEditorLanguageService(
+      model,
+      createLanguageServiceWorker,
+      onLanguageServiceReady,
+    );
 
     editorRef.current = editor;
 
@@ -93,9 +99,9 @@ export const TextEditor = ({
       editorRef.current = null;
     };
 
-    // Monaco and its language-service worker must be created only once.
+    // Recreate Monaco and its language service only when the language changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [language]);
 
   React.useEffect(() => {
     const editor = editorRef.current;
@@ -111,7 +117,7 @@ export const TextEditor = ({
     });
 
     return () => disposable.dispose();
-  }, [onContentChange]);
+  }, [onContentChange, language]);
 
   React.useEffect(() => {
     const editor = editorRef.current;
@@ -131,14 +137,8 @@ export const TextEditor = ({
       return;
     }
 
-    // updateOptions must run before setModelLanguage so that codeLens is applied
-    editor.updateOptions({ readOnly: isReadOnly, codeLens: language === "json" && !isReadOnly });
-
-    const model = editor.getModel();
-    if (model && model.getLanguageId() !== language) {
-      monaco.editor.setModelLanguage(model, language);
-    }
-  }, [isReadOnly, language]);
+    editor.updateOptions({ readOnly: isReadOnly, codeLens: !isReadOnly });
+  }, [isReadOnly]);
 
   React.useEffect(() => {
     if (!editorRef.current) {

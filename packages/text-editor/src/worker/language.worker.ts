@@ -13,7 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { createJsonLanguageServicePlugins } from "@openworkflowspec/language-service";
+import {
+  createJsonLanguageServicePlugins,
+  createYamlLanguageServicePlugins,
+} from "@openworkflowspec/language-service";
 import { createSimpleWorkerLanguageService } from "@volar/monaco/worker";
 import { initialize } from "monaco-editor/editor/editor.worker.js";
 import { URI } from "vscode-uri";
@@ -26,9 +29,12 @@ initialize((ctx) =>
     },
     languagePlugins: [
       {
-        getLanguageId: () => "json",
+        getLanguageId: (uri) => (/\.ya?ml$/.test(uri.path) ? "yaml" : "json"),
       },
     ],
-    languageServicePlugins: createJsonLanguageServicePlugins(),
+    languageServicePlugins: [
+      ...createJsonLanguageServicePlugins(),
+      ...createYamlLanguageServicePlugins(),
+    ],
   }),
 );

@@ -24,11 +24,12 @@ export function createJsonSchemaLanguageServicePlugin(): LanguageServicePlugin {
   return create({
     getLanguageSettings() {
       return {
+        validate: true,
         schemas: [
           {
             uri: workflowSchema.$id || DEFAULT_SCHEMA_URI,
             fileMatch: ["*.json"],
-            schema: workflowSchema,
+            schema: structuredClone(workflowSchema),
           },
         ],
       };

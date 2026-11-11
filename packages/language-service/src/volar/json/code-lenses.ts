@@ -16,35 +16,8 @@
 
 import type { LanguageServicePlugin } from "@volar/language-service";
 import { HELLO_WORLD_SAMPLE } from "../../samples/hello-world";
-import { isEmptyWorkflow } from "../../utils";
+import { createHelloWorldCodeLensesPlugin } from "../hello-world";
 
 export function createJsonCodeLensesPlugin(): LanguageServicePlugin {
-  return {
-    capabilities: {
-      codeLensProvider: {},
-    },
-    create() {
-      return {
-        provideCodeLenses(document) {
-          if (document.languageId !== "json" || !isEmptyWorkflow(document.getText())) {
-            return null;
-          }
-
-          return [
-            {
-              range: {
-                start: { line: 0, character: 0 },
-                end: { line: 0, character: 0 },
-              },
-              command: {
-                title: "Create an Open Workflow",
-                command: "openworkflow.insertHelloWorld",
-                arguments: [HELLO_WORLD_SAMPLE],
-              },
-            },
-          ];
-        },
-      };
-    },
-  };
+  return createHelloWorldCodeLensesPlugin("json", HELLO_WORLD_SAMPLE);
 }
