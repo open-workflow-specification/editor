@@ -196,7 +196,7 @@ export const holdsValue = (value: unknown): boolean =>
     : !isObjectNotArray(value) || Object.values(value).some(holdsValue));
 
 /**
- * Fields added in this draft and left empty are dropped on Apply
+ * Fields added in this draft and left empty are dropped on Apply.
  */
 function settleAddedFields(
   built: Task,
