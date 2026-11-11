@@ -256,15 +256,11 @@
 
   /** collapsible YAML field */
   .dec-root .dec-sidebar-yaml-field {
-    @apply dec:py-2 dec:px-1 dec:rounded-sm dec:border-b dec:border-gray-100 dec:transition-colors;
+    @apply dec:py-2 dec:px-1 dec:rounded-sm dec:transition-colors;
   }
 
   .dec-root .dec-sidebar-yaml-field:hover {
     @apply dec:bg-gray-100/60;
-  }
-
-  .dec-root.dark .dec-sidebar-yaml-field {
-    @apply dec:border-gray-800;
   }
 
   .dec-root.dark .dec-sidebar-yaml-field:hover {
@@ -512,6 +508,47 @@
   /* Runtime-expression string input — monospace hint */
   .dec-root .dec-form-expression-input {
     font-family: var(--dec-font-mono);
+  }
+
+  /* ── Read-only values ──────────────────────────────────
+     The label stays as in edit mode; the value takes the weight, as text where edit mode has an
+     input. */
+  .dec-root .dec-form-readonly-value {
+    @apply dec:m-0 dec:text-xs dec:text-gray-900;
+    overflow-wrap: anywhere;
+  }
+
+  .dec-root.dark .dec-form-readonly-value {
+    @apply dec:text-gray-100;
+  }
+
+  .dec-root .dec-form-readonly-value--expression {
+    font-family: var(--dec-font-mono);
+    color: var(--dec-teal-text);
+  }
+
+  .dec-root .dec-form-readonly-variant {
+    @apply dec:text-[11px] dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-form-readonly-variant {
+    @apply dec:text-gray-400;
+  }
+
+  .dec-root .dec-form-readonly-code {
+    @apply dec:m-0 dec:rounded-md dec:bg-gray-100 dec:px-2 dec:py-1.5 dec:text-[11px] dec:text-gray-900;
+    font-family: var(--dec-font-mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .dec-root.dark .dec-form-readonly-code {
+    @apply dec:text-gray-100;
+    background-color: var(--dec-surface-dark);
+  }
+
+  .dec-root .dec-form-readonly-stack {
+    @apply dec:flex dec:flex-col dec:gap-1;
   }
 
   /* Scrollable multiline textarea — fixed 3-line height with overflow scroll */
@@ -871,20 +908,20 @@
 
   /* Read-only rows */
   .dec-root .dec-map-key-readonly {
-    @apply dec:text-xs dec:text-gray-600 dec:w-2/5 dec:shrink-0 dec:break-all;
+    @apply dec:text-xs dec:text-gray-500 dec:w-2/5 dec:shrink-0 dec:break-all;
     font-family: var(--dec-font-mono);
   }
 
   .dec-root.dark .dec-map-key-readonly {
-    @apply dec:text-gray-300;
+    @apply dec:text-gray-400;
   }
 
   .dec-root .dec-map-value-readonly {
-    @apply dec:text-xs dec:text-gray-500 dec:flex-1 dec:break-all;
+    @apply dec:text-xs dec:text-gray-900 dec:flex-1 dec:break-all;
   }
 
   .dec-root.dark .dec-map-value-readonly {
-    @apply dec:text-gray-400;
+    @apply dec:text-gray-100;
   }
 
   /* Add-property button wrapper — provides the inset padding so the

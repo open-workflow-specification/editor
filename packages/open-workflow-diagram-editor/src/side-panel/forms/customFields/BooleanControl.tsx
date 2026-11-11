@@ -18,7 +18,6 @@ import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { Switch } from "@/components/ui/switch";
 import type { BooleanField } from "../../../core/schemaToFormFields";
-import { useTaskFormContext } from "../taskFormContext";
 
 // ---------------------------------------------------------------------------
 // BooleanControl — toggle switch backed by react-hook-form
@@ -33,7 +32,6 @@ export type BooleanControlProps = {
 
 export function BooleanControl({ field }: BooleanControlProps) {
   const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly } = useTaskFormContext();
 
   return (
     <Controller
@@ -42,8 +40,7 @@ export function BooleanControl({ field }: BooleanControlProps) {
       render={({ field: rhfField }) => (
         <Switch
           checked={(rhfField.value as boolean | undefined) ?? field.defaultValue ?? false}
-          {...(!isReadOnly ? { onCheckedChange: rhfField.onChange } : {})}
-          disabled={isReadOnly}
+          onCheckedChange={rhfField.onChange}
           aria-label={field.label}
         />
       )}

@@ -81,7 +81,7 @@ export type EnumControlProps = {
 
 export function EnumControl({ field, id }: EnumControlProps) {
   const { control, getValues, setValue } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, taskData, validateField } = useTaskFormContext();
+  const { taskData, validateField } = useTaskFormContext();
   const { t } = useI18n();
   const errorMessage = useFieldError(field.path);
   const removeField = useRemoveField(field.path);
@@ -192,11 +192,7 @@ export function EnumControl({ field, id }: EnumControlProps) {
         return (
           <>
             <FieldWithError errorMessage={!showInnerTextarea ? errorMessage : undefined}>
-              <Combobox
-                value={displayKey}
-                onValueChange={!isReadOnly ? handleValueChange : undefined}
-                disabled={isReadOnly}
-              >
+              <Combobox value={displayKey} onValueChange={handleValueChange}>
                 <ComboboxInput
                   id={id}
                   readOnly
@@ -234,13 +230,11 @@ export function EnumControl({ field, id }: EnumControlProps) {
               <FieldWithError errorMessage={errorMessage}>
                 <Textarea
                   value={innerText}
-                  onChange={!isReadOnly ? handleInnerTextChange : undefined}
+                  onChange={handleInnerTextChange}
                   onBlur={() => {
                     rhfField.onBlur();
                     validateField?.(field.path);
                   }}
-                  disabled={isReadOnly}
-                  readOnly={isReadOnly}
                   className="dec-form-scrollable-textarea dec-form-structured-value-textarea"
                   aria-invalid={errorMessage !== undefined || undefined}
                   aria-label={displayKey}

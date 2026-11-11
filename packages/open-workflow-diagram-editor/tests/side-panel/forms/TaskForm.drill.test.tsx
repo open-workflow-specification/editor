@@ -165,17 +165,20 @@ describe("TaskForm drill-in", () => {
     );
   });
 
+  // Read-only counts only the set fields: the unset ones are neither shown nor addable.
   it("shows the same row in read-only, and opens a level holding only the set fields", async () => {
     const { user } = renderPanel(PREPARE, true);
-    expect(row()).toHaveAccessibleName("Open Common fields, 3 of 6 set");
-    expect(screen.queryByDisplayValue("${ .greeting }")).not.toBeInTheDocument();
+    expect(row()).toHaveAccessibleName("Open Common fields, 3 fields");
+    expect(screen.queryByText("${ .greeting }")).not.toBeInTheDocument();
 
     await openCommonFields(user);
-    expect(outputRow()).toHaveAccessibleName("Open output, 1 of 2 set");
+    expect(outputRow()).toHaveAccessibleName("Open output, 1 field");
     expect(screen.queryByRole("button", { name: /^Open export,/ })).not.toBeInTheDocument();
 
     await openLevel(user, "output");
-    expect(outputAs()).toBeInTheDocument();
+    // Read-only shows the value as text, not in an input.
+    expect(screen.getByText("${ .greeting }")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("shows a lone set object inline in read-only, rather than behind another row", async () => {
@@ -183,7 +186,7 @@ describe("TaskForm drill-in", () => {
     await openCommonFields(user);
     // Only `input` is set, so the level would otherwise be a single drill row.
     expect(screen.queryByRole("button", { name: /^Open input,/ })).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue("${ .orders }")).toBeInTheDocument();
+    expect(screen.getByText("${ .orders }")).toBeInTheDocument();
   });
 
   it("counts in read-only exactly what the opened level will show", () => {

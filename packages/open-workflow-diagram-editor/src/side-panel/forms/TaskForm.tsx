@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { useWatch } from "react-hook-form";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
 import { useI18n } from "@openworkflowspec/i18n";
@@ -45,6 +45,7 @@ import { useDrillNavigation } from "./drill/useDrillNavigation";
 import { DrillContext, InlineLevelsContext } from "./drill/DrillContext";
 import type { VariantSelector } from "./drill/drill";
 import { DrillBreadcrumb } from "./drill/DrillBreadcrumb";
+import { buildFormValues } from "./draft";
 
 // ---------------------------------------------------------------------------
 // TaskForm
@@ -63,9 +64,11 @@ export type TaskFormProps = {
    * Used to map workflow-level SDK errors to form fields on initial load.
    */
   taskReference?: string | undefined;
+  /** Shown below the form at the task's top level only, never inside a drilled-in level. */
+  topLevelFooter?: React.ReactNode;
 };
 
-export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProps) {
+export function TaskForm({ nodeType, task, nodeId, taskReference, topLevelFooter }: TaskFormProps) {
   // The form layer reads and writes the task by path, so it sees it as a plain record.
   const taskData = task as Record<string, unknown>;
   const { t } = useI18n();
@@ -170,10 +173,17 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     name: SENTINEL_KEY,
     compute: (value: unknown) => flattenSentinels({ [SENTINEL_KEY]: value }),
   }) as Record<string, unknown>;
+  // Read-only ignores the draft's choice: without a label, the option is matched to the task.
   const selectVariant = React.useCallback<VariantSelector>(
     (field) =>
-      field.variants[selectedVariantIndex(field, sentinels[sentinelPath(field.path)], taskData)],
-    [sentinels, taskData],
+      field.variants[
+        selectedVariantIndex(
+          field,
+          isReadOnly ? undefined : sentinels[sentinelPath(field.path)],
+          taskData,
+        )
+      ],
+    [isReadOnly, sentinels, taskData],
   );
   const navigation = useDrillNavigation({
     fields: visibleFields,
@@ -183,9 +193,9 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
     selectVariant,
   });
 
-  if (allFields.length === 0 || visibleFields.length === 0) return null;
+  if (allFields.length === 0 || visibleFields.length === 0) return topLevelFooter ?? null;
 
-  return (
+  const body = (
     <TaskFormContext.Provider
       value={{
         isReadOnly,
@@ -229,10 +239,36 @@ export function TaskForm({ nodeType, task, nodeId, taskReference }: TaskFormProp
               </div>
             </InlineLevelsContext.Provider>
           </form>
+          {navigation.trail.length === 0 && topLevelFooter}
         </DrillContext.Provider>
       </VariantSnapshotsContext.Provider>
     </TaskFormContext.Provider>
   );
+
+  return isReadOnly ? (
+    <CommittedTaskForm fields={allFields} task={taskData}>
+      {body}
+    </CommittedTaskForm>
+  ) : (
+    body
+  );
+}
+
+/**
+ * Read-only shows the committed task, never the draft.
+ */
+function CommittedTaskForm({
+  fields,
+  task,
+  children,
+}: {
+  fields: FormFieldDescriptor[];
+  task: Record<string, unknown>;
+  children: React.ReactNode;
+}) {
+  const values = React.useMemo(() => buildFormValues(fields, task), [fields, task]);
+  const form = useForm<Record<string, unknown>>({ values });
+  return <FormProvider {...form}>{children}</FormProvider>;
 }
 
 const topLevelHeading = (field: FormFieldDescriptor) => <TopLevelHeading field={field} />;

@@ -368,14 +368,6 @@ describe("StructuredValueField — Strict Mode double-effect robustness", () => 
 // ---------------------------------------------------------------------------
 
 describe("StructuredValueField — read-only mode", () => {
-  it("renders the textarea as disabled and readOnly when isReadOnly is true", () => {
-    const defaults = { emit: { event: { with: { data: { key: "val" } } } } };
-    render(<Wrapper field={yamlField} defaultValues={defaults} isReadOnly={true} />);
-    const ta = getTextarea();
-    expect(ta).toBeDisabled();
-    expect(ta).toHaveAttribute("readonly");
-  });
-
   it("renders the textarea as enabled when isReadOnly is false", () => {
     render(<Wrapper field={yamlField} isReadOnly={false} />);
     expect(getTextarea()).not.toBeDisabled();
@@ -412,7 +404,7 @@ describe("StructuredValueField — read-only mode", () => {
 describe("StructuredValueField — variant-switch mount behaviour", () => {
   it("shows empty textarea when live value was cleared to undefined before remount (Expression→Data switch)", async () => {
     // Switching from expression to structured variant:
-    // 
+    //
     // 1. Form starts with expression string from committed task
     // 2. User switches variants → handleVariantChange clears the path with setValue(undefined)
     // 3. React mounts StructuredValueField
@@ -426,15 +418,15 @@ describe("StructuredValueField — variant-switch mount behaviour", () => {
       const form = useForm<Record<string, unknown>>({ defaultValues: defaults });
       const [phase, setPhase] = React.useState<"string" | "json">("string");
 
-      const doSwitch =  React.useCallback(() => {
+      const doSwitch = React.useCallback(() => {
         // Mirror handleVariantChange: clear the path (kind boundary) with
         // shouldDirty: false — dirty is owned by the sentinel, not this path.
         form.setValue(yamlField.path as never, undefined as never, { shouldDirty: false });
         setPhase("json");
       }, [form, setPhase]);
-      React.useEffect(()=>{
-        trigger.doSwitch = doSwitch
-      },[doSwitch])
+      React.useEffect(() => {
+        trigger.doSwitch = doSwitch;
+      }, [doSwitch]);
 
       return (
         <I18nProvider locale="en" dictionaries={{ en }}>
@@ -477,9 +469,9 @@ describe("StructuredValueField — variant-switch mount behaviour", () => {
         form.setValue(yamlField.path as never, savedData as never, { shouldDirty: true });
         setPhase("json");
       }, [form, setPhase]);
-            React.useEffect(()=>{
-        trigger.doRestore = doRestore
-      },[doRestore])
+      React.useEffect(() => {
+        trigger.doRestore = doRestore;
+      }, [doRestore]);
 
       return (
         <I18nProvider locale="en" dictionaries={{ en }}>

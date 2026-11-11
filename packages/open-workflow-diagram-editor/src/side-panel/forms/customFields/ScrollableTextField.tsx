@@ -36,7 +36,7 @@ export type ScrollableTextFieldProps = {
 
 export function ScrollableTextField({ field, id }: ScrollableTextFieldProps) {
   const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
+  const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
 
   const placeholder = field.placeholder ?? (field.isRuntimeExpression ? "${...}" : undefined);
@@ -55,8 +55,6 @@ export function ScrollableTextField({ field, id }: ScrollableTextFieldProps) {
               rhfField.onBlur();
               validateField?.(field.path);
             }}
-            disabled={isReadOnly}
-            readOnly={isReadOnly}
             placeholder={placeholder}
             className="dec-form-scrollable-textarea"
             aria-invalid={errorMessage !== undefined || undefined}

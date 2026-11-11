@@ -33,7 +33,7 @@ export type StructuredValueFieldProps = {
 
 export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
   const { control, getValues, getFieldState } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
+  const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
   // An expression string is stale only when an Expression variant beside this one holds it;
   // elsewhere (an HTTP `body`, `schema.document`) it is the field's own value.
@@ -134,8 +134,6 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
                 rhfField.onBlur();
                 validateField?.(field.path);
               }}
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
               className="dec-form-scrollable-textarea dec-form-structured-value-textarea"
               aria-invalid={errorMessage !== undefined || undefined}
             />

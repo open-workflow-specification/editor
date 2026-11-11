@@ -18,6 +18,7 @@ import { HelpCircle } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { RemoveFieldButton } from "./removeField";
+import { useTaskFormContext } from "./taskFormContext";
 
 // ---------------------------------------------------------------------------
 // FieldLabel — label text + optional description tooltip
@@ -39,6 +40,7 @@ export function FieldLabel({
   /** The field this label names: its ✕ goes at the row's end when it is removable. */
   fieldPath?: string;
 }) {
+  const { isReadOnly } = useTaskFormContext();
   return (
     <div className="dec-form-field-label-row">
       {changed && (
@@ -46,9 +48,13 @@ export function FieldLabel({
           <ChangedDot />
         </span>
       )}
-      <label htmlFor={htmlFor} className="dec-form-field-label">
-        {label}
-      </label>
+      {isReadOnly ? (
+        <span className="dec-form-field-label">{label}</span>
+      ) : (
+        <label htmlFor={htmlFor} className="dec-form-field-label">
+          {label}
+        </label>
+      )}
       {required && (
         <span className="dec-form-field-required" aria-hidden="true">
           *

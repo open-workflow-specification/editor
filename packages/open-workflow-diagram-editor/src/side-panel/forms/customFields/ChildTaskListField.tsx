@@ -17,6 +17,7 @@
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import type { ChildTaskListField as ChildTaskListFieldDescriptor } from "../../../core/schemaToFormFields";
+import { useTaskFormContext } from "../taskFormContext";
 import { TaskListDisplay } from "./TaskListDisplay";
 
 // ---------------------------------------------------------------------------
@@ -30,12 +31,15 @@ export type ChildTaskListFieldProps = {
 
 export function ChildTaskListField({ field }: ChildTaskListFieldProps) {
   const { control } = useFormContext<Record<string, unknown>>();
+  const { isReadOnly } = useTaskFormContext();
 
   return (
     <Controller
       name={field.path}
       control={control}
-      render={({ field: rhfField }) => <TaskListDisplay tasks={rhfField.value} />}
+      render={({ field: rhfField }) => (
+        <TaskListDisplay tasks={rhfField.value} isReadOnly={isReadOnly} />
+      )}
     />
   );
 }

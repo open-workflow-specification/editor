@@ -397,7 +397,7 @@ export function filterReadOnlyFields(
     if (field.kind === "object") {
       // Never show the object group if the parent key doesn't exist in the task data.
       if (!hasObjectAtPath(task, field.path)) return [];
-      // Kept whole, like a section: its drill row counts "n of m set" against every child, and
+      // Kept whole, like a section: its drill row counts its set children, and
       // whatever renders the children filters them itself.
       return filterReadOnlyFields(field.children, task).length === 0 ? [] : [field];
     }

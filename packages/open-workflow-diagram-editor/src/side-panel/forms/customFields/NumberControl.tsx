@@ -39,7 +39,7 @@ export type NumberControlProps = {
 
 export function NumberControl({ field, id }: NumberControlProps) {
   const { control, clearErrors } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
+  const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
 
   return (
@@ -76,8 +76,6 @@ export function NumberControl({ field, id }: NumberControlProps) {
               validateField?.(field.path);
             }}
             name={rhfField.name}
-            disabled={isReadOnly}
-            readOnly={isReadOnly}
             aria-invalid={errorMessage !== undefined || undefined}
           />
         </FieldWithError>

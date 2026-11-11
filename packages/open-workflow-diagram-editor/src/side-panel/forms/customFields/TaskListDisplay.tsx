@@ -36,9 +36,11 @@ function deriveTaskType(body: unknown): string | undefined {
 
 export type TaskListDisplayProps = {
   tasks: unknown;
+  /** Hides the hint to edit the tasks from the diagram, which nothing can do in read-only. */
+  isReadOnly?: boolean;
 };
 
-export function TaskListDisplay({ tasks }: TaskListDisplayProps) {
+export function TaskListDisplay({ tasks, isReadOnly = false }: TaskListDisplayProps) {
   const { t } = useI18n();
 
   const isEmpty = !Array.isArray(tasks) || tasks.length === 0;
@@ -74,10 +76,12 @@ export function TaskListDisplay({ tasks }: TaskListDisplayProps) {
           ) : null,
         )}
       </ul>
-      <p className="dec-task-list-hint">
-        <DiagramIcon className="dec-task-list-hint-icon" aria-hidden="true" />
-        {t("taskList.editHint")}
-      </p>
+      {!isReadOnly && (
+        <p className="dec-task-list-hint">
+          <DiagramIcon className="dec-task-list-hint-icon" aria-hidden="true" />
+          {t("taskList.editHint")}
+        </p>
+      )}
     </div>
   );
 }

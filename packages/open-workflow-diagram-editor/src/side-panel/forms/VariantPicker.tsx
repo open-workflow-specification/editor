@@ -36,6 +36,7 @@ import {
 import { sentinelPath as toSentinelPath } from "./sentinels";
 import { FieldLabel } from "./FieldLabel";
 import { useFieldChanged } from "../EditSession";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // VariantPicker — a one-of's type combobox; switching saves and restores values
@@ -145,7 +146,12 @@ export function VariantPicker({
 
   const variantLabels = React.useMemo(() => field.variants.map((v) => v.label), [field.variants]);
 
-  const picker = (
+  // Read-only names the chosen option as text: there is nothing to pick.
+  const picker = isReadOnly ? (
+    <p className={cn("dec-form-readonly-value", compact && "dec-form-readonly-variant")}>
+      {variantLabels[selectedVariantIdx] ?? ""}
+    </p>
+  ) : (
     <Combobox
       value={variantLabels[selectedVariantIdx] ?? ""}
       onValueChange={(val) => {
@@ -153,11 +159,9 @@ export function VariantPicker({
         const idx = variantLabels.indexOf(val);
         if (idx !== -1) handleVariantChange(idx);
       }}
-      disabled={isReadOnly}
     >
       <ComboboxInput
         readOnly
-        disabled={isReadOnly}
         value={variantLabels[selectedVariantIdx] ?? ""}
         aria-label={compact ? `${field.label} ${t("sidebar.field.variant")}` : field.label}
         showClear={false}

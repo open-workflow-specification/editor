@@ -56,31 +56,32 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
     return <p className="dec-sidebar-hint-text">{t("sidebar.noDetails")}</p>;
   }
 
+  /* The whole task's YAML, so it belongs to the top level, not to a drilled-in level */
+  const source = isReadOnly && task !== undefined && (
+    <>
+      <div className="dec-sidebar-section-spacer" />
+      <SectionHeader label={t("sidebar.sectionSource")} />
+      <YamlField
+        yaml={dump(task, { indent: 2, lineWidth: -1 })}
+        summary={t("sidebar.viewSource")}
+      />
+    </>
+  );
+
   return (
     <div data-testid="node-details">
       <ErrorSection items={errorItems} />
 
-      {hasTask && node.type !== undefined && (
-        <>
-          <SectionHeader label={t("sidebar.sectionProperties")} />
-          <TaskForm
-            nodeType={node.type}
-            task={task}
-            nodeId={node.id}
-            taskReference={taskReference}
-          />
-        </>
-      )}
-
-      {isReadOnly && task !== undefined && (
-        <>
-          <div className="dec-sidebar-section-spacer" />
-          <SectionHeader label={t("sidebar.sectionSource")} />
-          <YamlField
-            yaml={dump(task, { indent: 2, lineWidth: -1 })}
-            summary={t("sidebar.viewSource")}
-          />
-        </>
+      {hasTask && node.type !== undefined ? (
+        <TaskForm
+          nodeType={node.type}
+          task={task}
+          nodeId={node.id}
+          taskReference={taskReference}
+          topLevelFooter={source}
+        />
+      ) : (
+        source
       )}
     </div>
   );

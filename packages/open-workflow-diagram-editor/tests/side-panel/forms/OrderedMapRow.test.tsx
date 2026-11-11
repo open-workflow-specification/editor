@@ -178,8 +178,8 @@ describe("switch cases row", () => {
   it("hides an unset field when read-only", () => {
     renderCases({ isReadOnly: true });
 
-    expect(caseGroup("closeIssue").getByLabelText("when")).toBeInTheDocument();
-    expect(caseGroup("default").queryByLabelText("when")).toBeNull();
+    expect(caseGroup("closeIssue").getByText("when")).toBeInTheDocument();
+    expect(caseGroup("default").queryByText("when")).toBeNull();
   });
 
   /**

@@ -34,11 +34,9 @@ const thenFieldDescriptor: ThenFieldDescriptor = {
 function ThenFieldWrapper({
   defaultValue = "",
   siblingTaskNames = [],
-  isReadOnly = false,
 }: {
   defaultValue?: string;
   siblingTaskNames?: string[];
-  isReadOnly?: boolean;
 }) {
   const form = useForm<Record<string, unknown>>({
     // eslint-disable-next-line unicorn/no-thenable
@@ -48,7 +46,7 @@ function ThenFieldWrapper({
   return (
     <div className="dec-root">
       <I18nProvider locale="en" dictionaries={{ en }}>
-        <TaskFormContext.Provider value={{ isReadOnly, siblingTaskNames, taskData: {} }}>
+        <TaskFormContext.Provider value={{ isReadOnly: false, siblingTaskNames, taskData: {} }}>
           <FormProvider {...form}>
             <ThenField field={thenFieldDescriptor} id="field-then" />
           </FormProvider>
@@ -69,11 +67,5 @@ describe("ThenField", () => {
     render(<ThenFieldWrapper defaultValue="continue" />);
     const input = screen.getByLabelText("Then");
     expect(input).toHaveValue("continue");
-  });
-
-  it("renders with disabled input in read-only mode", () => {
-    render(<ThenFieldWrapper defaultValue="continue" isReadOnly />);
-    const input = screen.getByLabelText("Then");
-    expect(input).toBeDisabled();
   });
 });

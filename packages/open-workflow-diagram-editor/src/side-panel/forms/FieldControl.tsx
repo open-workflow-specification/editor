@@ -29,6 +29,8 @@ import {
   EventFilterListField,
   StructuredValueField,
 } from "./customFields";
+import { ReadOnlyValue, isReadOnlyTextField } from "./customFields/ReadOnlyValue";
+import { useTaskFormContext } from "./taskFormContext";
 
 // ---------------------------------------------------------------------------
 // FieldControl — dispatches to the appropriate control for each field kind
@@ -49,7 +51,13 @@ export type FieldControlProps = {
 };
 
 export function FieldControl({ field, id }: FieldControlProps) {
+  const { isReadOnly } = useTaskFormContext();
   const idProp = id !== undefined ? { id } : {};
+  // Read-only shows a value as text, never a disabled control. Lists and task lists keep their
+  // own read-only view below.
+  if (isReadOnly && isReadOnlyTextField(field)) {
+    return <ReadOnlyValue field={field} {...idProp} />;
+  }
   switch (field.kind) {
     case "string":
       return <StringControl field={field} {...idProp} />;

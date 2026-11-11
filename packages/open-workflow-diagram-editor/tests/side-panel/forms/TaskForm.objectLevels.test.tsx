@@ -51,10 +51,13 @@ describe("TaskForm inline objects", () => {
     "shows the payload inline through a one-of, and drills the object below it (read-only %s)",
     (isReadOnly) => {
       renderTask(RUN_PROCESS_TYPES_WORKFLOW, BUILD_IMAGE, isReadOnly);
+      // Edit mode shows a value in its input, read-only as text.
+      const value = (text: string) =>
+        isReadOnly ? screen.queryByText(text) : screen.queryByDisplayValue(text);
 
-      expect(screen.getByDisplayValue("nginx:latest")).toBeInTheDocument();
+      expect(value("nginx:latest")).toBeInTheDocument();
       expect(lifetimeRow()).toBeInTheDocument();
-      expect(screen.queryByDisplayValue("PT10M")).not.toBeInTheDocument();
+      expect(value("PT10M")).not.toBeInTheDocument();
     },
   );
 

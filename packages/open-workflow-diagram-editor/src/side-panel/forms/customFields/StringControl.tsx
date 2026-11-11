@@ -40,7 +40,7 @@ export function StringControl({ field, id }: StringControlProps) {
 }
 
 function SingleLineStringControl({ field, id }: StringControlProps) {
-  const { isReadOnly, validateField } = useTaskFormContext();
+  const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
   const placeholder =
     field.placeholder ?? field.defaultValue ?? (field.isRuntimeExpression ? "${...}" : undefined);
@@ -77,8 +77,6 @@ function SingleLineStringControl({ field, id }: StringControlProps) {
                 rhfField.onBlur();
                 validateField?.(field.path);
               }}
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
               placeholder={placeholder}
               className={field.isRuntimeExpression ? "dec-form-expression-input" : undefined}
               aria-invalid={errorMessage !== undefined || undefined}

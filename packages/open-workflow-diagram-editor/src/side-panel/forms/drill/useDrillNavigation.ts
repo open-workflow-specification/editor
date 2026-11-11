@@ -149,7 +149,7 @@ export function useDrillNavigation({
   });
 
   const current = levels[levels.length - 1];
-  // Read-only keeps a section or object whole (for its "n of m set"), so the level filters its own.
+  // Read-only keeps a section or object whole (its drill row counts the set children), so the level filters its own.
   const levelFields = React.useMemo(() => {
     if (current === undefined) return fields;
     if (!isReadOnly) return levelFieldsOf(current, selectVariant);
