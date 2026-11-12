@@ -210,6 +210,32 @@ describe("setOnChangeCallback", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
+    it("is not called by several setContent() calls batched in one event", async () => {
+      const editor = await renderEditor(BASIC_VALID_WORKFLOW_YAML);
+      const callback = registerCallback(editor);
+
+      await act(async () => {
+        editor.ref.current?.setContent(BASIC_VALID_WORKFLOW_JSON);
+        editor.ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML);
+      });
+
+      expect(callback).not.toHaveBeenCalled();
+      expect(screen.getByTestId("model-name")).toHaveTextContent("valid-workflow-yaml");
+    });
+
+    it("is called when an edit follows a setContent() in the same event", async () => {
+      const editor = await renderEditor(BASIC_VALID_WORKFLOW_YAML);
+      const callback = registerCallback(editor);
+
+      await act(async () => {
+        editor.ref.current?.setContent(BASIC_VALID_WORKFLOW_JSON);
+        screen.getByTestId("edit-valid").click();
+      });
+
+      await waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
+      expect(lastChange(callback)).toContain(RENAMED_BY_EDIT);
+    });
+
     it("is called after an edit made inside the editor", async () => {
       const editor = await renderEditor();
       const callback = registerCallback(editor);

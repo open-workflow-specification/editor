@@ -82,6 +82,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
   // Diagram.tsx is the sole caller of submitModel (after layout, with real viewport).
   const {
     model,
+    changeOrigin,
     seedModel,
     submitModel,
     resetHistory,
@@ -108,7 +109,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
   // Keep a ref to the latest selectedNodeId so the effect below can read it
   // synchronously without taking it as a dependency (avoids re-seeding on every click).
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
-  const externallySeededModelRef = React.useRef<Specification.Workflow | null>(null);
   const reportedModelRef = React.useRef<Specification.Workflow | null>(null);
   const onChangeCallbackRef = React.useRef<((content: string) => void) | null>(null);
 
@@ -116,7 +116,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
     selectedNodeIdRef.current = selectedNodeId;
   }, [selectedNodeId]);
 
-  // Seed history from the external content prop using seedModel (bypasses isReadOnly guard).
+  // Seed history from the external content prop using seedModel.
   // The real viewport is set by Diagram.tsx once layout completes in edit mode.
   // In read-only mode the placeholder viewport is acceptable since fitView always runs.
   React.useEffect(() => {
@@ -137,7 +137,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
     // to both setSelectedNodeId and seedModel in one shot.
     const resolvedId = resolveSelectedId(parsedModel, selectedNodeIdRef.current);
     setSelectedNodeId(resolvedId);
-    externallySeededModelRef.current = parsedModel;
     seedModel(parsedModel, { x: 0, y: 0, zoom: 1 }, resolvedId);
     // selectedNodeIdRef is a ref (stable, mutated inline — not a dep by convention).
   }, [props.content, resetHistory, seedModel]);
@@ -161,7 +160,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
       const resolvedId = resolveSelectedId(newModel, selectedNodeIdRef.current);
       setSelectedNodeId(resolvedId);
-      externallySeededModelRef.current = newModel;
       seedModel(newModel, { x: 0, y: 0, zoom: 1 }, resolvedId);
     },
     [seedModel],
@@ -171,7 +169,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
     (workflow: Specification.Workflow) => {
       const resolvedId = resolveSelectedId(workflow, selectedNodeIdRef.current);
       setSelectedNodeId(resolvedId);
-      seedModel(workflow, { x: 0, y: 0, zoom: 1 }, resolvedId);
+      seedModel(workflow, { x: 0, y: 0, zoom: 1 }, resolvedId, "internal");
     },
     [seedModel],
   );
@@ -193,13 +191,10 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
   React.useEffect(() => {
     if (!model) return;
-    if (model === externallySeededModelRef.current) {
-      externallySeededModelRef.current = null;
-      reportedModelRef.current = model;
-      return;
-    }
     if (model === reportedModelRef.current) return;
     reportedModelRef.current = model;
+    // The host already knows about content it loaded itself.
+    if (changeOrigin === "external") return;
 
     let content: string | null = null;
     try {
@@ -218,7 +213,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
         invokeSafely(() => onChange(reportedContent));
       }
     }
-  }, [model, contentFormat, onContentChange]);
+  }, [model, changeOrigin, contentFormat, onContentChange]);
 
   const setOnChangeCallback = React.useCallback(
     (callback: ((content: string) => void) | null | undefined) => {

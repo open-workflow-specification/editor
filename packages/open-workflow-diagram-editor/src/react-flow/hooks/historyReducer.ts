@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import * as React from "react";
-
 /**
  * Maximum number of past snapshots retained in the history stack.
  * Oldest entries are evicted when the cap is reached.
@@ -52,7 +50,7 @@ export function getFuture<T>(state: HistoryState<T>): T[] {
   return state.presentIndex === -1 ? [] : state.history.slice(state.presentIndex + 1);
 }
 
-type HistoryAction<T> =
+export type HistoryAction<T> =
   | { type: "PUSH"; payload: T }
   | { type: "SET_PRESENT"; payload: T }
   | { type: "UNDO" }
@@ -105,69 +103,10 @@ export function historyReducer<T>(
     case "RESET":
       // Wipe the entire history stack and return to the uninitialised state.
       return initialHistoryState<T>();
-
-    default:
-      return state;
   }
 }
 
-const initialHistoryState = <T>(): HistoryState<T> => ({
+export const initialHistoryState = <T>(): HistoryState<T> => ({
   history: [],
   presentIndex: -1,
 });
-
-export type UseHistoryReturn<T> = {
-  state: HistoryState<T>;
-  push: (payload: T) => void;
-  setPresent: (payload: T) => void;
-  reset: () => void;
-  undo: () => void;
-  redo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-};
-
-/**
- * Generic history hook backed by useReducer.
- * Uses a single flat array + a cursor index instead of three separate arrays.
- * Starts uninitialised (presentIndex = -1). The first push sets the
- * initial present without adding a past entry.
- */
-export function useHistory<T>(): UseHistoryReturn<T> {
-  const [state, dispatch] = React.useReducer(
-    historyReducer as React.Reducer<HistoryState<T>, HistoryAction<T>>,
-    undefined,
-    initialHistoryState<T>,
-  );
-
-  const push = React.useCallback((payload: T) => {
-    dispatch({ type: "PUSH", payload });
-  }, []);
-
-  const setPresent = React.useCallback((payload: T) => {
-    dispatch({ type: "SET_PRESENT", payload });
-  }, []);
-
-  const reset = React.useCallback(() => {
-    dispatch({ type: "RESET" });
-  }, []);
-
-  const undo = React.useCallback(() => {
-    dispatch({ type: "UNDO" });
-  }, []);
-
-  const redo = React.useCallback(() => {
-    dispatch({ type: "REDO" });
-  }, []);
-
-  return {
-    state,
-    push,
-    setPresent,
-    reset,
-    undo,
-    redo,
-    canUndo: state.presentIndex > 0,
-    canRedo: state.presentIndex < state.history.length - 1,
-  };
-}
