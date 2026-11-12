@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useArgs } from "storybook/preview-api";
-import { DiagramEditor, DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
+import {
+  DiagramEditor,
+  DiagramEditorRef,
+  HistoryAvailability,
+} from "../../src/diagram-editor/DiagramEditor";
 import { authenticationReusable } from "../examples";
 import { EditorToolbarLayout } from "./shared/EditorToolbarLayout";
 
@@ -39,14 +43,10 @@ function UndoRedoStory({
   onContentChange?: (content: string) => void;
 }) {
   const editorRef = useRef<DiagramEditorRef | null>(null);
+  const [history, setHistory] = useState<HistoryAvailability>({ canUndo: false, canRedo: false });
 
   return (
-    <EditorToolbarLayout
-      editorRef={editorRef}
-      content={content}
-      colorMode={colorModeProp}
-      {...(onContentChange && { onContentChange })}
-    >
+    <EditorToolbarLayout editorRef={editorRef} colorMode={colorModeProp} history={history}>
       {/* DiagramEditor — fills remaining height */}
       <div style={{ flex: 1, overflow: "hidden" }}>
         <DiagramEditor
@@ -55,6 +55,8 @@ function UndoRedoStory({
           isReadOnly={isReadOnly}
           locale={locale}
           colorMode={colorModeProp as "light" | "dark" | "system" | undefined}
+          onHistoryChange={setHistory}
+          {...(onContentChange && { onContentChange })}
         />
       </div>
     </EditorToolbarLayout>
@@ -78,7 +80,8 @@ const meta = {
 
 The \`DiagramEditor\` component exposes an imperative \`ref\` API that lets host
 applications call \`undo()\`, \`redo()\`, \`getContent()\`, and \`setContent()\`
-programmatically, and read \`canUndo\` / \`canRedo\` to drive toolbar or menu state.
+programmatically. The \`onHistoryChange\` prop reports when undo or redo becomes
+available or unavailable, to drive toolbar or menu state.
 
 ### How it works
 
@@ -88,7 +91,8 @@ the first time a valid workflow model is loaded in **edit mode**
 
 A new history entry is created whenever the workflow model changes
 structurally — for example when the external \`content\` prop is updated by
-an addon panel, a text editor, or a \`setContent()\` call. Transient state
+an addon panel, a text editor, or a \`setContent()\` call, or when the user
+edits a task in the side panel and applies the change. Transient state
 such as viewport pan/zoom does **not** create a new entry on its own.
 
 Each snapshot captures three pieces of state atomically:
@@ -110,7 +114,8 @@ model. It is only cleared when the node or edge has been removed by the change.
 
 #### Stack behaviour
 
-The history stack is capped at **10 entries** (\`HISTORY_STACK_SIZE\`).
+The history stack keeps at most **10 past entries** (\`HISTORY_STACK_SIZE\`)
+in addition to the current one.
 When that limit is reached the oldest entry is evicted. When a new change
 occurs while there are future entries (i.e. the user has previously undone
 some steps), all future entries are discarded before the new snapshot is
@@ -127,12 +132,20 @@ const editorRef = useRef<DiagramEditorRef>(null);
 <DiagramEditor ref={editorRef} content={yaml} isReadOnly={false} locale="en" />
 \`\`\`
 
+Prop related to undo / redo:
+
+| Prop | Type | Description |
+|---|---|---|
+| \`onHistoryChange\` | \`(state: { canUndo: boolean; canRedo: boolean }) => void\` | Called whenever \`canUndo\` or \`canRedo\` changes, whatever caused it: side-panel edits, \`undo()\`, \`redo()\`, \`setContent()\`, or a \`content\` prop update. Not called when the values are unchanged or on mount. See *Driving toolbar state with \`onHistoryChange\`* below. |
+
+Members exposed on the \`ref\`:
+
 | Member | Type | Description |
 |---|---|---|
 | \`undo()\` | \`() => void\` | Step back one history entry. No-op if nothing to undo. |
 | \`redo()\` | \`() => void\` | Step forward one history entry. No-op if nothing to redo. |
-| \`canUndo\` | \`boolean\` | \`true\` when there is at least one past entry to undo. |
-| \`canRedo\` | \`boolean\` | \`true\` when there is at least one future entry to redo. |
+| \`canUndo\` | \`boolean\` | \`true\` when there is at least one past entry to undo. Not reactive, prefer \`onHistoryChange\` for UI state. |
+| \`canRedo\` | \`boolean\` | \`true\` when there is at least one future entry to redo. Not reactive, prefer \`onHistoryChange\` for UI state. |
 | \`getContent()\` | \`() => string\` | Returns the current workflow serialised to a string. Returns \`""\` when no model is loaded. |
 | \`setContent(content)\` | \`(content: string) => void\` | Loads a new workflow from a YAML or JSON string. The format is auto-detected and preserved for future \`getContent()\` calls. Silently ignored if the string cannot be parsed. |
 | \`setOnChangeCallback(callback)\` | \`(callback: ((content: string) => void) \\| null \\| undefined) => void\` | Registers a function called after undo, redo and side-panel edits, never after \`setContent()\`. See the **OnChange Callback** story. |
@@ -188,48 +201,33 @@ editorRef.current?.setContent(JSON.stringify({
 }, null, 2));
 \`\`\`
 
-After calling \`setContent()\`, sync \`canUndo\` / \`canRedo\` into local state
-(see the deferred-sync pattern below) so toolbar buttons reflect the updated
-history stack.
+A successful \`setContent()\` call is reported through \`onHistoryChange\` like
+any other change, so toolbar buttons reflect the updated history stack.
 
 ---
 
-### Syncing \`canUndo\` / \`canRedo\` into React state
+### Driving toolbar state with \`onHistoryChange\`
 
-\`canUndo\` and \`canRedo\` are **plain values on the ref object**, not reactive
-state. To drive UI controls such as toolbar buttons, copy them into local state
-after each operation and after external content changes:
+\`canUndo\` and \`canRedo\` on the ref are **plain values**, not reactive state.
+To enable or disable toolbar buttons, store the state reported by
+\`onHistoryChange\`. It covers every cause: edits applied in the side panel,
+\`undo()\` / \`redo()\`, \`setContent()\` and \`content\` prop updates.
 
 \`\`\`tsx
-const [canUndo, setCanUndo] = useState(false);
-const [canRedo, setCanRedo] = useState(false);
+const editorRef = useRef<DiagramEditorRef>(null);
+const [history, setHistory] = useState({ canUndo: false, canRedo: false });
 
-const sync = useCallback(() => {
-  setCanUndo(editorRef.current?.canUndo ?? false);
-  setCanRedo(editorRef.current?.canRedo ?? false);
-}, []);
+<button disabled={!history.canUndo} onClick={() => editorRef.current?.undo()}>Undo</button>
+<button disabled={!history.canRedo} onClick={() => editorRef.current?.redo()}>Redo</button>
 
-// Sync after external content changes (e.g. addon panel updates the YAML):
-useEffect(() => {
-  const id = setTimeout(sync, 0); // defer one tick so the ref has settled
-  return () => clearTimeout(id);
-}, [content, sync]);
-
-// Sync after a button-triggered undo/redo:
-const handleUndo = () => {
-  editorRef.current?.undo();
-  setTimeout(sync, 0);
-};
-
-// Sync after a setContent call:
-const handleSetContent = (newContent: string) => {
-  editorRef.current?.setContent(newContent);
-  setTimeout(sync, 0);
-};
+<DiagramEditor
+  ref={editorRef}
+  content={yaml}
+  isReadOnly={false}
+  locale="en"
+  onHistoryChange={setHistory}
+/>
 \`\`\`
-
-> The \`setTimeout(..., 0)\` deferral is necessary because \`useImperativeHandle\`
-> updates the ref values one render after the internal state changes.
 
 ---
 
@@ -238,7 +236,10 @@ const handleSetContent = (newContent: string) => {
 The toolbar rendered above the diagram in this story (**Undo**, **Redo**,
 **Set Content**, **Get Content**) is implemented in the story helper
 \`shared/EditorToolbarLayout.tsx\` — it is **not** part of the \`DiagramEditor\`
-component. Its purpose is
+component. The story passes the state received from \`onHistoryChange\` to it,
+and passes \`onContentChange\` to keep the Storybook \`content\` control in sync
+with in-editor changes.
+Its purpose is
 to provide an interactive way to exercise the ref API and to show one approach
 to wiring up a toolbar in a host application. You are free to implement your
 own toolbar or menu in whatever way suits your application.
@@ -267,7 +268,7 @@ diagramEditorRef.current.redo();
 diagramEditorRef.current.canUndo; // boolean
 diagramEditorRef.current.canRedo; // boolean
 
-// Read the current workflow (YAML or JSON, matching the original input):
+// Read the current workflow (YAML or JSON, matching the last loaded content):
 diagramEditorRef.current.getContent();
 
 // Replace the diagram content programmatically (YAML or JSON):

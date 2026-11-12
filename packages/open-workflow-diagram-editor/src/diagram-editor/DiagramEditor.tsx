@@ -42,8 +42,8 @@ import { EditSessionProvider } from "@/side-panel/EditSession";
  * Both are no-ops when there is nothing to undo or redo respectively.
  *
  * **`canUndo` / `canRedo`** — Plain boolean values (not reactive state).
- * Copy them into local state after each operation and after the `content`
- * prop changes to keep toolbar or menu items in sync.
+ * To drive toolbar or menu items, use the `onHistoryChange` prop instead of
+ * polling them.
  *
  * **`getContent()`** — Returns the current workflow serialised back to a
  * string. The format (YAML or JSON) tracks the most recently successfully
@@ -91,6 +91,12 @@ export type DiagramEditorRef = {
   setOnChangeCallback: (callback: ((content: string) => void) | null | undefined) => void;
 };
 
+/** Whether the editor currently has history to step back or forward through. */
+export type HistoryAvailability = {
+  canUndo: boolean;
+  canRedo: boolean;
+};
+
 export type DiagramEditorProps = {
   /**
    * The workflow definition to visualise, as a YAML or JSON string.
@@ -123,6 +129,13 @@ export type DiagramEditorProps = {
    * Initial and externally supplied content changes do not trigger the callback.
    */
   onContentChange?: (content: string) => void;
+  /**
+   * Called whenever `canUndo` or `canRedo` changes, whatever caused it:
+   * side-panel edits, undo, redo, `setContent()`, `content` prop updates or a
+   * reset. Not called when the values are unchanged, and not called on mount
+   * (both start as `false`).
+   */
+  onHistoryChange?: (state: HistoryAvailability) => void;
 };
 
 const DiagramEditorContent = ({
@@ -170,6 +183,7 @@ const DiagramEditorBody = ({
           locale={props.locale}
           {...(props.language && { language: props.language })}
           {...(props.onContentChange && { onContentChange: props.onContentChange })}
+          {...(props.onHistoryChange && { onHistoryChange: props.onHistoryChange })}
         >
           <SidebarProvider defaultOpen={false}>
             <EditSessionProvider>

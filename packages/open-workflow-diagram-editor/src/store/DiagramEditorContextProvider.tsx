@@ -25,7 +25,11 @@ import {
   validateWorkflow,
 } from "../core";
 import type { Specification } from "@openworkflowspec/sdk";
-import { DiagramEditorProps, DiagramEditorRef } from "../diagram-editor/DiagramEditor";
+import {
+  DiagramEditorProps,
+  DiagramEditorRef,
+  HistoryAvailability,
+} from "../diagram-editor/DiagramEditor";
 import { invokeSafely } from "../lib/invokeSafely";
 import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorContext";
 import type * as RF from "@xyflow/react";
@@ -50,6 +54,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
   React.PropsWithChildren<ContextProviderProps>
 >((props, ref) => {
   const onContentChange: ((content: string) => void) | undefined = props.onContentChange;
+  const onHistoryChange: DiagramEditorProps["onHistoryChange"] = props.onHistoryChange;
   // Detect the serialization format once from the initial content prop.
   // JSON content starts with `{` (after trimming); everything else is YAML.
   // useState keeps the format in sync with React's render cycle, so consumers
@@ -111,6 +116,8 @@ export const DiagramEditorContextProvider = React.forwardRef<
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
   const reportedModelRef = React.useRef<Specification.Workflow | null>(null);
   const onChangeCallbackRef = React.useRef<((content: string) => void) | null>(null);
+  // Both flags start as false, so the first report only happens on a real change.
+  const reportedHistoryRef = React.useRef<HistoryAvailability>({ canUndo: false, canRedo: false });
 
   React.useEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
@@ -214,6 +221,15 @@ export const DiagramEditorContextProvider = React.forwardRef<
       }
     }
   }, [model, changeOrigin, contentFormat, onContentChange]);
+
+  React.useEffect(() => {
+    const reported: HistoryAvailability = reportedHistoryRef.current;
+    if (reported.canUndo === canUndo && reported.canRedo === canRedo) return;
+    reportedHistoryRef.current = { canUndo, canRedo };
+    if (onHistoryChange) {
+      invokeSafely(() => onHistoryChange({ canUndo, canRedo }));
+    }
+  }, [canUndo, canRedo, onHistoryChange]);
 
   const setOnChangeCallback = React.useCallback(
     (callback: ((content: string) => void) | null | undefined) => {

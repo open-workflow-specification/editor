@@ -16,7 +16,11 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DiagramEditor, DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
+import {
+  DiagramEditor,
+  DiagramEditorRef,
+  HistoryAvailability,
+} from "../../src/diagram-editor/DiagramEditor";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 import { authenticationReusable } from "../examples";
 import { EditorToolbarLayout } from "./shared/EditorToolbarLayout";
@@ -156,8 +160,7 @@ function OnChangeCallbackStory({
   const editorRef = useRef<DiagramEditorRef | null>(null);
   const callCounter = useRef<number>(0);
   const [entries, setEntries] = useState<OutputEntry[]>([]);
-  // Bumped on every callback so the toolbar re-reads canUndo / canRedo after in-editor edits.
-  const [historyVersion, setHistoryVersion] = useState<number>(0);
+  const [history, setHistory] = useState<HistoryAvailability>({ canUndo: false, canRedo: false });
   const resolvedColorMode = useResolvedColorMode(
     (colorModeProp as "light" | "dark" | "system") ?? "system",
   );
@@ -170,7 +173,6 @@ function OnChangeCallbackStory({
       content,
     };
     setEntries((previous) => [...previous, entry]);
-    setHistoryVersion((version) => version + 1);
   }, []);
 
   // Register the callback for the lifetime of the story.
@@ -181,12 +183,7 @@ function OnChangeCallbackStory({
   }, [handleChange]);
 
   return (
-    <EditorToolbarLayout
-      editorRef={editorRef}
-      content={content}
-      colorMode={colorModeProp}
-      historyVersion={historyVersion}
-    >
+    <EditorToolbarLayout editorRef={editorRef} colorMode={colorModeProp} history={history}>
       <div style={{ flex: 1, overflow: "hidden" }}>
         <DiagramEditor
           ref={editorRef}
@@ -194,6 +191,7 @@ function OnChangeCallbackStory({
           isReadOnly={isReadOnly ?? false}
           locale={locale ?? "en"}
           colorMode={colorModeProp as "light" | "dark" | "system" | undefined}
+          onHistoryChange={setHistory}
         />
       </div>
       <OutputPanel
@@ -288,13 +286,17 @@ useEffect(() => {
   still sees it. The editor itself writes nothing to the console.
 - The \`onContentChange\` prop remains available. It reports the same events but only
   receives the content string.
+- The callback reports **content**, not history state. To enable or disable Undo / Redo
+  controls use the \`onHistoryChange\` prop instead, which also covers \`setContent()\`
+  and \`content\` prop updates. See the **Undo Redo** story.
 
 ### Story toolbar and output panel
 
 The toolbar above the diagram (**Undo**, **Redo**, **Set Content**, **Get Content**) and
 the panel under it are implemented in the story, they are **not** part of the
 \`DiagramEditor\` component. The toolbar is the same as in the **Undo Redo** story and
-exercises the ref API. The story registers a callback that appends everything it
+exercises the ref API; its Undo / Redo buttons are enabled from the \`onHistoryChange\`
+prop. The story also registers an on-change callback that appends everything it
 receives to the panel: the call number and the full content.
 
 Try it:

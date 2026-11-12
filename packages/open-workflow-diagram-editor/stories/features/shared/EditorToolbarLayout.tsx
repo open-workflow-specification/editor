@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { DiagramEditorRef } from "../../../src/diagram-editor/DiagramEditor";
+import React, { useEffect, useState } from "react";
+import type {
+  DiagramEditorRef,
+  HistoryAvailability,
+} from "../../../src/diagram-editor/DiagramEditor";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 
 // ---------------------------------------------------------------------------
@@ -81,59 +84,31 @@ const baseButtonStyle: React.CSSProperties = {
  * `children`, which is expected to hold the `DiagramEditor` bound to `editorRef`.
  * Also publishes `editorRef` on `window.diagramEditorRef` for browser-console testing.
  *
- * `onContentChange` is called with the latest content after a toolbar undo, redo or
- * Set Content, never for content that changes externally.
- *
- * Undo / Redo enablement is re-read whenever `content` or `historyVersion` changes.
- * Hosts that learn about in-editor edits by other means bump `historyVersion`.
+ * `history` drives the Undo / Redo enablement. Hosts feed it from the editor's
+ * `onHistoryChange` prop.
  */
 export function EditorToolbarLayout({
   editorRef,
-  content,
   colorMode: colorModeProp,
-  onContentChange,
-  historyVersion = 0,
+  history,
   children,
 }: {
   editorRef: React.RefObject<DiagramEditorRef | null>;
-  content: string;
   colorMode?: string;
-  onContentChange?: (content: string) => void;
-  historyVersion?: number;
+  history: HistoryAvailability;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { canUndo, canRedo } = history;
   const resolvedColorMode = useResolvedColorMode(
     (colorModeProp as "light" | "dark" | "system") ?? "system",
   );
   const theme = resolvedColorMode === "dark" ? dark : light;
 
-  const [canUndo, setCanUndo] = useState<boolean>(false);
-  const [canRedo, setCanRedo] = useState<boolean>(false);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [modalText, setModalText] = useState<string>("");
   const [getContentOpen, setGetContentOpen] = useState<boolean>(false);
   const [getContentText, setGetContentText] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
-
-  // True only while a button-triggered undo/redo is pending its deferred sync.
-  // Prevents onContentChange from firing when content changes externally,
-  // which would create a feedback loop.
-  const undoRedoInFlight = useRef<boolean>(false);
-
-  const syncHistory = useCallback(() => {
-    setCanUndo(editorRef.current?.canUndo ?? false);
-    setCanRedo(editorRef.current?.canRedo ?? false);
-    if (undoRedoInFlight.current && onContentChange && editorRef.current) {
-      onContentChange(editorRef.current.getContent());
-    }
-    undoRedoInFlight.current = false;
-  }, [editorRef, onContentChange]);
-
-  // Sync button state after external content or history changes — never notify the host.
-  useEffect(() => {
-    const id = setTimeout(syncHistory, 0);
-    return () => clearTimeout(id);
-  }, [content, historyVersion, syncHistory]);
 
   // Expose the ref on the window for browser-console testing.
   useEffect(() => {
@@ -179,8 +154,6 @@ export function EditorToolbarLayout({
   const applyModal = () => {
     editorRef.current?.setContent(modalText);
     setModalOpen(false);
-    undoRedoInFlight.current = true;
-    setTimeout(syncHistory, 0);
   };
 
   // ---------------------------------------------------------------------------
@@ -374,11 +347,7 @@ export function EditorToolbarLayout({
           <button
             style={buttonStyle(!canUndo)}
             disabled={!canUndo}
-            onClick={() => {
-              undoRedoInFlight.current = true;
-              editorRef.current?.undo();
-              setTimeout(syncHistory, 0);
-            }}
+            onClick={() => editorRef.current?.undo()}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
@@ -405,11 +374,7 @@ export function EditorToolbarLayout({
           <button
             style={buttonStyle(!canRedo)}
             disabled={!canRedo}
-            onClick={() => {
-              undoRedoInFlight.current = true;
-              editorRef.current?.redo();
-              setTimeout(syncHistory, 0);
-            }}
+            onClick={() => editorRef.current?.redo()}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}

@@ -20,7 +20,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { ReactFlowProvider } from "@xyflow/react";
 import { I18nProvider } from "@openworkflowspec/i18n";
-import type { Specification } from "@openworkflowspec/sdk";
 import { useDiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { DiagramEditorContextProvider } from "../../src/store/DiagramEditorContextProvider";
 import type { DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
@@ -36,6 +35,13 @@ import {
   MANAGING_GITHUB_ISSUES_WORKFLOW,
 } from "../fixtures/workflows";
 import { clickApply, dirtyTaskDraft, EDITABLE_TASK_NODE_ID } from "../test-utils/edit-helpers";
+import {
+  captureAsyncRethrows,
+  clickEdit,
+  EditButtons,
+  RENAMED_BY_EDIT,
+  type AsyncRethrowCapture,
+} from "../test-utils/editor-callback-helpers";
 import { nodeAt } from "../test-utils/workflow-helpers";
 
 vi.mock("../../src/core", async (importOriginal) => {
@@ -47,36 +53,6 @@ vi.mock("../../src/core", async (importOriginal) => {
 });
 
 const serializeWorkflowMock = vi.mocked(core.serializeWorkflow);
-
-const RENAMED_BY_EDIT = "edited-in-editor";
-
-/** Commits an edit through the same path the side panel uses. */
-const EditButtons: React.FC = () => {
-  const { commitWorkflow, model } = useDiagramEditorContext();
-  const commit = (mutate: (workflow: Specification.Workflow) => Specification.Workflow): void => {
-    if (model) commitWorkflow(mutate(model));
-  };
-  return (
-    <div>
-      <button
-        data-testid="edit-valid"
-        aria-label="edit-valid"
-        onClick={() =>
-          commit((workflow) => ({
-            ...workflow,
-            document: { ...workflow.document, name: RENAMED_BY_EDIT },
-          }))
-        }
-      />
-      <button
-        data-testid="edit-invalid"
-        aria-label="edit-invalid"
-        onClick={() => commit((workflow) => ({ ...workflow, document: undefined! }))}
-      />
-      <p data-testid="model-name">{model?.document?.name ?? "none"}</p>
-    </div>
-  );
-};
 
 /** The real task form and footer, rendered the way the side panel does. */
 const SidePanelTaskForm: React.FC = () => {
@@ -147,12 +123,6 @@ async function renderEditor(
     },
   };
 }
-
-const clickEdit = async (testId: "edit-valid" | "edit-invalid"): Promise<void> => {
-  await act(async () => {
-    screen.getByTestId(testId).click();
-  });
-};
 
 type ChangeCallback = Mock<(content: string) => void>;
 
@@ -425,26 +395,10 @@ describe("setOnChangeCallback", () => {
     });
 
     describe("when a consumer throws", () => {
-      let rethrown: unknown[];
-      let consoleSpies: Array<ReturnType<typeof vi.spyOn>>;
+      let capture: AsyncRethrowCapture;
 
       beforeEach(() => {
-        rethrown = [];
-        const originalQueueMicrotask: typeof queueMicrotask =
-          globalThis.queueMicrotask.bind(globalThis);
-        // React also queues microtasks, so run everything and record only what throws.
-        vi.spyOn(globalThis, "queueMicrotask").mockImplementation((cb: () => void): void => {
-          originalQueueMicrotask(() => {
-            try {
-              cb();
-            } catch (error: unknown) {
-              rethrown.push(error);
-            }
-          });
-        });
-        consoleSpies = (["log", "warn", "error"] as const).map((method) =>
-          vi.spyOn(console, method).mockImplementation(() => {}),
-        );
+        capture = captureAsyncRethrows();
       });
 
       it("keeps the editor working, keeps calling it, rethrows asynchronously and does not use the console", async () => {
@@ -463,8 +417,8 @@ describe("setOnChangeCallback", () => {
         await waitFor(() => expect(callback).toHaveBeenCalledTimes(2));
 
         expect(screen.getByTestId("model-name")).toBeInTheDocument();
-        await waitFor(() => expect(rethrown).toEqual([failure, failure]));
-        consoleSpies.forEach((spy) => expect(spy).not.toHaveBeenCalled());
+        await waitFor(() => expect(capture.rethrown).toEqual([failure, failure]));
+        capture.consoleSpies.forEach((spy) => expect(spy).not.toHaveBeenCalled());
       });
 
       it.each([
@@ -490,7 +444,7 @@ describe("setOnChangeCallback", () => {
 
           await waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
           expect(editor.onContentChange).toHaveBeenCalledTimes(1);
-          await waitFor(() => expect(rethrown).toHaveLength(1));
+          await waitFor(() => expect(capture.rethrown).toHaveLength(1));
         },
       );
     });
