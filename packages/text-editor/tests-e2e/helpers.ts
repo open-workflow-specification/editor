@@ -23,3 +23,12 @@ export function getCompletion(page: Page, label: string): Locator {
 export function getCodeLens(page: Page, title: string): Locator {
   return page.locator(".codelens-decoration").getByText(title, { exact: true });
 }
+
+/** Replaces the whole editor content with `text`. The editor must have the focus. */
+export async function pasteText(page: Page, text: string): Promise<void> {
+  await page.keyboard.press("ControlOrMeta+a");
+  // Use clipboard paste instead of keyboard.type: Monaco auto-indents after each newline,
+  // which corrupts the formatting when typing multi-line text character by character.
+  await page.evaluate((value) => navigator.clipboard.writeText(value), text);
+  await page.keyboard.press("ControlOrMeta+v");
+}

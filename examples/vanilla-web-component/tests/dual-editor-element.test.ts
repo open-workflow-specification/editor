@@ -1,0 +1,140 @@
+/*
+ * Copyright 2021-Present The Open Workflow Specification Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
+import { screen } from "@testing-library/dom";
+import { DualEditorElement } from "../src/dual-editor-element";
+
+let lastProps: Record<string, unknown> | null = null;
+
+vi.mock("@openworkflowspec/dual-editor", () => ({
+  DualEditor: (props: Record<string, unknown>) => {
+    lastProps = props;
+    return null;
+  },
+}));
+
+vi.mock("@openworkflowspec/text-editor/worker?worker", () => ({
+  default: class LanguageServiceWorker {},
+}));
+
+beforeAll(() => {
+  if (!customElements.get("openworkflowspec-dual-editor")) {
+    customElements.define("openworkflowspec-dual-editor", DualEditorElement);
+  }
+});
+
+afterEach(() => {
+  lastProps = null;
+  document.body.innerHTML = "";
+});
+
+describe("DualEditorElement", () => {
+  function createElement(): DualEditorElement {
+    const el = document.createElement("openworkflowspec-dual-editor") as DualEditorElement;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it("is registered as a custom element", () => {
+    const el = createElement();
+    expect(el).toBeInstanceOf(DualEditorElement);
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
+  it("creates a mount point div on connect", () => {
+    createElement();
+    expect(screen.getByTestId("dual-editor-mount-point")).toBeDefined();
+  });
+
+  it("renders DualEditor with default props", async () => {
+    createElement();
+    await vi.waitFor(() => expect(lastProps).not.toBeNull());
+    expect(lastProps).toEqual(
+      expect.objectContaining({
+        content: "",
+        contentResetKey: 0,
+        locale: "en",
+        isReadOnly: false,
+        colorMode: "system",
+        language: "json",
+        createLanguageServiceWorker: expect.any(Function),
+      }),
+    );
+  });
+
+  it("passes content via property setter", async () => {
+    const el = createElement();
+    el.content = "document:\n  dsl: '1.0.3'";
+    await vi.waitFor(() => expect(lastProps?.content).toBe("document:\n  dsl: '1.0.3'"));
+    expect(lastProps?.contentResetKey).toBe(1);
+  });
+
+  it("re-renders when content is replaced with a different workflow", async () => {
+    const el = createElement();
+    el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-a";
+    await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-a"));
+
+    el.content = "document:\n  dsl: '1.0.3'\n  name: workflow-b";
+    await vi.waitFor(() => expect(lastProps?.content).toContain("workflow-b"));
+  });
+
+  it("increments the content reset key when the host reassigns the same content", async () => {
+    const el = createElement();
+    el.content = "workflow-a";
+    await vi.waitFor(() => expect(lastProps?.contentResetKey).toBe(1));
+
+    el.content = "workflow-a";
+    await vi.waitFor(() => expect(lastProps?.contentResetKey).toBe(2));
+  });
+
+  it("ignores an edit callback from before a host reset when disconnected", async () => {
+    const el = createElement();
+    el.content = "original workflow";
+    await vi.waitFor(() => expect(lastProps?.content).toBe("original workflow"));
+    const staleOnContentChange = lastProps?.onContentChange as (content: string) => void;
+
+    el.content = "replacement workflow";
+    el.remove();
+    staleOnContentChange("stale pending edit");
+
+    expect(el.content).toBe("replacement workflow");
+
+    document.body.appendChild(el);
+    await vi.waitFor(() => expect(lastProps?.content).toBe("replacement workflow"));
+  });
+
+  it("re-renders after edits so external content resets reach the editor", async () => {
+    const el = createElement();
+    const originalContent = "document:\n  dsl: '1.0.3'\n  name: workflow-a";
+    el.content = originalContent;
+    await vi.waitFor(() => expect(lastProps?.content).toBe(originalContent));
+
+    const onContentChange = lastProps?.onContentChange;
+    expect(onContentChange).toBeTypeOf("function");
+    (onContentChange as (content: string) => void)("edited workflow");
+    await vi.waitFor(() => expect(lastProps?.content).toBe("edited workflow"));
+
+    el.content = originalContent;
+    await vi.waitFor(() => expect(lastProps?.content).toBe(originalContent));
+  });
+
+  it("passes YAML mode and updates when the language attribute changes", async () => {
+    const el = createElement();
+    el.setAttribute("language", "yaml");
+    await vi.waitFor(() => expect(lastProps?.language).toBe("yaml"));
+  });
+});

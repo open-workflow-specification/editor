@@ -14,24 +14,17 @@
  * limitations under the License.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createJsonCodeLensesPlugin } from "../../../src/index";
-import type { LanguageServicePlugin, LanguageServicePluginInstance } from "../../../src/index";
 import { CANCELLATION_TOKEN, treat, MINIMAL_CONTEXT } from "../../testUtils";
 
+const getPluginInstance = () => createJsonCodeLensesPlugin().create(MINIMAL_CONTEXT);
+
 describe("createJsonCodeLensesPlugin", () => {
-  let plugin: LanguageServicePlugin;
-  let instance: LanguageServicePluginInstance;
-
-  beforeEach(() => {
-    plugin = createJsonCodeLensesPlugin();
-    instance = plugin.create(MINIMAL_CONTEXT);
-  });
-
   describe("provideCodeLenses", () => {
     it("provides a code lens on an empty document", async () => {
       const { doc } = treat("🎯");
-      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toHaveLength(1);
       const command = result?.[0]?.command;
       expect(result?.[0]?.command?.title).toBe("Create an Open Workflow");
@@ -43,19 +36,19 @@ describe("createJsonCodeLensesPlugin", () => {
 
     it("does not provide a code lens on bare {}", async () => {
       const { doc } = treat("{🎯}");
-      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
 
     it("does not provide a code lens on partial OWS content", async () => {
       const { doc } = treat('{ "document": { 🎯 }, "do": [] }');
-      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
 
     it("does not provide a code lens on an empty YAML document", async () => {
       const { doc } = treat("🎯", "yaml");
-      const result = await instance.provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
       expect(result).toBeNull();
     });
   });

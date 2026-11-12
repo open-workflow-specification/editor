@@ -26,6 +26,7 @@ import "./DualEditor.css";
 
 export type DualEditorProps = {
   content: string;
+  contentResetKey?: number;
   createLanguageServiceWorker: () => Worker;
   language?: TextEditorLanguage;
   isReadOnly?: boolean;
@@ -42,6 +43,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 
 export const DualEditor = ({
   content,
+  contentResetKey,
   createLanguageServiceWorker,
   language = "json",
   isReadOnly = false,
@@ -55,6 +57,7 @@ export const DualEditor = ({
   const [editorContent, setEditorContent] = React.useState(content);
   const [diagramContent, setDiagramContent] = React.useState(content);
   const editorContentRef = React.useRef(content);
+  const contentResetKeyRef = React.useRef(contentResetKey);
   const diagramUpdateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTextContentRef = React.useRef<string | null>(null);
   const onContentChangeRef = React.useRef(onContentChange);
@@ -67,13 +70,15 @@ export const DualEditor = ({
   }, [onContentChange]);
 
   React.useEffect(() => {
-    if (content === editorContentRef.current) return;
+    const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
+    contentResetKeyRef.current = contentResetKey;
+    if (!contentResetRequested && content === editorContentRef.current) return;
     if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
     pendingTextContentRef.current = null;
     editorContentRef.current = content;
     setEditorContent(content);
     setDiagramContent(content);
-  }, [content]);
+  }, [content, contentResetKey]);
 
   React.useEffect(
     () => () => {

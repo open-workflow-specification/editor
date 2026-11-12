@@ -187,6 +187,37 @@ describe("DualEditor", () => {
     vi.useRealTimers();
   });
 
+  it("resets to the same host content and cancels a pending text edit when the reset key changes", () => {
+    const onContentChange = vi.fn();
+    const content = "original workflow";
+    const { rerender } = renderDualEditor({ content, contentResetKey: 0, onContentChange });
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByTestId("text-source"), {
+      target: { value: "pending edit" },
+    });
+    expect(screen.getByTestId("text-source")).toHaveValue("pending edit");
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+
+    rerender(
+      <DualEditor
+        content={content}
+        contentResetKey={1}
+        createLanguageServiceWorker={createLanguageServiceWorker}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    expect(screen.getByTestId("text-source")).toHaveValue(content);
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+
+    act(() => vi.advanceTimersByTime(3000));
+    expect(onContentChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("text-source")).toHaveValue(content);
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+    vi.useRealTimers();
+  });
+
   it("notifies the host of a pending text edit when unmounted", () => {
     const onContentChange = vi.fn();
     const { unmount } = renderDualEditor({ onContentChange });
