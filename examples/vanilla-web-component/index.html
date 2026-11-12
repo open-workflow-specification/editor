@@ -18,7 +18,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Text Editor — Web Component Example</title>
+    <title>Dual Editor — Web Component Example</title>
     <style>
       body {
         height: 100vh;
@@ -34,7 +34,7 @@
         text-align: center;
       }
 
-      openworkflowspec-text-editor {
+      openworkflowspec-dual-editor {
         display: block;
         width: 80%;
         height: 80vh;
@@ -46,31 +46,15 @@
     </style>
   </head>
 <body>
-  <h1>Text Editor — Web Component Example</h1>
-  <openworkflowspec-text-editor></openworkflowspec-text-editor>
+    <h1>Dual Editor — Web Component Example</h1>
+    <openworkflowspec-dual-editor locale="en" language="yaml"></openworkflowspec-dual-editor>
 
-  <script type="module">
-    import "./src/index.ts";
-    import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
-    import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
-    import { sampleWorkflow } from "./src/sample-workflow.ts";
+<script type="module">
+  import "./src/index.ts";
+  import { sampleWorkflow } from "./src/sample-workflow.ts";
 
-    self.MonacoEnvironment = {
-      getWorker(_workerId, label) {
-        if (label === "editorWorkerService") {
-          return new EditorWorker();
-        }
-        throw new Error(`Unexpected Monaco worker: ${label}`);
-      },
-    };
-
-    const editor = document.querySelector("openworkflowspec-text-editor");
-    editor.createLanguageServiceWorker = () => new LanguageServiceWorker();
-    editor.content = sampleWorkflow;
-
-    editor.addEventListener("change", (e) => {
-      console.log("Workflow content changed:", e.detail.content);
-    });
-  </script>
+  const editor = document.querySelector("openworkflowspec-dual-editor");
+  editor.content = sampleWorkflow;
+</script>
 </body>
 </html>

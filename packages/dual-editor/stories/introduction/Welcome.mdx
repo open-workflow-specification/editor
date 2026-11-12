@@ -1,0 +1,127 @@
+{/*
+ * Copyright 2021-Present The Open Workflow Specification Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */}
+
+import { Meta } from "@storybook/addon-docs/blocks";
+import { PropCard } from "./PropCard";
+import "./Welcome.css";
+
+<Meta title="Introduction/Welcome" />
+
+# Welcome to the OWS Editor
+
+The **Open Workflow Specification Editor** brings text and diagram editing together in one embeddable React component. Edit a workflow as JSON or YAML and see the diagram update alongside it; diagram edits are synchronized back to the text editor.
+
+## Get started
+
+Install `@openworkflowspec/dual-editor` and its workspace dependencies, then provide workflow content and a language service worker. The component fills its parent, so give the parent a definite height.
+
+```tsx
+import { useState } from "react";
+import { DualEditor } from "@openworkflowspec/dual-editor";
+import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
+import "@openworkflowspec/dual-editor/styles.css";
+
+const initialWorkflow = `{
+  "document": {
+    "dsl": "1.0.0",
+    "namespace": "examples",
+    "name": "hello-world",
+    "version": "1.0.0"
+  },
+  "do": [{ "log": { "message": "Hello, World!" } }]
+}`;
+
+function WorkflowEditor() {
+  const [content, setContent] = useState(initialWorkflow);
+
+  return (
+    <div style={{ height: "600px" }}>
+      <DualEditor
+        content={content}
+        createLanguageServiceWorker={() => new LanguageServiceWorker()}
+        onContentChange={setContent}
+      />
+    </div>
+  );
+}
+```
+
+## Props
+
+### Workflow
+
+<div className="dual-editor-prop-grid">
+  <PropCard
+    name="content"
+    type="string"
+    required
+    description="Workflow definition as JSON or YAML."
+  />
+  <PropCard
+    name="createLanguageServiceWorker"
+    type="() => Worker"
+    required
+    description="Creates the language service worker used by the Text Editor."
+  />
+</div>
+
+### Editor options
+
+<div className="dual-editor-prop-grid">
+  <PropCard
+    name="language"
+    type="TextEditorLanguage"
+    defaultValue="json"
+    description="Text Editor requires a language. Dual Editor defaults to JSON."
+  />
+  <PropCard
+    name="isReadOnly"
+    type="boolean"
+    defaultValue="false"
+    description="Makes both editors read only."
+  />
+  <PropCard
+    name="locale"
+    type="string"
+    defaultValue="en"
+    description="Diagram Editor requires a locale. Dual Editor defaults to English."
+  />
+  <PropCard
+    name="colorMode"
+    type="ColorMode"
+    defaultValue="system"
+    description="Color mode passed to both editors."
+  />
+</div>
+
+### Change notifications
+
+<div className="dual-editor-prop-grid">
+  <PropCard
+    name="onContentChange"
+    type="(content: string) => void"
+    description="Called when either editor changes the workflow content."
+  />
+  <PropCard
+    name="onSplitChange"
+    type="(split: number) => void"
+    description="Called with the text pane size percentage after changes."
+  />
+</div>
+
+Use the **Features** section to explore JSON, YAML, read-only, empty, and invalid workflow examples.
+
+For more information, visit the [GitHub repository](https://github.com/open-workflow-specification/editor).

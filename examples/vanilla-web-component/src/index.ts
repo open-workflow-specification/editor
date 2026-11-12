@@ -14,9 +14,21 @@
  * limitations under the License.
  */
 
-import "@openworkflowspec/text-editor/styles.css";
-import { TextEditorElement } from "./text-editor-element";
+import "@openworkflowspec/dual-editor/styles.css";
+import { DualEditorElement } from "./dual-editor-element";
+import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
 
-if (!customElements.get("openworkflowspec-text-editor")) {
-  customElements.define("openworkflowspec-text-editor", TextEditorElement);
+Object.assign(self, {
+  MonacoEnvironment: {
+    getWorker(_workerId: string, label: string) {
+      if (label === "editorWorkerService") {
+        return new EditorWorker();
+      }
+      throw new Error(`Unexpected Monaco worker: ${label}`);
+    },
+  },
+});
+
+if (!customElements.get("openworkflowspec-dual-editor")) {
+  customElements.define("openworkflowspec-dual-editor", DualEditorElement);
 }

@@ -34,6 +34,7 @@ React text editor component for Open Workflow documents, based on [Monaco Editor
 | `content`                     | `string`                    | ✅       | —           | Current document content.                        |
 | `language`                    | `TextEditorLanguage`        | ✅       | —           | Document language: `json` or `yaml`.             |
 | `createLanguageServiceWorker` | `() => Worker`              | ✅       | —           | Creates the Worker used by the language service. |
+| `onLanguageServiceReady`      | `() => void`                | —        | `undefined` | Called once the language service is ready.       |
 | `isReadOnly`                  | `boolean`                   | —        | `false`     | Prevents editing when enabled.                   |
 | `onContentChange`             | `(content: string) => void` | —        | `undefined` | Called when the user modifies the document.      |
 | `colorMode`                   | `light, dark, system`       | —        | `system`    | Controls the editor theme.                       |
@@ -46,6 +47,7 @@ The editor fills `100%` of its container's width and height. The host must provi
 
 ```tsx
 import { TextEditor } from "@openworkflowspec/text-editor";
+import "@openworkflowspec/text-editor/styles.css";
 import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
 import { useState } from "react";
 
@@ -82,6 +84,6 @@ Multiple concurrently mounted Text Editor instances and shared-worker reuse are 
 | Language | Syntax highlighting | OWS completions | OWS diagnostics | OWS code lenses |
 | -------- | ------------------- | --------------- | --------------- | --------------- |
 | JSON     | ✅                  | ✅              | ✅              | ✅              |
-| YAML     | ✅                  | 🚧 planned      | 🚧 planned      | 🚧 planned      |
+| YAML     | ✅                  | ✅              | ✅              | ✅              |
 
-YAML language-service support is not yet available. Until then, YAML documents use Monaco's built-in syntax highlighting and language configuration only.
+When the `language` prop changes, the Text Editor recreates the Monaco editor, model and language-service Worker. Undo history, cursor position and scroll position are not preserved.

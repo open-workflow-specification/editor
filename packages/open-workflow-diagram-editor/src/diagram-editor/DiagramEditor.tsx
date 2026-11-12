@@ -85,6 +85,8 @@ export type DiagramEditorProps = {
    * the lifetime of the component — see `getContent()` on `DiagramEditorRef`.
    */
   content: string;
+  /** Language/serialization format to use instead of detecting it from `content`. */
+  language?: "json" | "yaml";
   /**
    * When `true`, the diagram is read-only: no history is recorded, undo/redo
    * are no-ops, and `fitView` runs on every content change. When `false`
@@ -101,6 +103,11 @@ export type DiagramEditorProps = {
    * `"system"` follows the OS/browser preference via `prefers-color-scheme`.
    */
   colorMode?: ColorMode;
+  /**
+   * Called when an in-editor edit, undo, or redo changes the workflow.
+   * Initial and externally supplied content changes do not trigger the callback.
+   */
+  onContentChange?: (content: string) => void;
 };
 
 const DiagramEditorContent = ({
@@ -146,6 +153,8 @@ const DiagramEditorBody = ({
           content={props.content}
           isReadOnly={props.isReadOnly}
           locale={props.locale}
+          {...(props.language && { language: props.language })}
+          {...(props.onContentChange && { onContentChange: props.onContentChange })}
         >
           <SidebarProvider defaultOpen={false}>
             <div className="dec-diagram-content">

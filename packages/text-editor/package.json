@@ -24,18 +24,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./styles.css": "./dist/text-editor.css",
     "./worker": {
       "import": "./dist/worker.js"
     },
     "./editor-worker": {
       "import": "./dist/editor-worker.js"
-    },
-    "./styles.css": "./dist/text-editor.css"
+    }
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
-    "lint": "oxlint --config .oxlintrc.json src/ stories/ tests/",
+    "lint": "oxlint --config .oxlintrc.json src/ stories/ tests/ tests-e2e/",
     "format": "oxfmt --config .oxfmtrc.json",
     "format:check": "oxfmt --config .oxfmtrc.json --check",
     "clean": "rimraf ./dist",
@@ -53,6 +53,7 @@
     "@openworkflowspec/language-service": "workspace:*",
     "@volar/monaco": "catalog:",
     "monaco-editor": "catalog:",
+    "path-browserify": "catalog:",
     "vscode-uri": "catalog:"
   },
   "devDependencies": {
