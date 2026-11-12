@@ -63,18 +63,42 @@ describe("DiagramEditor Component", () => {
   );
 
   it("transitions from the empty state to the diagram when workflow content is added", async () => {
-    const { rerender } = render(
+    const { container, rerender } = render(
       <DiagramEditor content="" locale={locale} isReadOnly={isReadOnly} />,
     );
 
     expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
 
-    rerender(
-      <DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale={locale} isReadOnly={isReadOnly} />,
-    );
+    const insertedAlerts: Element[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches('[role="alert"]')) insertedAlerts.push(node);
+          insertedAlerts.push(...node.querySelectorAll('[role="alert"]'));
+        }
+      }
+    });
+    observer.observe(container, { childList: true, subtree: true });
 
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    try {
+      rerender(
+        <DiagramEditor
+          content={BASIC_VALID_WORKFLOW_YAML}
+          locale={locale}
+          isReadOnly={isReadOnly}
+        />,
+      );
+
+      await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+      await act(async () => {
+        await Promise.resolve();
+      });
+    } finally {
+      observer.disconnect();
+    }
+
+    expect(insertedAlerts).toHaveLength(0);
     expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
