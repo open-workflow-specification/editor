@@ -103,7 +103,7 @@ describe("DiagramEditor Component", () => {
     expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
-  //
+
   it("returns to the empty state when workflow content is removed", async () => {
     const { rerender } = render(
       <DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale={locale} isReadOnly={isReadOnly} />,
