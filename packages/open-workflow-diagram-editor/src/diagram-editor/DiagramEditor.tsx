@@ -22,8 +22,7 @@ import { I18nProvider, detectLocale, useI18n } from "@openworkflowspec/i18n";
 import { dictionaries } from "../i18n/locales";
 import { useDiagramEditorContext } from "../store/DiagramEditorContext";
 import { ParsingErrorPage } from "./error-pages/ParsingErrorPage";
-import { ColorMode, ResolvedColorMode } from "@openworkflowspec/core";
-import { useResolvedColorMode } from "@openworkflowspec/core";
+import { ColorMode, ResolvedColorMode, useResolvedColorMode } from "@openworkflowspec/core";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { SidePanel } from "@/side-panel/SidePanel";
 import { DiagramEditorErrorBoundary } from "./error-pages/DiagramEditorErrorBoundary";
@@ -52,6 +51,12 @@ import { EditSessionProvider } from "@/side-panel/EditSession";
  * updates whenever `setContent()` loads a new string, so undo/redo always
  * round-trips in the format of the last successfully loaded content.
  * Returns `""` when no valid model has been loaded yet.
+ *
+ * **`setContent()`** — Loads a new workflow from a YAML or JSON string, as if
+ * the `content` prop had changed.
+ *
+ * **`setOnChangeCallback()`** — Registers a function called after changes made
+ * inside the editor, with the latest content.
  */
 export type DiagramEditorRef = {
   /** Step back one history entry. No-op if there is nothing to undo. */
@@ -75,13 +80,22 @@ export type DiagramEditorRef = {
    * Silently ignored when the string cannot be parsed.
    */
   setContent: (content: string) => void;
+  /**
+   * Register (or clear with `null` / `undefined`) a function called after every
+   * change made inside the editor: side-panel edits, undo and redo. It is never
+   * called for content that arrives through the `content` prop or
+   * `setContent()`, so it is safe to call `setContent()` from inside it.
+   * Replaces any previously registered callback. Errors thrown by the callback
+   * never break the editor; they are rethrown asynchronously.
+   */
+  setOnChangeCallback: (callback: ((content: string) => void) | null | undefined) => void;
 };
 
 export type DiagramEditorProps = {
   /**
    * The workflow definition to visualise, as a YAML or JSON string.
-   * Updating this prop (e.g. from an addon panel) re-parses the workflow and,
-   * in edit mode, pushes a new history entry if the model changed structurally.
+   * Updating this prop re-parses the workflow and, in edit mode, pushes a
+   * new history entry if the model changed structurally.
    * The serialisation format is auto-detected on first load and preserved for
    * the lifetime of the component — see `getContent()` on `DiagramEditorRef`.
    */
@@ -95,8 +109,8 @@ export type DiagramEditorProps = {
    */
   isReadOnly: boolean;
   /**
-   * BCP 47 locale tag (e.g. `"en"`). Controls the language used for
-   * aria-labels and any localised text inside the editor.
+   * BCP 47 locale tag. Controls the language used for aria-labels and any
+   * localised text inside the editor.
    */
   locale: string;
   /**
@@ -117,7 +131,7 @@ const DiagramEditorContent = ({
 }: {
   diagramDivRef: React.RefObject<HTMLDivElement | null>;
   colorMode: ResolvedColorMode;
-}) => {
+}): React.JSX.Element => {
   const { model } = useDiagramEditorContext();
   return model === null ? (
     <ParsingErrorPage />
@@ -140,7 +154,7 @@ const DiagramEditorBody = ({
   resolvedColorMode: ResolvedColorMode;
   props: DiagramEditorProps;
   editorRef: React.ForwardedRef<DiagramEditorRef>;
-}) => {
+}): React.JSX.Element => {
   const { t } = useI18n();
   const errorBoundaryProps = {
     title: t("workflowError.title"),

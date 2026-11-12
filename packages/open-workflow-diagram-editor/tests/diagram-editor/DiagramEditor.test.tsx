@@ -150,15 +150,8 @@ describe("DiagramEditor Component", () => {
     expect(screen.queryByText(t("workflowError.parsing.title"))).not.toBeInTheDocument();
   });
 
-  it("exposes the imperative ref API with undo, redo, canUndo, canRedo, getContent and setContent", () => {
-    const ref = React.createRef<{
-      undo: () => void;
-      redo: () => void;
-      canUndo: boolean;
-      canRedo: boolean;
-      getContent: () => string;
-      setContent: (content: string) => void;
-    }>();
+  it("exposes the imperative ref API with undo, redo, canUndo, canRedo, getContent, setContent and setOnChangeCallback", () => {
+    const ref = React.createRef<DiagramEditorRef>();
 
     render(
       <DiagramEditor ref={ref} content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />,
@@ -182,6 +175,7 @@ describe("DiagramEditor Component", () => {
     expect(content.trimStart()).not.toMatch(/^\{/);
     // setContent must be a function.
     expect(ref.current?.setContent).toBeTypeOf("function");
+    expect(ref.current?.setOnChangeCallback).toBeTypeOf("function");
   });
 
   it("getContent returns JSON when fed JSON content", () => {

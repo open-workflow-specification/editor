@@ -20,11 +20,13 @@ import {
   ContentFormat,
   getTaskReferences,
   parseWorkflow,
+  SdkError,
   serializeWorkflow,
   validateWorkflow,
 } from "../core";
 import type { Specification } from "@openworkflowspec/sdk";
 import { DiagramEditorProps, DiagramEditorRef } from "../diagram-editor/DiagramEditor";
+import { invokeSafely } from "../lib/invokeSafely";
 import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorContext";
 import type * as RF from "@xyflow/react";
 import { useWorkflowHistory } from "../react-flow/hooks/useWorkflowHistory";
@@ -47,7 +49,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
   DiagramEditorRef,
   React.PropsWithChildren<ContextProviderProps>
 >((props, ref) => {
-  const onContentChange = props.onContentChange;
+  const onContentChange: ((content: string) => void) | undefined = props.onContentChange;
   // Detect the serialization format once from the initial content prop.
   // JSON content starts with `{` (after trimming); everything else is YAML.
   // useState keeps the format in sync with React's render cycle, so consumers
@@ -55,7 +57,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
   const [detectedContentFormat, setDetectedContentFormat] = React.useState<ContentFormat>(
     props.content.trimStart().startsWith("{") ? "json" : "yaml",
   );
-  const contentFormat = props.language ?? detectedContentFormat;
+  const contentFormat: ContentFormat = props.language ?? detectedContentFormat;
 
   // Config state (non-history)
   const [locale, setLocale] = React.useState<string>(props.locale);
@@ -66,15 +68,15 @@ export const DiagramEditorContextProvider = React.forwardRef<
     setLocale(props.locale);
   }
 
-  const [nodes, setNodes] = React.useState([] as RF.Node[]);
-  const [edges, setEdges] = React.useState([] as RF.Edge[]);
+  const [nodes, setNodes] = React.useState<RF.Node[]>([]);
+  const [edges, setEdges] = React.useState<RF.Edge[]>([]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
-  const [isExporting, setIsExporting] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState<boolean>(false);
 
   // Read isReadOnly directly from props — no local state copy.
   // This ensures useWorkflowHistory always receives the current value without
   // a one-render lag from useState + useEffect synchronisation.
-  const isReadOnly = props.isReadOnly;
+  const isReadOnly: boolean = props.isReadOnly;
 
   // History — starts uninitialised (present = null).
   // Diagram.tsx is the sole caller of submitModel (after layout, with real viewport).
@@ -91,17 +93,24 @@ export const DiagramEditorContextProvider = React.forwardRef<
     clearPendingViewportRestore,
   } = useWorkflowHistory(isReadOnly);
 
-  // errors are shared state written by both the props.content path and setContent.
-  // They are never part of a history snapshot — always reflect the last parse result.
-  const [errors, setErrors] = React.useState<ReturnType<typeof parseWorkflow>["errors"]>(
+  // Parse errors are only used while there is no model (unparseable content).
+  const [parseErrors, setParseErrors] = React.useState<SdkError[]>(
     () => parseWorkflow(props.content).errors,
   );
+
+  // Derived from the model, so the errors always describe the model currently shown.
+  const validationErrors = React.useMemo<SdkError[] | null>(
+    () => (model ? validateWorkflow(model) : null),
+    [model],
+  );
+  const errors: SdkError[] = validationErrors ?? parseErrors;
 
   // Keep a ref to the latest selectedNodeId so the effect below can read it
   // synchronously without taking it as a dependency (avoids re-seeding on every click).
   const selectedNodeIdRef = React.useRef<string | null>(selectedNodeId);
   const externallySeededModelRef = React.useRef<Specification.Workflow | null>(null);
   const reportedModelRef = React.useRef<Specification.Workflow | null>(null);
+  const onChangeCallbackRef = React.useRef<((content: string) => void) | null>(null);
 
   React.useEffect(() => {
     selectedNodeIdRef.current = selectedNodeId;
@@ -112,20 +121,19 @@ export const DiagramEditorContextProvider = React.forwardRef<
   // In read-only mode the placeholder viewport is acceptable since fitView always runs.
   React.useEffect(() => {
     const { model: parsedModel, errors: parsedErrors } = parseWorkflow(props.content);
-    // This will be addressed in the editing feature branch as the implemntation is changing
     // oxlint-disable-next-line react/set-state-in-effect
-    setErrors(parsedErrors);
+    setParseErrors(parsedErrors);
     if (parsedModel === null) {
       // Content is unparseable — reset history to null so downstream consumers
-      // (e.g. DiagramEditorContent) see model === null and render the error page
-      // instead of displaying the last successfully-parsed (now stale) model.
+      // see model === null and render the error page instead of displaying
+      // the last successfully-parsed (now stale) model.
       resetHistory();
       setSelectedNodeId(null);
       return;
     }
-    // Preserve selection across content reloads (e.g. addon-panel edits): only clear
-    // selectedNodeId when the previously-selected node/edge no longer exists in the
-    // new model. We read the ref synchronously so we can pass the same resolved value
+    // Preserve selection across content reloads: only clear selectedNodeId
+    // when the previously-selected node/edge no longer exists in the new model.
+    // We read the ref synchronously so we can pass the same resolved value
     // to both setSelectedNodeId and seedModel in one shot.
     const resolvedId = resolveSelectedId(parsedModel, selectedNodeIdRef.current);
     setSelectedNodeId(resolvedId);
@@ -145,10 +153,8 @@ export const DiagramEditorContextProvider = React.forwardRef<
    */
   const setContent = React.useCallback(
     (content: string) => {
-      const { model: newModel, errors: newErrors } = parseWorkflow(content);
+      const { model: newModel } = parseWorkflow(content);
       if (newModel === null) return;
-
-      setErrors(newErrors);
 
       const newFormat: ContentFormat = content.trimStart().startsWith("{") ? "json" : "yaml";
       setDetectedContentFormat(newFormat);
@@ -163,8 +169,6 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
   const commitWorkflow = React.useCallback(
     (workflow: Specification.Workflow) => {
-      // TODO: Temporary - Errors still computed here by validating full workflow, Open question on how to tackle this - a form knows about one task, but these areas are for entire workflow
-      setErrors(validateWorkflow(workflow));
       const resolvedId = resolveSelectedId(workflow, selectedNodeIdRef.current);
       setSelectedNodeId(resolvedId);
       seedModel(workflow, { x: 0, y: 0, zoom: 1 }, resolvedId);
@@ -196,13 +200,37 @@ export const DiagramEditorContextProvider = React.forwardRef<
     }
     if (model === reportedModelRef.current) return;
     reportedModelRef.current = model;
-    onContentChange?.(serializeWorkflow(model, contentFormat));
+
+    let content: string | null = null;
+    try {
+      content = serializeWorkflow(model, contentFormat);
+    } catch {
+      // Ignore serialisation failure
+    }
+
+    if (content !== null) {
+      const reportedContent: string = content;
+      if (onContentChange) {
+        invokeSafely(() => onContentChange(reportedContent));
+      }
+      const onChange: ((content: string) => void) | null = onChangeCallbackRef.current;
+      if (onChange) {
+        invokeSafely(() => onChange(reportedContent));
+      }
+    }
   }, [model, contentFormat, onContentChange]);
+
+  const setOnChangeCallback = React.useCallback(
+    (callback: ((content: string) => void) | null | undefined) => {
+      onChangeCallbackRef.current = callback ?? null;
+    },
+    [],
+  );
 
   React.useImperativeHandle(
     ref as React.Ref<DiagramEditorRef>,
-    () => ({ undo, redo, canUndo, canRedo, getContent, setContent }),
-    [undo, redo, canUndo, canRedo, getContent, setContent],
+    () => ({ undo, redo, canUndo, canRedo, getContent, setContent, setOnChangeCallback }),
+    [undo, redo, canUndo, canRedo, getContent, setContent, setOnChangeCallback],
   );
 
   // Memoize context value to prevent unnecessary re-renders of consumers.
