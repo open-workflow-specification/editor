@@ -418,7 +418,9 @@
   .dec-root .dec-filter-with-disclosure:focus-visible,
   .dec-root .dec-form-breadcrumb-back:focus-visible,
   .dec-root .dec-form-breadcrumb-crumb:focus-visible,
-  .dec-root .dec-form-drill-row:focus-visible {
+  .dec-root .dec-form-drill-row:focus-visible,
+  .dec-root .dec-form-add-chip:focus-visible,
+  .dec-root .dec-form-remove-btn:focus-visible {
     outline: 2px solid rgb(var(--dec-selected-rgb));
     outline-offset: 1px;
   }
@@ -1381,5 +1383,99 @@
 
   .dec-root.dark .dec-form-drill-row-chevron {
     @apply dec:text-gray-400;
+  }
+
+  /* ── Fields you can add ────────────────────────────────────────────── */
+
+  .dec-root .dec-form-field-list,
+  .dec-root .dec-form-field-item {
+    display: contents;
+  }
+
+  .dec-root .dec-form-add-fields {
+    @apply dec:flex dec:flex-col dec:gap-1.5 dec:pt-0.5;
+  }
+
+  .dec-root .dec-form-add-fields-label {
+    @apply dec:text-[11.5px] dec:text-gray-500;
+  }
+
+  .dec-root .dec-form-add-fields-list {
+    @apply dec:flex dec:flex-wrap dec:gap-1.5;
+  }
+
+  .dec-root .dec-form-add-chip {
+    @apply dec:inline-flex dec:items-center dec:gap-1 dec:rounded-sm dec:border dec:border-dashed
+      dec:border-gray-300 dec:bg-transparent dec:px-2 dec:py-0.5 dec:font-mono dec:text-xs
+      dec:text-gray-700 dec:cursor-pointer dec:transition-colors;
+  }
+
+  .dec-root.dark .dec-form-add-chip {
+    @apply dec:border-gray-600 dec:text-gray-200;
+  }
+
+  .dec-root .dec-form-add-chip:hover {
+    border-style: solid;
+    border-color: var(--dec-teal-text);
+    color: var(--dec-teal-text);
+  }
+
+  .dec-root .dec-form-add-chip-icon {
+    @apply dec:h-3 dec:w-3 dec:shrink-0;
+  }
+
+  .dec-root .dec-form-add-chip-default {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root .dec-form-add-chip:hover .dec-form-add-chip-default {
+    color: inherit;
+  }
+
+  .dec-root.dark .dec-form-add-fields-label,
+  .dec-root.dark .dec-form-add-chip-default {
+    @apply dec:text-gray-400;
+  }
+
+  /* ── Remove (✕) ────────────────────────────────────────────────────── */
+
+  .dec-root .dec-form-remove-btn {
+    @apply dec:inline-flex dec:h-6 dec:w-6 dec:shrink-0 dec:items-center dec:justify-center
+      dec:rounded-sm dec:border-0 dec:bg-transparent dec:text-gray-400 dec:cursor-pointer
+      dec:transition-colors;
+  }
+
+  .dec-root .dec-form-remove-btn:hover {
+    @apply dec:bg-red-50 dec:text-red-500;
+  }
+
+  .dec-root .dec-form-remove-icon {
+    @apply dec:h-3.5 dec:w-3.5;
+  }
+
+  .dec-root .dec-form-field-label-row .dec-form-remove-btn,
+  .dec-root .dec-form-group-heading .dec-form-remove-btn,
+  .dec-root .dec-map-header .dec-form-remove-btn {
+    margin-left: auto;
+  }
+  
+  .dec-root .dec-form-drill-row-wrap {
+    @apply dec:flex dec:items-center dec:gap-1.5;
+  }
+
+  .dec-root .dec-form-drill-row-wrap .dec-form-drill-row {
+    @apply dec:min-w-0 dec:flex-1;
+  }
+
+  .dec-root .dec-form-drill-row-wrap .dec-form-remove-btn {
+    @apply dec:h-7 dec:w-7;
+  }
+
+  .dec-root.dark .dec-form-remove-btn {
+    @apply dec:text-gray-500;
+  }
+
+  .dec-root.dark .dec-form-remove-btn:hover {
+    @apply dec:bg-red-500/15 dec:text-red-300;
   }
 }

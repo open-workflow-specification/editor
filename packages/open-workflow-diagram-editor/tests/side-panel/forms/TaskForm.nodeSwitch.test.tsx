@@ -68,12 +68,14 @@ describe("switching the panel to another task of the same type", () => {
     expect(rowKeys()).toEqual(["MODE"]);
   });
 
-  it("shows the default for a key only the previous task set", async () => {
-    expect(fieldValue("return")).toBe("stdout (default)");
+  it("offers a key only the previous task set under Fields you can add", async () => {
+    expect(fieldValue("return")).toBe("(not rendered)");
+    expect(screen.getByRole("button", { name: "Add return" })).toBeInTheDocument();
   });
 
   it("shows the new task's own values", async () => {
     expect(fieldValue("Code")).toBe("print(1)");
-    expect(fieldValue("Stdin")).toBe("");
+    // Unset on this task, so not carried over from the last one: it waits as a chip.
+    expect(screen.getByRole("button", { name: "Add Stdin" })).toBeInTheDocument();
   });
 });

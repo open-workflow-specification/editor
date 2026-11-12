@@ -37,6 +37,7 @@ import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
 import { readSentinels } from "@/side-panel/forms/sentinels";
 import { buildTaskFromDraft } from "./forms/draft";
+import { useAddedFields } from "./forms/addedFields";
 
 /* How long the applied message stays in footer */
 const APPLIED_MESSAGE_MS = 2400;
@@ -94,6 +95,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
   const footerValidationState = deriveFooterValidationState(taskValidation, errorCount);
 
   const [appliedNodeId, setAppliedNodeId] = React.useState<string | null>(null);
+  const { added } = useAddedFields();
   const dismissTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(
@@ -142,6 +144,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
       values,
       dirtyFields: liveFormState().dirtyFields,
       liveValue: (path) => form.getValues(path as never) as unknown,
+      added: [...added.keys()],
     });
     // Block commit if inner text fails to parse.
     if (unparsed.length > 0) return;

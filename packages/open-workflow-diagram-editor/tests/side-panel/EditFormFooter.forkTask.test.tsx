@@ -76,6 +76,8 @@ describe("fork task editing", () => {
   it("commits compete switched on, with the branches untouched", async () => {
     const { commitWorkflow, original, user } = renderForkFooter(INNER_FORK_ID);
     await act(async () => {});
+    // Unset, compete waits under Fields you can add.
+    await user.click(screen.getByRole("button", { name: /^Add compete$/i }));
 
     expect(compete()).not.toBeChecked();
     await user.click(compete());
@@ -106,6 +108,7 @@ describe("fork task editing", () => {
     await act(async () => {});
 
     await openCommonFields(user);
+    await user.click(screen.getByRole("button", { name: "Add if" }));
     await user.type(screen.getByLabelText("if"), "{{.alarm}");
     await user.click(applyButton());
 

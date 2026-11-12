@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { isAtOrBelow } from "@/core/paths";
-import { applyDirtyValues, flattenTask, setNestedPath } from "@/core/taskDraft";
+import { getParentPath, isAtOrBelow } from "@/core/paths";
+import { applyDirtyValues, deletePath, flattenTask, setNestedPath } from "@/core/taskDraft";
 import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { structuralEqual } from "@/core/structuralEqual";
 import { isObjectNotArray } from "@/core/utils";
@@ -44,6 +44,7 @@ import {
   isReservedPath,
   readSentinels,
 } from "./sentinels";
+import { findShownField, type VariantSelector } from "./drill/drill";
 
 // ---------------------------------------------------------------------------
 // The task form's draft: the values a reset installs, and the task an Apply commits.
@@ -101,12 +102,15 @@ export function buildTaskFromDraft({
   values,
   dirtyFields,
   liveValue,
+  added = [],
 }: {
   task: Task;
   fields: FormFieldDescriptor[];
   values: Record<string, unknown>;
   dirtyFields: object;
   liveValue: (path: string) => unknown;
+  /** The optional fields added in this draft (`AddedFields`). */
+  added?: readonly string[];
 }): { task: Task; unparsed: string[] } {
   // JSON/YAML fields are written whole to ensure deleted keys don't survive
   const jsonPaths = collectJsonPaths(fields);
@@ -176,7 +180,50 @@ export function buildTaskFromDraft({
     formListPaths: collectFormListPaths(fields),
     sentinelPresenceKeys,
   });
+  settleAddedFields(built, task, fields, selectedVariants, added);
   return { task: built, unparsed };
+}
+
+/**
+ * Whether a draft value holds anything but padding: not `""`, nor an object or list of only that.
+ * An emptied list (`[]`) and an option chosen with nothing typed (`{}`) hold nothing.
+ */
+export const holdsValue = (value: unknown): boolean =>
+  value !== undefined &&
+  value !== "" &&
+  (Array.isArray(value)
+    ? value.some(holdsValue)
+    : !isObjectNotArray(value) || Object.keys(value).length > 0);
+
+/**
+ * Fields added in this draft and left empty are dropped on Apply.
+ */
+function settleAddedFields(
+  built: Task,
+  task: Task,
+  fields: FormFieldDescriptor[],
+  selectedVariants: ReturnType<typeof collectSelectedVariants>,
+  added: readonly string[],
+): void {
+  const chosen: VariantSelector = (field) => selectedVariants.get(field.path)?.variant;
+  // Parents first: a parent dropped takes its added children with it, a required child comes back.
+  for (const path of [...added].sort()) {
+    if (getNestedValue(task, path) !== undefined) continue;
+    const value = getNestedValue(built, path);
+    if (holdsValue(value)) continue;
+    const field = findShownField(fields, path, chosen);
+    const shownFields =
+      field?.kind === "object"
+        ? field.children
+        : field?.kind === "one-of"
+          ? chosen(field)?.fields
+          : undefined;
+    if (shownFields?.some((shown) => shown.required)) {
+      if (value === undefined) setNestedPath(built, path, {});
+    } else if (value !== undefined) {
+      deletePath(built, path.split("."), { prune: false });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -219,6 +266,7 @@ export function computeDraftChanges({
   dirtyFields,
   defaultValues,
   liveValue,
+  added = [],
 }: {
   task: Task;
   fields: FormFieldDescriptor[];
@@ -226,6 +274,8 @@ export function computeDraftChanges({
   dirtyFields: object;
   defaultValues: Record<string, unknown> | undefined;
   liveValue: (path: string) => unknown;
+  /** The optional fields added in this draft: Apply commits some of them although empty. */
+  added?: readonly string[];
 }): DraftChanges {
   const { task: built, unparsed } = buildTaskFromDraft({
     task,
@@ -233,6 +283,7 @@ export function computeDraftChanges({
     values,
     dirtyFields,
     liveValue,
+    added,
   });
   // Unparsed inner text counts as unsaved work, beside whatever else changed.
   if (unparsed.length === 0 && structuralEqual(built, task)) return NO_DRAFT_CHANGES;
@@ -256,12 +307,20 @@ export function computeDraftChanges({
   // Check if path was user-edited (not just switch padding). A whole value's own entries count.
   const edited = (path: string) =>
     dirty.some((d) => isUnder(path, d) || (wholeAfter.has(path) && d.startsWith(`${path}.`)));
+  // A removed field is one change, not one per value it held.
+  // A value the switch discarded (an edit in the old variant) is part of the switch, as in `differing`
+  const removed = collectRemovedPaths(dirty, values, task, built).filter(
+    (path) =>
+      ![...wholeBefore].some((whole) => path.startsWith(`${whole}.`)) &&
+      !switched.some((oneOf) => isUnder(path, oneOf)),
+  );
   const before = flattenTask(task, "", wholeBefore);
   const after = flattenTask(built, "", wholeAfter);
   const allPaths = [...new Set([...Object.keys(before), ...Object.keys(after)])];
   const differing = allPaths.filter(
     (path) =>
       !structuralEqual(before[path], after[path]) &&
+      !removed.some((removedPath) => isAtOrBelow(path, removedPath)) &&
       // An emptied container is part of the change below it (clearing a variant's only field)
       !(
         (isEmptyContainer(before[path], path, wholeBefore) ||
@@ -275,6 +334,33 @@ export function computeDraftChanges({
       (!switched.some((oneOf) => isUnder(path, oneOf)) || (path in after && edited(path))),
   );
 
-  const paths = [...switched, ...differing, ...unparsed];
+  const paths = [...switched, ...removed, ...differing, ...unparsed];
   return { hasChanges: true, paths: paths.length > 0 ? paths : [""] };
+}
+
+/**
+ * The fields the draft removed (✕): for each dirty path, its outermost ancestor that is
+ * `undefined` in the draft, was set in the task, and is gone from the built task.
+ */
+function collectRemovedPaths(
+  dirty: readonly string[],
+  values: Record<string, unknown>,
+  task: Task,
+  built: Task,
+): string[] {
+  const removed = new Set<string>();
+  for (const path of dirty) {
+    let outermost: string | undefined;
+    for (let current = path; current !== ""; current = getParentPath(current)) {
+      if (
+        getNestedValue(values, current) === undefined &&
+        getNestedValue(task, current) !== undefined &&
+        getNestedValue(built, current) === undefined
+      ) {
+        outermost = current;
+      }
+    }
+    if (outermost !== undefined) removed.add(outermost);
+  }
+  return [...removed];
 }

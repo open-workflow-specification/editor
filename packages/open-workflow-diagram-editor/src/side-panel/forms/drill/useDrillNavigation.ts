@@ -21,8 +21,10 @@ import { filterReadOnlyFields } from "../taskFormContext";
 import type { DrillContextValue } from "./DrillContext";
 import {
   drillLabel,
+  FIRST_TO_FILL,
   isInlineLevel,
   levelFieldsOf,
+  needsAtLeastOne,
   resolveDrillStack,
   type VariantSelector,
 } from "./drill";
@@ -31,7 +33,12 @@ import {
  * Custom hook managing drill-in navigation state and behavior.
  */
 
-type PendingFocus = { kind: "back" } | { kind: "row"; path: string };
+type PendingFocus = { kind: "back" } | { kind: "first" } | { kind: "row"; path: string };
+
+/** The first thing to fill on a level opened by adding it. Never a "?" help. */
+const FIRST_TO_FILL_ON_LEVEL = FIRST_TO_FILL.map(
+  (selector) => `.dec-task-form-fields ${selector}`,
+).join(", ");
 
 export type DrillNavigationOptions = {
   /** The task's top-level fields as rendered (already filtered in read-only). */
@@ -64,6 +71,8 @@ export type DrillNavigation = {
   inlineLevels: boolean;
   /** The open level when it is a one-of, whose picker goes above `levelFields`. */
   levelOneOf: OneOfField | undefined;
+  /** The open level needs at least one of `levelFields` set. */
+  levelNeedsAtLeastOne: boolean;
 };
 
 /**
@@ -100,12 +109,13 @@ export function useDrillNavigation({
 
   const drill = React.useMemo<DrillContextValue>(
     () => ({
-      open(path, label) {
-        pendingFocus.current = { kind: "back" };
+      open(path, label, { focus = "back" } = {}) {
+        pendingFocus.current = { kind: focus };
         setDrillStack([...levels.map((level) => level.path), path]);
         setAnnouncement(label);
       },
       levelPath: levels[levels.length - 1]?.path,
+      announce: setAnnouncement,
     }),
     [levels],
   );
@@ -130,9 +140,11 @@ export function useDrillNavigation({
     const target =
       pending.kind === "back"
         ? formElement.querySelector<HTMLElement>("[data-drill-back]")
-        : [...formElement.querySelectorAll<HTMLElement>("[data-drill-path]")].find(
-            (element) => element.dataset.drillPath === pending.path,
-          );
+        : pending.kind === "first"
+          ? formElement.querySelector<HTMLElement>(FIRST_TO_FILL_ON_LEVEL)
+          : [...formElement.querySelectorAll<HTMLElement>("[data-drill-path]")].find(
+              (element) => element.dataset.drillPath === pending.path,
+            );
     target?.focus();
   });
 
@@ -163,5 +175,6 @@ export function useDrillNavigation({
     taskName,
     inlineLevels,
     levelOneOf,
+    levelNeedsAtLeastOne: current !== undefined && needsAtLeastOne(current, selectVariant),
   };
 }

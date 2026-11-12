@@ -35,6 +35,7 @@ import {
 import { TaskValidationProvider } from "./forms/validation";
 import { useTaskFormContext } from "./forms/taskFormContext";
 import { structuralEqual } from "@/core/structuralEqual";
+import { AddedFieldsContext, useAddedFieldsState } from "./forms/addedFields";
 
 type FormValues = Record<string, unknown>;
 
@@ -52,6 +53,11 @@ type EditSessionValue = {
    * runs right after a `setValue` would read it stale.
    */
   liveFormState: () => LiveFormState;
+  /**
+   * The task the draft was last reset to, or `null` before the first reset. Right after Apply it
+   * is the applied task, while the panel's own task still waits on the canvas layout.
+   */
+  baselineTask: FormValues | null;
   /** Increments on every `resetDraft`, so effects can re-run when the draft is reset. */
   draftVersion: number;
   /**
@@ -84,6 +90,7 @@ function draftChangesOf(
   form: UseFormReturn<FormValues>,
   state: LiveFormState,
   baseline: DraftBaseline | null,
+  added: ReadonlyMap<string, string>,
 ) {
   if (baseline === null) return NO_DRAFT_CHANGES;
   return computeDraftChanges({
@@ -92,6 +99,7 @@ function draftChangesOf(
     dirtyFields: state.dirtyFields,
     defaultValues: state.defaultValues as FormValues | undefined,
     liveValue: (path) => form.getValues(path as never) as unknown,
+    added: [...added.keys()],
   });
 }
 
@@ -102,6 +110,13 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
   const [baseline, setBaseline] = React.useState<DraftBaseline | null>(null);
   const baselineRef = React.useRef<DraftBaseline | null>(null);
   const [draftVersion, setDraftVersion] = React.useState<number>(0);
+  const addedFields = useAddedFieldsState();
+  const clearAddedFields = addedFields.clear;
+
+  const addedRef = React.useRef(addedFields.added);
+  React.useEffect(() => {
+    addedRef.current = addedFields.added;
+  });
 
   // Kept current by RHF's `subscribe`, which reports synchronously on every change.
   const liveStateRef = React.useRef<LiveFormState>({ dirtyFields: {}, defaultValues: {} });
@@ -126,15 +141,19 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
       baselineRef.current = next;
       setBaseline(next);
       setDraftVersion((version) => version + 1);
+      clearAddedFields();
     },
-    [form],
+    [form, clearAddedFields],
   );
 
   const [blockedNavigation, setBlockedNavigation] = React.useState<(() => void) | null>(null);
 
   const requestNavigation = React.useCallback(
     (proceed: () => void) => {
-      if (!draftChangesOf(form, liveStateRef.current, baselineRef.current).hasChanges) {
+      if (
+        !draftChangesOf(form, liveStateRef.current, baselineRef.current, addedRef.current)
+          .hasChanges
+      ) {
         proceed();
         return true;
       }
@@ -151,9 +170,10 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     }
 
     form.reset(liveStateRef.current.defaultValues);
+    clearAddedFields();
     setBlockedNavigation(null);
     blockedNavigation();
-  }, [blockedNavigation, form]);
+  }, [blockedNavigation, form, clearAddedFields]);
 
   const cancelNavigation = React.useCallback(() => setBlockedNavigation(null), []);
 
@@ -161,6 +181,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     () => ({
       form,
       liveFormState,
+      baselineTask: baseline?.task ?? null,
       draftVersion,
       resetDraft,
       isNavigationBlocked: blockedNavigation !== null,
@@ -171,6 +192,7 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     [
       form,
       liveFormState,
+      baseline,
       draftVersion,
       resetDraft,
       blockedNavigation,
@@ -184,8 +206,10 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
     <EditSessionContext.Provider value={value}>
       <TaskValidationProvider>
         <FormProvider {...form}>
-          <DraftChangesProvider form={form} baseline={baseline}>
-            {children}
+          <DraftChangesProvider form={form} baseline={baseline} added={addedFields.added}>
+            <AddedFieldsContext.Provider value={addedFields}>
+              {children}
+            </AddedFieldsContext.Provider>
           </DraftChangesProvider>
         </FormProvider>
       </TaskValidationProvider>
@@ -200,17 +224,19 @@ export function EditSessionProvider({ children }: { children: React.ReactNode })
 function DraftChangesProvider({
   form,
   baseline,
+  added,
   children,
 }: {
   form: UseFormReturn<FormValues>;
   baseline: DraftBaseline | null;
+  added: ReadonlyMap<string, string>;
   children: React.ReactNode;
 }) {
   // Subscribe to changes via stringified values to avoid false equality from in-place updates
   useWatch({ control: form.control, compute: (values: FormValues) => JSON.stringify(values) });
   const { dirtyFields, defaultValues } = useFormState({ control: form.control });
 
-  const changes = draftChangesOf(form, { dirtyFields, defaultValues }, baseline);
+  const changes = draftChangesOf(form, { dirtyFields, defaultValues }, baseline, added);
   // Stable while nothing changes, so the drill rows reading it don't re-render on every keystroke.
   const key = changes.paths.join("\n");
   const hasChanges = changes.hasChanges;

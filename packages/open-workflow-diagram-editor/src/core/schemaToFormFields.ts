@@ -153,6 +153,7 @@ export interface OrderedMapField extends FieldBase {
 export interface ObjectField extends FieldBase {
   kind: "object";
   children: FormFieldDescriptor[];
+  atLeastOne?: true;
 }
 
 /* Task base fields */
@@ -220,6 +221,11 @@ export interface OneOfVariant {
   presenceKey?: string;
   /** The variant's only required property, validation reads it to tell which `oneOf` branch the user is editing. */
   requiredKey?: string;
+  /**
+   * None of the fields are required, but at least one must be set (`minProperties`, e.g. an
+   * inline duration's days, hours, …).
+   */
+  atLeastOne?: true;
 }
 
 // ---------------------------------------------------------------------------
@@ -314,6 +320,17 @@ function isUnconstrainedSchema(schema: Record<string, unknown>): boolean {
   return Object.entries(schema).every(
     ([key, value]) => value === undefined || SCHEMA_META_KEYS.has(key),
   );
+}
+
+/** `{ atLeastOne: true }` when an object schema needs one of its properties but requires none. */
+function atLeastOneOf(schema: Record<string, unknown>): { atLeastOne?: true } {
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  return typeof schema.minProperties === "number" &&
+    schema.minProperties >= 1 &&
+    required.length === 0 &&
+    isObjectNotArray(schema.properties)
+    ? { atLeastOne: true }
+    : {};
 }
 
 /**
@@ -986,6 +1003,7 @@ export function schemaToFormFields(
         ...withDesc(description),
         required: isRequired,
         children,
+        ...atLeastOneOf(resolved),
       });
       continue;
     }
@@ -1601,6 +1619,7 @@ function buildOneOfVariants(
         constWrites: buildConstWrites(item.resolved),
         ...withPresenceKey(item.resolved, defs),
         ...withRequiredKey(item.resolved),
+        ...atLeastOneOf(item.resolved),
       });
     }
   }

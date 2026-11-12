@@ -116,6 +116,11 @@ export const panel = {
   drillInto: async (user: User, ...labels: string[]) => {
     for (const label of labels) await user.click(panel.row(label));
   },
+  /** An optional field's chip under "Fields you can add", or null when it isn't offered. */
+  chip: (label: string) => screen.queryByRole("button", { name: `Add ${label}` }),
+  /** Adds an optional field through its chip. */
+  add: (user: User, label: string) =>
+    user.click(screen.getByRole("button", { name: `Add ${label}` })),
   toTopLevel: (user: User, taskName: string) =>
     user.click(screen.getByRole("button", { name: `Top level of ${taskName}` })),
 };

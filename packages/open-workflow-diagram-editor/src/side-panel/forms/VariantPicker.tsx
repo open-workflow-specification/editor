@@ -189,6 +189,7 @@ export function VariantPicker({
             label={field.label}
             required={field.required}
             changed={switched}
+            fieldPath={field.path}
             {...(field.description !== undefined ? { description: field.description } : {})}
           />
           <div className="dec-form-field-control">{picker}</div>

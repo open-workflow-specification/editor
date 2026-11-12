@@ -39,8 +39,10 @@ import { FieldLabel, HelpTooltip } from "./FieldLabel";
 import { VariantPicker } from "./VariantPicker";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
 import { DrillRow } from "./drill/DrillRow";
+import { FieldList } from "./FieldList";
+import { RemoveFieldButton } from "./removeField";
 import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
-import { isInlineLevel, oneOfDrills, STRUCTURED_KINDS } from "./drill/drill";
+import { isInlineLevel, rendersAsDrillRow, STRUCTURED_KINDS } from "./drill/drill";
 
 /* useFieldArry's per entry key, not 'id': (an entry name could be 'id') */
 export const RHF_ENTRY_KEY = "__rhfEntryKey";
@@ -86,6 +88,7 @@ function PlainFieldRow({ field }: { field: PlainField }) {
         label={field.label}
         required={field.required}
         changed={changed}
+        fieldPath={field.path}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
       <div className="dec-form-field-control">
@@ -214,7 +217,7 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
 // Renders an object field as either a drill row or, inline, a group under a heading.
 function ObjectFieldRow({ field }: { field: ObjectField }) {
   const inline = React.useContext(InlineLevelsContext);
-  if (!inline) return <DrillRow field={field} />;
+  if (rendersAsDrillRow(field, inline)) return <DrillRow field={field} />;
   return <InlineObjectGroup field={field} />;
 }
 
@@ -222,7 +225,7 @@ function ObjectFieldRow({ field }: { field: ObjectField }) {
 function MapFieldRow({ field }: { field: MapField }) {
   const inline = React.useContext(InlineLevelsContext);
   const { levelPath } = useDrill();
-  if (!inline) return <DrillRow field={field} />;
+  if (rendersAsDrillRow(field, inline)) return <DrillRow field={field} />;
   // A map opened as its own level is already named by the breadcrumb.
   return <KeyValueMapField field={field} showLabel={levelPath !== field.path} />;
 }
@@ -245,14 +248,13 @@ function InlineObjectGroup({ field }: { field: ObjectField }) {
         id={headingId}
         label={field.label}
         required={field.required}
+        fieldPath={field.path}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
       <LevelErrors path={field.path} />
       {/* Below an inline object, objects drill, unless one is its only child. */}
       <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
-        {visibleChildren.map((child) => (
-          <FormField key={child.path} field={child} />
-        ))}
+        <FieldList fields={visibleChildren} atLeastOne={field.atLeastOne} />
       </InlineLevelsContext.Provider>
     </section>
   );
@@ -264,11 +266,14 @@ export function GroupHeading({
   label,
   required = false,
   description,
+  fieldPath,
 }: {
   id?: string;
   label: string;
   required?: boolean;
   description?: string;
+  /** The field this heading names: its ✕ goes at the heading's end when it is removable. */
+  fieldPath?: string;
 }) {
   return (
     <h4 id={id} className="dec-form-group-heading">
@@ -279,6 +284,7 @@ export function GroupHeading({
         </span>
       )}
       {description !== undefined && <HelpTooltip label={label} description={description} />}
+      <RemoveFieldButton path={fieldPath} />
     </h4>
   );
 }
@@ -312,6 +318,7 @@ function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainFie
         label={field.label}
         required={field.required}
         changed={changed}
+        fieldPath={field.path}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
       <div className="dec-form-field-control dec-form-single-value-oneof">
@@ -342,16 +349,14 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
       <>
         <LevelErrors path={field.path} />
         <div className="dec-form-oneof-children">
-          {shownFields.map((child) => (
-            <FormField key={child.path} field={child} />
-          ))}
+          <FieldList fields={shownFields} ownerPath={field.path} atLeastOne={variant?.atLeastOne} />
         </div>
       </>
     );
   }
 
   const [only, ...rest] = shownFields;
-  if (!inline && oneOfDrills(field)) {
+  if (rendersAsDrillRow(field, inline)) {
     // Map variants show entry count; single values show after variant name
     const isOwnMap = rest.length === 0 && only?.kind === "map" && only.path === field.path;
     const valuePath =
@@ -377,9 +382,7 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
       <LevelErrors path={field.path} />
       {shownFields.length > 0 && (
         <div className="dec-form-oneof-children">
-          {shownFields.map((child) => (
-            <FormField key={child.path} field={child} />
-          ))}
+          <FieldList fields={shownFields} ownerPath={field.path} atLeastOne={variant?.atLeastOne} />
         </div>
       )}
     </div>

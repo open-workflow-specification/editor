@@ -17,7 +17,7 @@
 import { test, expect } from "@playwright/test";
 import { openLevel, waitForDiagram, waitForSidebar } from "./helpers";
 
-test("clearing backoff to '—' and applying keeps it cleared after re-render", async ({ page }) => {
+test("clearing backoff to '—' and applying removes it, not snapping back", async ({ page }) => {
   await page.goto("/iframe.html?id=nested-editing-workflows--try-catch-retry-inline");
   await waitForDiagram(page);
 
@@ -63,8 +63,13 @@ test("clearing backoff to '—' and applying keeps it cleared after re-render", 
   await expect(applyButton).toBeEnabled();
   await applyButton.click();
 
-  // The backoff combobox should STILL show "—", not snap back to "exponential"
-  await expect(backoffInput).toHaveValue("—");
+  // An optional field applied empty is dropped: backoff is a field to add again, and nothing
+  // snapped back to "exponential"
+  await expect(form.getByRole("button", { name: "Add Backoff" })).toBeVisible();
+  await expect(form.getByRole("textbox", { name: "exponential" })).toHaveCount(0);
+  for (const combo of await allCombos.all()) {
+    await expect(combo).not.toHaveValue("exponential");
+  }
 });
 
 test("editing backoff inner object replaces old content completely after apply", async ({

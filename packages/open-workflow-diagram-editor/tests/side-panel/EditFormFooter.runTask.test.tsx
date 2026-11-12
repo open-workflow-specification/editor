@@ -245,8 +245,10 @@ describe("run task editing", () => {
 
 describe("run task schema defaults", () => {
   it("shows an unset await as on, its schema default", async () => {
-    renderRunFooter(SHELL_NODE_ID);
+    const { user } = renderRunFooter(SHELL_NODE_ID);
     await act(async () => {});
+    // Unset, it waits under Fields you can add; added, it shows the default.
+    await user.click(screen.getByRole("button", { name: "Add await" }));
 
     expect(screen.getByRole("switch", { name: "await" })).toBeChecked();
   });
@@ -259,8 +261,9 @@ describe("run task schema defaults", () => {
   });
 
   it("names an unset return's default rather than asking for a choice", async () => {
-    renderRunFooter(SHELL_NODE_ID);
+    const { user } = renderRunFooter(SHELL_NODE_ID);
     await act(async () => {});
+    await user.click(screen.getByRole("button", { name: "Add return" }));
 
     expect(fieldValue("return")).toBe("stdout (default)");
   });

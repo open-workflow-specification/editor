@@ -16,6 +16,7 @@
 
 import {
   COMMON_FIELDS_PATH,
+  ROOT_ONE_OF_PATH,
   type FormFieldDescriptor,
   type MapField,
   type ObjectField,
@@ -64,6 +65,58 @@ export function levelFieldsOf(
   return target.children;
 }
 
+/** Whether an opened level needs at least one of its fields set (see `OneOfVariant.atLeastOne`). */
+export function needsAtLeastOne(target: DrillTarget, selectVariant: VariantSelector): boolean {
+  if (target.kind === "one-of") return selectVariant(target)?.atLeastOne === true;
+  return target.kind === "object" && target.atLeastOne === true;
+}
+
+/**
+ * Whether `field` renders as a drill row where it stands (`inline`: see `InlineLevelsContext`).
+ * Rendering and Add both ask this, so adding a field opens it exactly when it would be a row.
+ */
+export function rendersAsDrillRow(field: FormFieldDescriptor, inline: boolean): boolean {
+  if (field.kind === "section") return true;
+  if (field.kind === "object" || field.kind === "map") return !inline;
+  return field.kind === "one-of" && !inline && oneOfDrills(field);
+}
+
+/**
+ * What focus may land on for a field: its controls or its drill row, never its "?" help. A
+ * selector list matches in document order, so the order here doesn't matter.
+ */
+export const FIELD_CONTROLS: readonly string[] = [
+  "input:not([type=hidden])",
+  "textarea",
+  "select",
+  "[role=switch]",
+  "[role=combobox]",
+  "[data-drill-path]",
+];
+
+/**
+ * The first thing to fill in a field or level just added, in document order: its option picker
+ * or a control, a nested row, the first optional chip, or a list's or map's add button.
+ */
+export const FIRST_TO_FILL: readonly string[] = [
+  ...FIELD_CONTROLS,
+  "[data-add-field]",
+  ".dec-map-add-btn",
+];
+
+/** Kinds that are the task's structure rather than optional data: always on screen. */
+const FIXED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<FormFieldDescriptor["kind"]>([
+  "then",
+  "section",
+  "child-task-list",
+  "ordered-map",
+]);
+
+/** Whether a field is part of the task's shape, so it is never added or removed. */
+export function isFixedField(field: FormFieldDescriptor): boolean {
+  return field.required || field.path === ROOT_ONE_OF_PATH || FIXED_KINDS.has(field.kind);
+}
+
 /**
  * Whether objects and maps among `fields` (the fields a level or inline object actually shows)
  * render inline: only when there is just the one.
@@ -101,28 +154,38 @@ export function oneOfDrills(field: OneOfField): boolean {
 export type VariantSelector = (field: OneOfField) => OneOfVariant | undefined;
 
 /**
- * Finds a drill target at the given path by searching through nested objects and one-of variants.
- * Sections are not searched (they're always top-level).
- * Only searches the currently selected variant of each one-of.
+ * The field at `path` as the form shows it: searched through sections, objects and each one-of's
+ * selected variant only, since variants reuse paths with different children (every call variant
+ * has its own `with`) and a variant switched away from is not on screen.
  */
+export function findShownField(
+  fields: readonly FormFieldDescriptor[],
+  path: string,
+  selectVariant: VariantSelector,
+): FormFieldDescriptor | undefined {
+  for (const field of fields) {
+    if (field.path === path) return field;
+    const variant = field.kind === "one-of" ? selectVariant(field) : undefined;
+    const nested =
+      field.kind === "object" || field.kind === "section"
+        ? field.children
+        : field.kind === "one-of" && variant
+          ? variantFieldsOf(field, variant)
+          : undefined;
+    const found = nested && findShownField(nested, path, selectVariant);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** The drill target at `path` (see `findShownField`). */
 function findDrillTarget(
   fields: readonly FormFieldDescriptor[],
   path: string,
   selectVariant: VariantSelector,
 ): DrillTarget | undefined {
-  for (const field of fields) {
-    if (isDrillTarget(field) && field.path === path) return field;
-    const variant = field.kind === "one-of" ? selectVariant(field) : undefined;
-    const nested =
-      field.kind === "object"
-        ? field.children
-        : field.kind === "one-of" && variant
-          ? variantFieldsOf(field, variant)
-          : undefined;
-    const found = nested && findDrillTarget(nested, path, selectVariant);
-    if (found) return found;
-  }
-  return undefined;
+  const field = findShownField(fields, path, selectVariant);
+  return field && isDrillTarget(field) ? field : undefined;
 }
 
 /**

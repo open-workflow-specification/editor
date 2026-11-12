@@ -33,6 +33,7 @@ import { TaskFormContext } from "../../../src/side-panel/forms/taskFormContext";
 import { getFormFieldsForNodeType } from "../../../src/core/schemaWalker";
 import type { OrderedMapField } from "../../../src/core/schemaToFormFields";
 import { InlineLevelsContext } from "../../../src/side-panel/forms/drill/DrillContext";
+import { EditSessionProvider } from "../../../src/side-panel/EditSession";
 import { MANAGING_GITHUB_ISSUES_WORKFLOW } from "../../fixtures/workflows";
 import { nodeAt, parseFixture, switchCase, t } from "../../test-utils";
 
@@ -94,19 +95,22 @@ function renderCases({
     return (
       <I18nProvider locale="en" dictionaries={{ en }}>
         <TooltipProvider>
-          <TaskFormContext.Provider
-            value={{
-              isReadOnly,
-              siblingTaskNames: [],
-              taskData: task,
-            }}
-          >
-            <FormProvider {...form}>
-              <InlineLevelsContext.Provider value={inline}>
-                <FormField field={field} />
-              </InlineLevelsContext.Provider>
-            </FormProvider>
-          </TaskFormContext.Provider>
+          {/* The session the field lists need; the harness's own form still owns the fields. */}
+          <EditSessionProvider>
+            <TaskFormContext.Provider
+              value={{
+                isReadOnly,
+                siblingTaskNames: [],
+                taskData: task,
+              }}
+            >
+              <FormProvider {...form}>
+                <InlineLevelsContext.Provider value={inline}>
+                  <FormField field={field} />
+                </InlineLevelsContext.Provider>
+              </FormProvider>
+            </TaskFormContext.Provider>
+          </EditSessionProvider>
         </TooltipProvider>
       </I18nProvider>
     );
