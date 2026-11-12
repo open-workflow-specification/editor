@@ -278,6 +278,19 @@ do:
     expect(output).toContain("loaded-via-set-content");
   });
 
+  it("shows a workflow loaded through the ref when the initial content is blank", async () => {
+    const ref = React.createRef<DiagramEditorRef>();
+    render(<DiagramEditor ref={ref} content="" locale="en" isReadOnly={true} />);
+
+    expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+
+    act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML));
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("setContent with JSON input switches the format so getContent returns JSON", () => {
     const ref = React.createRef<DiagramEditorRef>();
 

@@ -135,6 +135,11 @@
     @apply dec:flex dec:h-full dec:min-h-0 dec:items-center dec:justify-center dec:p-6;
   }
 
+  .dec-root .dec-empty-state,
+  .dec-root .dec-loading-state {
+    background-color: var(--dec-canvas-bg);
+  }
+
   .dec-root .dec-empty-state__content {
     @apply dec:max-w-sm dec:text-center;
   }

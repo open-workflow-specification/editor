@@ -121,7 +121,7 @@ const DiagramEditorContent = ({
 }) => {
   const { model, processedContent } = useDiagramEditorContext();
   const { t } = useI18n();
-  if (content.trim().length === 0) {
+  if (content.trim().length === 0 && model === null) {
     return (
       <div className="dec-empty-state">
         <div className="dec-empty-state__content">
