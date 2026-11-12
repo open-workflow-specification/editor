@@ -90,7 +90,8 @@ describe("DiagramEditor Component", () => {
         />,
       );
 
-      await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+      // A mounted wrapper can still contain an empty canvas while ELK is laying out nodes.
+      await waitFor(() => expect(container.querySelector(".dec-leaf-node")).toBeInTheDocument());
       await act(async () => {
         await Promise.resolve();
       });
