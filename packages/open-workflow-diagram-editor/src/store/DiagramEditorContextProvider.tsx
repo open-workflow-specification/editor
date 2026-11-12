@@ -55,6 +55,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
     props.content.trimStart().startsWith("{") ? "json" : "yaml",
   );
   const contentFormat = props.language ?? detectedContentFormat;
+  const [processedContent, setProcessedContent] = React.useState<string | null>(null);
 
   // Config state (non-history)
   const [locale, setLocale] = React.useState<string>(props.locale);
@@ -114,6 +115,8 @@ export const DiagramEditorContextProvider = React.forwardRef<
     // This will be addressed in the editing feature branch as the implemntation is changing
     // oxlint-disable-next-line react/set-state-in-effect
     setErrors(parsedErrors);
+    // oxlint-disable-next-line react/set-state-in-effect
+    setProcessedContent(props.content);
     if (parsedModel === null) {
       // Content is unparseable — reset history to null so downstream consumers
       // (e.g. DiagramEditorContent) see model === null and render the error page
@@ -148,6 +151,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       if (newModel === null) return;
 
       setErrors(newErrors);
+      setProcessedContent(content);
 
       const newFormat: ContentFormat = content.trimStart().startsWith("{") ? "json" : "yaml";
       setDetectedContentFormat(newFormat);
@@ -199,6 +203,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       isReadOnly,
       locale,
       contentFormat,
+      processedContent,
       model,
       errors,
       nodes,
@@ -224,6 +229,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       isReadOnly,
       locale,
       contentFormat,
+      processedContent,
       model,
       errors,
       nodes,

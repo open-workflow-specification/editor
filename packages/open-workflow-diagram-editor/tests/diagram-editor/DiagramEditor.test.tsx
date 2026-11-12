@@ -50,6 +50,50 @@ describe("DiagramEditor Component", () => {
     expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
   });
 
+  it.each(["", " \n\t "])(
+    "renders the empty state without an error for blank content %j",
+    (content) => {
+      render(<DiagramEditor content={content} locale={locale} isReadOnly={isReadOnly} />);
+
+      expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+      expect(screen.getByText(t("workflowEmpty.message"))).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+    },
+  );
+
+  it("transitions from the empty state to the diagram when workflow content is added", async () => {
+    const { rerender } = render(
+      <DiagramEditor content="" locale={locale} isReadOnly={isReadOnly} />,
+    );
+
+    expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+
+    rerender(
+      <DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale={locale} isReadOnly={isReadOnly} />,
+    );
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("returns to the empty state when workflow content is removed", async () => {
+    const { rerender } = render(
+      <DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale={locale} isReadOnly={isReadOnly} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    rerender(<DiagramEditor content={"  \n"} locale={locale} isReadOnly={isReadOnly} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
   it.each([
     { colorMode: "light" as const, expectedDark: false },
     { colorMode: "dark" as const, expectedDark: true },
