@@ -16,6 +16,8 @@
 
 import "@openworkflowspec/dual-editor/styles.css";
 import { DualEditorElement } from "./dual-editor-element";
+// Vite transforms this module import into a Worker constructor.
+// oxlint-disable-next-line import/default
 import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
 
 Object.assign(self, {
