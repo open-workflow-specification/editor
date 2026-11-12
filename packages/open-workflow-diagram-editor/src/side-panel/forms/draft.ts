@@ -193,7 +193,7 @@ export const holdsValue = (value: unknown): boolean =>
   value !== "" &&
   (Array.isArray(value)
     ? value.some(holdsValue)
-    : !isObjectNotArray(value) || Object.values(value).some(holdsValue));
+    : !isObjectNotArray(value) || Object.keys(value).length > 0);
 
 /**
  * Fields added in this draft and left empty are dropped on Apply.
