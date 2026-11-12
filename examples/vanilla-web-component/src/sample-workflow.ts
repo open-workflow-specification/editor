@@ -15,14 +15,65 @@
  */
 
 export const sampleWorkflow = `document:
-  dsl: "1.0.3"
+  dsl: '1.0.3'
   namespace: examples
-  name: hello-world
-  version: "0.1.0"
+  name: accumulate-room-readings
+  version: '0.1.0'
+  title: "Test Workflow Title"
+  summary: "A test workflow with metadata"
+  tags:
+    iot: Internet of Things
+    sensors: Sensor data
+    readings: Room readings
 do:
-  - greet:
-      call: http
+  - consumeReading:
+      listen:
+        to:
+          all:
+            - with:
+                source: https://my.home.com/sensor
+                type: my.home.sensors.temperature
+              correlate:
+                roomId:
+                  from: .roomid
+            - with:
+                source: https://my.home.com/sensor
+                type: my.home.sensors.humidity
+              correlate:
+                roomId:
+                  from: .roomid
+      output:
+        as: .data.reading
+  - logReading:
+      for:
+        each: reading
+        in: .readings
+      do:
+        - callOrderService:
+            call: openapi
+            with:
+              document:
+                endpoint: http://myorg.io/ordersservices.json
+              operationId: logreading
+  - generateReport:
+      call: openapi
       with:
-        method: GET
-        endpoint: https://httpbin.org/get
-`;
+        document:
+          endpoint: http://myorg.io/ordersservices.json
+        operationId: produceReport
+  - emitEvent:
+      emit:
+        event:
+          with:
+            source: https://petstore.com
+            type: com.petstore.order.placed.v1
+            data:
+              client:
+                firstName: Cruella
+                lastName: de Vil
+              items:
+                - breed: dalmatian
+                  quantity: 101
+timeout:
+  after:
+    hours: 1`;
