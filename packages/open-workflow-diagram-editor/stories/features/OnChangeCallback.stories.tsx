@@ -14,141 +14,27 @@
  * limitations under the License.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { action } from "storybook/actions";
 import {
   DiagramEditor,
   DiagramEditorRef,
   HistoryAvailability,
 } from "../../src/diagram-editor/DiagramEditor";
-import { useResolvedColorMode } from "@openworkflowspec/core";
 import { authenticationReusable } from "../examples";
 import { EditorToolbarLayout } from "./shared/EditorToolbarLayout";
-
-// ---------------------------------------------------------------------------
-// Output panel
-// ---------------------------------------------------------------------------
-
-type OutputEntry = {
-  id: number;
-  time: string;
-  content: string;
-};
-
-type PanelTheme = {
-  container: React.CSSProperties;
-  header: React.CSSProperties;
-  muted: string;
-  button: React.CSSProperties;
-};
-
-const lightPanel: PanelTheme = {
-  container: { background: "#f7f8fa", color: "#1f2328", borderTop: "1px solid #e5e7eb" },
-  header: { borderBottom: "1px solid #e5e7eb", background: "#f1f3f5" },
-  muted: "#57606a",
-  button: { border: "1px solid #d1d5db", background: "#ffffff", color: "#374151" },
-};
-
-const darkPanel: PanelTheme = {
-  container: { background: "#111827", color: "#e5e7eb", borderTop: "1px solid #374151" },
-  header: { borderBottom: "1px solid #374151", background: "#1f2937" },
-  muted: "#9ca3af",
-  button: { border: "1px solid #4b5563", background: "#374151", color: "#e5e7eb" },
-};
-
-const PANEL_HEIGHT: string = "240px";
-
-function OutputPanel({
-  entries,
-  theme,
-  onClear,
-}: {
-  entries: OutputEntry[];
-  theme: PanelTheme;
-  onClear: () => void;
-}): React.JSX.Element {
-  const bodyRef = useRef<HTMLDivElement | null>(null);
-
-  // Keep the newest entry in view.
-  useEffect(() => {
-    const body = bodyRef.current;
-    if (body) body.scrollTop = body.scrollHeight;
-  }, [entries]);
-
-  return (
-    <section
-      aria-label="onChange callback output"
-      data-testid="onchange-output"
-      style={{
-        ...theme.container,
-        height: PANEL_HEIGHT,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-        fontSize: "12px",
-      }}
-    >
-      <div
-        style={{
-          ...theme.header,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "4px 12px",
-        }}
-      >
-        <span style={{ fontWeight: 600 }}>
-          onChange callback output ({entries.length} {entries.length === 1 ? "call" : "calls"})
-        </span>
-        <button
-          type="button"
-          onClick={onClear}
-          style={{
-            ...theme.button,
-            borderRadius: "4px",
-            padding: "2px 10px",
-            fontSize: "12px",
-            cursor: "pointer",
-          }}
-        >
-          Clear
-        </button>
-      </div>
-      <div
-        ref={bodyRef}
-        role="log"
-        aria-live="polite"
-        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable region must be keyboard reachable
-        tabIndex={0}
-        style={{ flex: 1, overflow: "auto", padding: "8px 12px" }}
-      >
-        {entries.length === 0 ? (
-          <span style={{ color: theme.muted }}>
-            Nothing received yet. Edit a task in the side panel, or use Undo / Redo in the toolbar,
-            and the content passed to the callback appears here. Set Content does not call it.
-          </span>
-        ) : (
-          entries.map((entry) => (
-            <div key={entry.id} style={{ marginBottom: "12px" }}>
-              <div style={{ color: theme.muted }}>
-                [{entry.time}] onChange #{entry.id}
-              </div>
-              <pre style={{ margin: "4px 0 0", whiteSpace: "pre-wrap" }}>{entry.content}</pre>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Story render function
 // ---------------------------------------------------------------------------
 
+// Logs every call, with the received content as its argument, in the Storybook Actions panel.
+const logOnChange = action("onChange");
+
 function OnChangeCallbackStory({
   content,
-  colorMode: colorModeProp,
+  colorMode,
   isReadOnly,
   locale,
 }: {
@@ -158,47 +44,27 @@ function OnChangeCallbackStory({
   locale?: string;
 }): React.JSX.Element {
   const editorRef = useRef<DiagramEditorRef | null>(null);
-  const callCounter = useRef<number>(0);
-  const [entries, setEntries] = useState<OutputEntry[]>([]);
   const [history, setHistory] = useState<HistoryAvailability>({ canUndo: false, canRedo: false });
-  const resolvedColorMode = useResolvedColorMode(
-    (colorModeProp as "light" | "dark" | "system") ?? "system",
-  );
-
-  const handleChange = useCallback((content: string) => {
-    callCounter.current += 1;
-    const entry: OutputEntry = {
-      id: callCounter.current,
-      time: new Date().toLocaleTimeString(),
-      content,
-    };
-    setEntries((previous) => [...previous, entry]);
-  }, []);
 
   // Register the callback for the lifetime of the story.
   useEffect(() => {
     const editor: DiagramEditorRef | null = editorRef.current;
-    editor?.setOnChangeCallback(handleChange);
+    editor?.setOnChangeCallback(logOnChange);
     return () => editor?.setOnChangeCallback(null);
-  }, [handleChange]);
+  }, []);
 
   return (
-    <EditorToolbarLayout editorRef={editorRef} colorMode={colorModeProp} history={history}>
+    <EditorToolbarLayout editorRef={editorRef} colorMode={colorMode} history={history}>
       <div style={{ flex: 1, overflow: "hidden" }}>
         <DiagramEditor
           ref={editorRef}
           content={content}
           isReadOnly={isReadOnly ?? false}
           locale={locale ?? "en"}
-          colorMode={colorModeProp as "light" | "dark" | "system" | undefined}
+          colorMode={colorMode as "light" | "dark" | "system" | undefined}
           onHistoryChange={setHistory}
         />
       </div>
-      <OutputPanel
-        entries={entries}
-        theme={resolvedColorMode === "dark" ? darkPanel : lightPanel}
-        onClear={() => setEntries([])}
-      />
     </EditorToolbarLayout>
   );
 }
@@ -290,23 +156,23 @@ useEffect(() => {
   controls use the \`onHistoryChange\` prop instead, which also covers \`setContent()\`
   and \`content\` prop updates. See the **Undo Redo** story.
 
-### Story toolbar and output panel
+### Story toolbar and Actions panel
 
-The toolbar above the diagram (**Undo**, **Redo**, **Set Content**, **Get Content**) and
-the panel under it are implemented in the story, they are **not** part of the
-\`DiagramEditor\` component. The toolbar is the same as in the **Undo Redo** story and
-exercises the ref API; its Undo / Redo buttons are enabled from the \`onHistoryChange\`
-prop. The story also registers an on-change callback that appends everything it
-receives to the panel: the call number and the full content.
+The toolbar above the diagram (**Undo**, **Redo**, **Set Content**, **Get Content**) is
+implemented in the story, it is **not** part of the \`DiagramEditor\` component. The toolbar
+is the same as in the **Undo Redo** story and exercises the ref API; its Undo / Redo buttons
+are enabled from the \`onHistoryChange\` prop. The story also registers an on-change callback
+that is a Storybook action named \`onChange\`. Open the **Actions** panel at the bottom of
+Storybook to see each call with the full content it received.
 
 Try it:
 
-1. Select a task, edit it in the side panel and apply the change. A new entry appears.
+1. Select a task, edit it in the side panel and apply the change. A new \`onChange\` entry appears in the Actions panel.
 2. Click **Undo**, then **Redo**. Each one adds an entry, because they are in-editor changes.
 3. Click **Set Content**, edit the text and **Apply**. **No** entry appears, because the
    change came from the host. Click **Undo** afterwards: that reverts the loaded content
    and **does** add an entry.
-4. Click **Get Content** to compare the current model with the last entry in the panel.
+4. Click **Get Content** to compare the current model with the last entry in the Actions panel.
 5. Change the \`content\` control in the Storybook controls panel. **No** entry appears.
 
 ### Calling the API from the browser console
@@ -318,7 +184,7 @@ This story publishes the editor ref on \`window.diagramEditorRef\`:
 3. Run any of the following:
 
 \`\`\`js
-// Register your own callback (replaces the one used by the story panel):
+// Register your own callback (replaces the one that logs to the Actions panel):
 diagramEditorRef.current.setOnChangeCallback((content) => console.log(content));
 
 // Unregister:
@@ -342,9 +208,8 @@ diagramEditorRef.current.undo();
 diagramEditorRef.current.redo();
 \`\`\`
 
-> **Tip:** After registering your own callback from the console, the story output
-> panel stops updating, because the last registration wins. Reload the story to
-> restore it.
+> **Tip:** After registering your own callback from the console, the Actions panel
+> stops updating, because the last registration wins. Reload the story to restore it.
         `,
       },
     },
