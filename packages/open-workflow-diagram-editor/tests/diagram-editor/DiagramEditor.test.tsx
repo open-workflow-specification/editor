@@ -50,6 +50,75 @@ describe("DiagramEditor Component", () => {
     expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
   });
 
+  it.each(["", " \n\t "])(
+    "renders the empty state without an error for blank content %j",
+    (content) => {
+      render(<DiagramEditor content={content} locale={locale} isReadOnly={isReadOnly} />);
+
+      expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+      expect(screen.getByText(t("workflowEmpty.message"))).toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+    },
+  );
+
+  it("transitions from the empty state to the diagram when workflow content is added", async () => {
+    const { container, rerender } = render(
+      <DiagramEditor content="" locale={locale} isReadOnly={isReadOnly} />,
+    );
+
+    expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+
+    const insertedAlerts: Element[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          if (node.matches('[role="alert"]')) insertedAlerts.push(node);
+          insertedAlerts.push(...node.querySelectorAll('[role="alert"]'));
+        }
+      }
+    });
+    observer.observe(container, { childList: true, subtree: true });
+
+    try {
+      rerender(
+        <DiagramEditor
+          content={BASIC_VALID_WORKFLOW_YAML}
+          locale={locale}
+          isReadOnly={isReadOnly}
+        />,
+      );
+
+      // A mounted wrapper can still contain an empty canvas while ELK is laying out nodes.
+      await waitFor(() => expect(container.querySelector(".dec-leaf-node")).toBeInTheDocument());
+      await act(async () => {
+        await Promise.resolve();
+      });
+    } finally {
+      observer.disconnect();
+    }
+
+    expect(insertedAlerts).toHaveLength(0);
+    expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("returns to the empty state when workflow content is removed", async () => {
+    const { rerender } = render(
+      <DiagramEditor content={BASIC_VALID_WORKFLOW_YAML} locale={locale} isReadOnly={isReadOnly} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    rerender(<DiagramEditor content={"  \n"} locale={locale} isReadOnly={isReadOnly} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
+
   it.each([
     { colorMode: "light" as const, expectedDark: false },
     { colorMode: "dark" as const, expectedDark: true },
@@ -232,6 +301,19 @@ do:
     expect(output.trimStart()).not.toMatch(/^\{/);
     // The new workflow name should appear in the output.
     expect(output).toContain("loaded-via-set-content");
+  });
+
+  it("shows a workflow loaded through the ref when the initial content is blank", async () => {
+    const ref = React.createRef<DiagramEditorRef>();
+    render(<DiagramEditor ref={ref} content="" locale="en" isReadOnly={true} />);
+
+    expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+
+    act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML));
+
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    expect(screen.queryByText(t("workflowEmpty.title"))).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("setContent with JSON input switches the format so getContent returns JSON", () => {
