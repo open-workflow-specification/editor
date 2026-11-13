@@ -71,7 +71,7 @@ function App() {
 
 Monaco's built-in `editorWorkerService` requires a separate worker from the OWS language-service worker passed through `createLanguageServiceWorker`.
 
-The host application must configure `MonacoEnvironment` before mounting the Text Editor (including when it is used through the Dual Editor). For Vite:
+The host application must configure `MonacoEnvironment` before mounting the Text Editor. For Vite:
 
 ```ts
 import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
@@ -88,7 +88,7 @@ Object.assign(self, {
 });
 ```
 
-The `?worker` suffix is specific to Vite. Other bundlers must configure equivalent worker loading for `@openworkflowspec/text-editor/editor-worker`. This configuration belongs to the host application, not to the Text Editor or Dual Editor props.
+The `?worker` suffix is specific to Vite. Other bundlers must configure equivalent worker loading for `@openworkflowspec/text-editor/editor-worker`. This configuration belongs to the host application, not to the Text Editor props.
 
 The OWS language-service worker remains separate and is created using `createLanguageServiceWorker` as shown above.
 
