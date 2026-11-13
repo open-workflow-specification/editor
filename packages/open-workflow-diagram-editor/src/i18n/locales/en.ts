@@ -19,7 +19,7 @@ export const en = {
   "workflowError.default": "There was an error loading the workflow.",
   "workflowError.parsing.title": "Parsing Error",
   "workflowEmpty.title": "Your diagram will appear here",
-  "workflowEmpty.message": "Start by adding workflow content to see your diagram.",
+  "workflowEmpty.message": "Start by adding YAML or JSON workflow content to see your diagram.",
   workflowLoading: "Loading diagram…",
   "sidebar.toggle": "Toggle sidebar",
   "sidebar.workflow": "Workflow",
