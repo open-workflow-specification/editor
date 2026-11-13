@@ -137,6 +137,29 @@ describe("DiagramEditor Component", () => {
     });
   });
 
+  it("forwards onHistoryChange to the editor", async () => {
+    const ref = React.createRef<DiagramEditorRef>();
+    const onHistoryChange = vi.fn();
+
+    render(
+      <DiagramEditor
+        ref={ref}
+        content={BASIC_VALID_WORKFLOW_YAML}
+        locale="en"
+        isReadOnly={false}
+        onHistoryChange={onHistoryChange}
+      />,
+    );
+    await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+    expect(onHistoryChange).not.toHaveBeenCalled();
+
+    act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_JSON));
+
+    await waitFor(() =>
+      expect(onHistoryChange).toHaveBeenLastCalledWith({ canUndo: true, canRedo: false }),
+    );
+  });
+
   it("updates the rendered content when the workflow content change", () => {
     const { rerender } = render(
       <DiagramEditor content={UNPARSEABLE_CONTENT} locale="en" isReadOnly={true} />,
@@ -150,15 +173,8 @@ describe("DiagramEditor Component", () => {
     expect(screen.queryByText(t("workflowError.parsing.title"))).not.toBeInTheDocument();
   });
 
-  it("exposes the imperative ref API with undo, redo, canUndo, canRedo, getContent and setContent", () => {
-    const ref = React.createRef<{
-      undo: () => void;
-      redo: () => void;
-      canUndo: boolean;
-      canRedo: boolean;
-      getContent: () => string;
-      setContent: (content: string) => void;
-    }>();
+  it("exposes the imperative ref API with undo, redo, canUndo, canRedo, getContent, setContent and setOnChangeCallback", () => {
+    const ref = React.createRef<DiagramEditorRef>();
 
     render(
       <DiagramEditor ref={ref} content={BASIC_VALID_WORKFLOW_YAML} locale="en" isReadOnly={true} />,
@@ -182,6 +198,7 @@ describe("DiagramEditor Component", () => {
     expect(content.trimStart()).not.toMatch(/^\{/);
     // setContent must be a function.
     expect(ref.current?.setContent).toBeTypeOf("function");
+    expect(ref.current?.setOnChangeCallback).toBeTypeOf("function");
   });
 
   it("getContent returns JSON when fed JSON content", () => {
