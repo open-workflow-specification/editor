@@ -116,8 +116,9 @@ describe("TaskForm one-of levels", () => {
     const user = await renderTask(CALL_BEARER, true);
     await openLevel(user, "Endpoint");
 
-    expect(picker("Endpoint")).toHaveValue("Endpoint Configuration");
-    expect(picker("Endpoint")).toBeDisabled();
+    // The chosen option as text: there is no picker to open.
+    expect(screen.getByText("Endpoint Configuration")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Endpoint" })).not.toBeInTheDocument();
   });
 
   it("keeps its shape whatever option is picked: on its level, then a row again", async () => {

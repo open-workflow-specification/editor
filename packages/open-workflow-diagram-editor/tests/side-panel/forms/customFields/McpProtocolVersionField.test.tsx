@@ -36,20 +36,14 @@ const field: McpProtocolVersionFieldDescriptor = {
   required: false,
 };
 
-function Wrapper({
-  defaultValue,
-  isReadOnly = false,
-}: {
-  defaultValue?: unknown;
-  isReadOnly?: boolean;
-}) {
+function Wrapper({ defaultValue }: { defaultValue?: unknown }) {
   const form = useForm<Record<string, unknown>>({
     defaultValues: { "with.transport.mcp.protocolVersion": defaultValue },
   });
 
   return (
     <I18nProvider locale="en" dictionaries={{ en }}>
-      <TaskFormContext.Provider value={{ isReadOnly, siblingTaskNames: [], taskData: {} }}>
+      <TaskFormContext.Provider value={{ isReadOnly: false, siblingTaskNames: [], taskData: {} }}>
         <FormProvider {...form}>
           <McpProtocolVersionField field={field} id="field-protocol-version" />
         </FormProvider>
@@ -81,13 +75,6 @@ describe("McpProtocolVersionField", () => {
     const input = screen.getByRole("textbox");
     await user.type(input, "2025-06-18");
     expect(input).toHaveValue("2025-06-18");
-  });
-
-  it("disables the input in read-only mode", () => {
-    render(<Wrapper defaultValue="2025-06-18" isReadOnly />);
-    const input = screen.getByRole("textbox");
-    expect(input).toBeDisabled();
-    expect(input).toHaveAttribute("readonly");
   });
 
   it.each([

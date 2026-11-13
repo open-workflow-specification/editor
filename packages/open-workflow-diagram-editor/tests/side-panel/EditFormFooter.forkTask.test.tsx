@@ -34,6 +34,7 @@ const { NESTED_FORK_WORKFLOW } = await import("../fixtures/workflows");
 const { renderWithProviders } = await import("../test-utils/render-helpers");
 const { nodeAt, parseFixture, applyButton } = await import("../test-utils");
 const { openCommonFields } = await import("../test-utils/drill-helpers");
+const { renderTaskPanel } = await import("../test-utils/panel-helpers");
 
 /** Races its branches (`compete: true`); one of them is the inner fork. */
 const OUTER_FORK_ID = "/do/raiseAlarm";
@@ -124,5 +125,14 @@ describe("fork task editing", () => {
     expect(screen.getByText("notifyStaff")).toBeInTheDocument();
     expect(screen.getByText("logAlarm")).toBeInTheDocument();
     expect(screen.getByText("Edit tasks by selecting them from the diagram")).toBeInTheDocument();
+  });
+
+  it("lists the branches without the edit hint in read-only", async () => {
+    await renderTaskPanel(model, OUTER_FORK_ID, { isReadOnly: true });
+
+    expect(screen.getByText("notifyStaff")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Edit tasks by selecting them from the diagram"),
+    ).not.toBeInTheDocument();
   });
 });

@@ -45,7 +45,7 @@ export type ThenFieldProps = {
 export function ThenField({ field, id }: ThenFieldProps) {
   const { t } = useI18n();
   const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, siblingTaskNames, validateField } = useTaskFormContext();
+  const { siblingTaskNames, validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
 
   return (
@@ -54,11 +54,7 @@ export function ThenField({ field, id }: ThenFieldProps) {
       control={control}
       render={({ field: rhfField }) => (
         <FieldWithError errorMessage={errorMessage}>
-          <Combobox
-            value={(rhfField.value as string) ?? ""}
-            onValueChange={!isReadOnly ? rhfField.onChange : undefined}
-            disabled={isReadOnly}
-          >
+          <Combobox value={(rhfField.value as string) ?? ""} onValueChange={rhfField.onChange}>
             <ComboboxInput
               id={id}
               readOnly

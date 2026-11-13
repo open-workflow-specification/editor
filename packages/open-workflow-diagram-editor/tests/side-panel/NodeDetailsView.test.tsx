@@ -17,6 +17,7 @@
 import * as React from "react";
 import { describe, it, expect } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ReactFlowProvider } from "@xyflow/react";
 import { I18nProvider } from "@openworkflowspec/i18n";
 import type * as RF from "@xyflow/react";
@@ -37,7 +38,7 @@ const makeNode = (data: BaseNodeData, type = "call"): RF.Node<BaseNodeData> => (
 });
 
 describe("NodeDetailsView", () => {
-  it("renders the Properties section and form for a task node", () => {
+  it("renders the form for a task node", () => {
     const node = makeNode({
       label: "getPets",
       task: JSON.parse(`{
@@ -50,7 +51,6 @@ describe("NodeDetailsView", () => {
     renderWithProviders(<NodeDetailsView node={node} />);
 
     expect(screen.getByTestId("node-details")).toBeInTheDocument();
-    expect(screen.getByText("Properties")).toBeInTheDocument();
     // The form renders a <form> element with the task properties aria-label
     expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
   });
@@ -77,7 +77,7 @@ describe("NodeDetailsView", () => {
     renderWithProviders(<NodeDetailsView node={node} />);
 
     expect(screen.queryByTestId("node-details")).not.toBeInTheDocument();
-    expect(screen.queryByText("Properties")).not.toBeInTheDocument();
+    expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(screen.queryByText("Source")).not.toBeInTheDocument();
     expect(screen.getByText("No additional details for this node")).toBeInTheDocument();
   });
@@ -86,7 +86,7 @@ describe("NodeDetailsView", () => {
     const taskReference = "/do/0/getPets";
     const taskReferences = new Set([taskReference]);
 
-    it("renders the node's errors above the Properties section, without field labels", () => {
+    it("renders the node's errors above the form, without field labels", () => {
       const node = makeNode({
         label: "getPets",
         taskReference,
@@ -106,7 +106,7 @@ describe("NodeDetailsView", () => {
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
       expect(document.querySelector(".dec-sidebar-error-field")).toBeNull();
       expect(screen.getByText("must have required property 'endpoint'")).toBeInTheDocument();
-      expect(screen.getByText("Properties")).toBeInTheDocument();
+      expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
     });
 
     it("renders node details (errors only) when a task-less node has errors", () => {
@@ -120,7 +120,7 @@ describe("NodeDetailsView", () => {
       expect(screen.getByTestId("node-details")).toBeInTheDocument();
       expect(screen.getByTestId("sidebar-errors")).toBeInTheDocument();
       expect(screen.getByText("something is wrong")).toBeInTheDocument();
-      expect(screen.queryByText("Properties")).not.toBeInTheDocument();
+      expect(screen.queryByRole("form")).not.toBeInTheDocument();
       expect(screen.queryByText("No additional details for this node")).not.toBeInTheDocument();
     });
     it("lists errors that share a message once, even when their schema paths differ", () => {
@@ -163,7 +163,7 @@ describe("NodeDetailsView", () => {
       });
 
       expect(screen.queryByTestId("sidebar-errors")).not.toBeInTheDocument();
-      expect(screen.getByText("Properties")).toBeInTheDocument();
+      expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
     });
 
     it("attributes a nested child's error to the child, not its container", () => {
@@ -358,18 +358,14 @@ describe("NodeDetailsView", () => {
       },
     });
 
-    it("renders the Properties section in read-only mode", () => {
-      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
+    it.each([
+      { mode: "read-only", isReadOnly: true },
+      { mode: "editable", isReadOnly: false },
+    ])("renders the form with no section heading in $mode mode", ({ isReadOnly }) => {
+      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly });
 
-      expect(screen.getByText("Properties")).toBeInTheDocument();
       expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
-    });
-
-    it("renders the Properties section in editable mode", () => {
-      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: false });
-
-      expect(screen.getByText("Properties")).toBeInTheDocument();
-      expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
+      expect(screen.queryByText("Properties")).not.toBeInTheDocument();
     });
 
     it("does not render the Source section in editable mode", () => {
@@ -387,6 +383,17 @@ describe("NodeDetailsView", () => {
       expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
     });
 
+    it("shows the Source section on the top level only, not inside a drilled-in level", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
+
+      await user.click(screen.getByRole("button", { name: /^Open Endpoint,/ }));
+      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Up one level" }));
+      expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
+    });
+
     it("renders form controls in editable mode", () => {
       const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
         isReadOnly: false,
@@ -396,18 +403,13 @@ describe("NodeDetailsView", () => {
       expect(container.querySelector("input, textarea, select")).not.toBeNull();
     });
 
-    it("renders read-only controls in read-only mode", () => {
+    it("shows values as text, with no controls, in read-only mode", () => {
       const { container } = renderWithProviders(<NodeDetailsView node={node} />, {
         isReadOnly: true,
       });
 
-      // In read-only mode all controls are disabled
-      const controls = container.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
-        "input, textarea, select",
-      );
-      for (const control of controls) {
-        expect(control.disabled).toBe(true);
-      }
+      expect(container.querySelector("form input, form textarea, form select")).toBeNull();
+      expect(screen.getByText("get")).toBeInTheDocument();
     });
   });
 });

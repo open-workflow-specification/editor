@@ -106,10 +106,14 @@ export function DrillRow({
         ? String(value)
         : "";
     summary = shown === "" ? (variantLabel ?? "") : `${variantLabel ?? ""} · ${shown}`;
+  } else if (isReadOnly) {
+    // Only the set fields: the level shows no others, and none can be added.
+    const setCount = field.children.filter(
+      (child) => filterReadOnlyFields([child], taskData).length > 0,
+    ).length;
+    summary = `${setCount} ${t(setCount === 1 ? "sidebar.drill.field" : "sidebar.drill.fields")}`;
   } else {
-    const setCount = isReadOnly
-      ? field.children.filter((child) => filterReadOnlyFields([child], taskData).length > 0).length
-      : values.filter(hasDraftValue).length;
+    const setCount = values.filter(hasDraftValue).length;
     summary = `${setCount} ${t("sidebar.drill.of")} ${field.children.length} ${t("sidebar.drill.set")}`;
   }
   const changedText = `${changedCount} ${t("sidebar.form.changed")}`;

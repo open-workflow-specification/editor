@@ -111,9 +111,8 @@ describe("TaskForm field-level validation", () => {
   it("does not generate validation errors in read-only mode", async () => {
     await renderTask("/do/waitStep", true);
 
-    const input = screen.getByLabelText("wait");
-    expect(input).toBeDisabled();
-    expect(input).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByText("wait")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 

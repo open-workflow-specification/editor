@@ -40,7 +40,7 @@ export function PatternTextControl({
   title,
 }: PatternTextControlProps) {
   const { control } = useFormContext<Record<string, unknown>>();
-  const { isReadOnly, validateField } = useTaskFormContext();
+  const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(path);
 
   return (
@@ -64,8 +64,6 @@ export function PatternTextControl({
             name={rhfField.name}
             pattern={pattern}
             title={title}
-            disabled={isReadOnly}
-            readOnly={isReadOnly}
             placeholder={placeholder}
             aria-invalid={errorMessage !== undefined || undefined}
           />

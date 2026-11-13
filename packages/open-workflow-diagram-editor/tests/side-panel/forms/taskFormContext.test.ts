@@ -209,7 +209,7 @@ describe("filterReadOnlyFields — object groups", () => {
   it("includes the group whole when the parent key exists and a child has a value", () => {
     const task = { set: { startEvent: "${ $workflow.input[0] }", extra: "" } };
     const object = makeObject("set", [makeString("set.startEvent"), makeString("set.extra")]);
-    // Whole, so its drill row can count "1 of 2 set"; the renderer filters the children.
+    // Whole, so its drill row can count its set children; the renderer filters the children.
     expect(filterReadOnlyFields([object], task)).toEqual([object]);
   });
 
@@ -628,7 +628,7 @@ describe("filterReadOnlyFields on a section", () => {
     children: [str("if"), str("other")],
   };
 
-  // Kept whole, so the drill row can say "1 of 2 set"; the opened level filters its own children.
+  // Kept whole, so the drill row can count its set children; the opened level filters its own children.
   it.each([
     ["keeps the whole section when any child is set", { if: "${ .ok }" }, [section]],
     ["drops the section when nothing in it is set", {}, []],
