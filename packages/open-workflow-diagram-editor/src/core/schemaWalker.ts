@@ -46,6 +46,8 @@ export const NODE_TYPE_TO_DEF: Readonly<Record<string, string>> = {
   [GraphNodeType.Set]: "setTask",
   [GraphNodeType.Switch]: "switchTask",
   [GraphNodeType.Try]: "tryTask",
+  // The outer TRY…CATCH frame shows the same form as its inner Try / Catch frames.
+  [GraphNodeType.TryCatch]: "tryTask",
   [GraphNodeType.Wait]: "waitTask",
   [GraphNodeType.Catch]: "tryTask",
   [CATCH_CONTAINER_NODE_TYPE]: "tryTask",
