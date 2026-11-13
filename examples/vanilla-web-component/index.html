@@ -42,16 +42,16 @@
       }
     </style>
   </head>
-<body>
+  <body>
     <h1>Dual Editor — Web Component Example</h1>
     <openworkflowspec-dual-editor locale="en" language="yaml"></openworkflowspec-dual-editor>
 
-<script type="module">
-  import "./src/index.ts";
-  import { sampleWorkflow } from "./src/sample-workflow.ts";
+    <script type="module">
+      import "./src/index.ts";
+      import { sampleWorkflow } from "./src/sample-workflow.ts";
 
-  const editor = document.querySelector("openworkflowspec-dual-editor");
-  editor.content = sampleWorkflow;
-</script>
-</body>
+      const editor = document.querySelector("openworkflowspec-dual-editor");
+      editor.content = sampleWorkflow;
+    </script>
+  </body>
 </html>
