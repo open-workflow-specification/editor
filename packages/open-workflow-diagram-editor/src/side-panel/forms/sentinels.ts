@@ -15,6 +15,7 @@
  */
 
 import { flattenTask } from "@/core/taskDraft";
+import { isObjectNotArray } from "@/core/utils";
 
 // Variant sentinels — where a one-of records its selected variant in the form values.
 
@@ -56,12 +57,39 @@ export function innerTextPath(path: string): string {
   return `${INNER_TEXT_KEY}.${path}`;
 }
 
+// Key-value map rows as edited (blank keys included), persisted across drills.
+export const MAP_ROWS_KEY = "__maprows__";
+
+/** A key-value map row as edited: its key may be blank or another row's. */
+export interface MapRowDraft {
+  key: string;
+  value: unknown;
+}
+
+/** Every map's stored rows, keyed by map path. */
+export function readAllMapRows(values: Record<string, unknown>): Record<string, MapRowDraft[]> {
+  const all = values[MAP_ROWS_KEY];
+  return isObjectNotArray(all) ? (all as Record<string, MapRowDraft[]>) : {};
+}
+
+/** Every map's stored rows but those at `paths`, to write back whole under `MAP_ROWS_KEY`. */
+export function withoutMapRows(
+  values: Record<string, unknown>,
+  paths: readonly string[],
+): Record<string, MapRowDraft[]> {
+  const all = { ...readAllMapRows(values) };
+  for (const path of paths) delete all[path];
+  return all;
+}
+
 /** True for internal form values (not part of task data) */
 export function isReservedPath(path: string): boolean {
   return (
     path === SENTINEL_KEY ||
     path.startsWith(SENTINEL_PREFIX) ||
     path === INNER_TEXT_KEY ||
-    path.startsWith(`${INNER_TEXT_KEY}.`)
+    path.startsWith(`${INNER_TEXT_KEY}.`) ||
+    path === MAP_ROWS_KEY ||
+    path.startsWith(`${MAP_ROWS_KEY}.`)
   );
 }

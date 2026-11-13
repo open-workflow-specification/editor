@@ -170,6 +170,8 @@ export const COMMON_FIELDS_PATH = "__common__";
 
 export interface MapField extends FieldBase {
   kind: "map";
+  /** The schema allows only string values (`headers`, `query`), so typed text is never read as a number, boolean or JSON. */
+  stringValues?: true;
 }
 
 /**
@@ -331,6 +333,12 @@ function atLeastOneOf(schema: Record<string, unknown>): { atLeastOne?: true } {
     isObjectNotArray(schema.properties)
     ? { atLeastOne: true }
     : {};
+}
+
+/** `{ stringValues: true }` when a map schema allows only string values, else nothing to spread. */
+function mapValueType(schema: Record<string, unknown>): { stringValues?: true } {
+  const values = schema.additionalProperties;
+  return isObjectNotArray(values) && values.type === "string" ? { stringValues: true } : {};
 }
 
 /**
@@ -954,6 +962,7 @@ export function schemaToFormFields(
           label: deriveLabel(prop, key),
           ...withDesc(description),
           required: isRequired,
+          ...mapValueType(resolved),
         });
       }
       continue;
@@ -1385,6 +1394,7 @@ function buildOneOfVariants(
           path: leafPath,
           label,
           required: false,
+          ...mapValueType(resolved),
         };
         return [{ kind: "map" as const, label, matchesData, fields: [mapField], resolved, c }];
       }

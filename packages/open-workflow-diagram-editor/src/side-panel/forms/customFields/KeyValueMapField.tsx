@@ -27,6 +27,7 @@ import { getNestedValue, useTaskFormContext } from "../taskFormContext";
 import { ChangedDot } from "../FieldLabel";
 import { useFieldChanged } from "../../EditSession";
 import { useFieldError, FieldWithError, formatEntryCount, newId } from "./fieldHelpers";
+import { MAP_ROWS_KEY, readAllMapRows, type MapRowDraft } from "../sentinels";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,11 +92,34 @@ function extractEntries(value: unknown): MapEntry[] {
   // `undefined` is how this field removes a key (`clearKey`), including every key rename leaves behind while typing. Without the filter they come back as empty rows whenever the field remounts e.g. after visiting a drill-in level.
   return Object.entries(value)
     .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => ({
-      id: newId(),
-      key: k,
-      value: v === null ? "" : v,
-    }));
+    .map(([k, v]) => ({ id: newId(), key: k, value: v }));
+}
+
+/**
+ * The map the rows describe. A key belongs to the last row that has it, so a key typed again
+ * overwrites the earlier entry's value, as writing it straight to the map did.
+ */
+function mapFromRows(rows: readonly MapRowDraft[]): Record<string, unknown> {
+  const map: Record<string, unknown> = {};
+  for (const row of rows) {
+    if (row.key !== "") map[row.key] = row.value;
+  }
+  return map;
+}
+
+/**
+ * The stored rows of the map at `path`, or undefined when there are none or they no longer
+ * describe its value
+ */
+function liveMapRows(values: Record<string, unknown>, path: string): MapRowDraft[] | undefined {
+  const rows = readAllMapRows(values)[path];
+  if (!Array.isArray(rows)) return undefined;
+  const value = getNestedValue(values, path);
+  // `undefined` is how the map removes a key, so a removed key is not part of its value.
+  const current = isObjectNotArray(value)
+    ? Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined))
+    : {};
+  return structuralEqual(mapFromRows(rows), current) ? rows : undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,13 +154,14 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   const { setValue, getValues } = form;
 
   // ── Initialise rows ───────────────────────────────────────────────────────
-  // Prefer the current RHF value (an object restored by a variant switch) over
-  // `taskData` when the field mounts. This covers the case where OneOfFieldRow
-  // already called setValue(field.path, savedObject) before this component was
-  // mounted (because KeyValueMapField unmounts when its variant is not active).
-  // If the RHF value is a plain object, derive rows from it; otherwise fall back
-  // to taskData (the committed task snapshot).
+  // Prefer the rows stored by an earlier mount (they keep blank keys the value cannot hold),
+  // then the current RHF value (an object restored by a variant switch) over
+  // `taskData`: OneOfFieldRow may call setValue(field.path, savedObject) before this component
+  // mounts (KeyValueMapField unmounts when its variant is not active). Otherwise fall back to
+  // taskData (the committed task snapshot).
   const [rows, setRows] = React.useState<MapEntry[]>(() => {
+    const stored = liveMapRows(getValues(), field.path);
+    if (stored) return stored.map((row) => ({ id: newId(), ...row }));
     const rhfValue = getValues(field.path as never);
     if (isObjectNotArray(rhfValue)) {
       return extractEntries(rhfValue);
@@ -173,41 +198,61 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
     [field.path, setValue],
   );
 
+  /**
+   * Replaces the rows, stores them in the form (so a remount gets them back)
+   */
+  const commitRows = React.useCallback(
+    (next: MapEntry[], touchedKeys: string[]) => {
+      rowsRef.current = next;
+      setRows(next);
+      const drafts: MapRowDraft[] = next.map(({ key, value }) => ({ key, value }));
+      setValue(
+        MAP_ROWS_KEY as never,
+        {
+          ...readAllMapRows(getValues()),
+          [field.path]: drafts,
+        } as never,
+      );
+      const map = mapFromRows(drafts);
+      for (const key of new Set(touchedKeys)) {
+        if (key === "") continue;
+        if (Object.prototype.hasOwnProperty.call(map, key)) {
+          setValue(`${field.path}.${key}` as never, map[key] as never, { shouldDirty: true });
+        } else {
+          clearKey(key);
+        }
+      }
+    },
+    [field.path, getValues, setValue, clearKey],
+  );
+
   const updateRow = React.useCallback(
     (id: string, newKey: string, rawValueStr: string) => {
       const current = rowsRef.current.find((r) => r.id === id);
       if (!current) return;
-
-      const parsed = parseValue(rawValueStr);
-
-      // Rename: clear the old key before registering the new one.
-      if (current.key !== newKey && current.key !== "") {
-        clearKey(current.key);
-      }
-      if (newKey !== "") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setValue(`${field.path}.${newKey}` as any, parsed, { shouldDirty: true });
-      }
-
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, key: newKey, value: parsed } : r)));
+      const parsed = field.stringValues ? rawValueStr : parseValue(rawValueStr);
+      commitRows(
+        rowsRef.current.map((r) => (r.id === id ? { ...r, key: newKey, value: parsed } : r)),
+        [current.key, newKey],
+      );
     },
-    [field.path, setValue, clearKey],
+    [commitRows, field.stringValues],
   );
 
   const addRow = React.useCallback(() => {
-    setRows((prev) => [...prev, { id: newId(), key: "", value: "" }]);
-  }, []);
+    commitRows([...rowsRef.current, { id: newId(), key: "", value: "" }], []);
+  }, [commitRows]);
 
   const deleteRow = React.useCallback(
     (id: string) => {
       const current = rowsRef.current.find((r) => r.id === id);
-      if (current?.key) {
-        clearKey(current.key);
-      }
-      setRows((prev) => prev.filter((r) => r.id !== id));
+      commitRows(
+        rowsRef.current.filter((r) => r.id !== id),
+        current ? [current.key] : [],
+      );
       validateField?.(field.path);
     },
-    [clearKey, validateField, field.path],
+    [commitRows, validateField, field.path],
   );
 
   // ── Count badge ───────────────────────────────────────────────────────────

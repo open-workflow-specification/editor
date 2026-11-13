@@ -292,5 +292,101 @@ describe("TaskForm drill-in", () => {
       await openLevel(user, "Headers");
       expect(keys()).toEqual(["accept", "x-trace", "hello"]);
     });
+
+    describe("keys another entry has", () => {
+      const headers = (formRef: FormRef) => formRef.current!.getValues("with.headers");
+
+      async function addHeader(user: UserEvent, key: string, value: string) {
+        await user.click(screen.getByRole("button", { name: "Add property" }));
+        await user.type(keyInputs().at(-1)!, key);
+        await user.type(screen.getAllByRole("textbox", { name: "Entry value" }).at(-1)!, value);
+      }
+
+      // Typed one character at a time, `accept-language` passes through `accept`.
+      it("keeps the entry whose key a new key passes through on the way", async () => {
+        const { user, formRef } = renderPanel(FETCH);
+        await openLevel(user, "Headers");
+        await addHeader(user, "accept-language", "en");
+        await leaveLevel(user);
+        await openLevel(user, "Headers");
+
+        expect(keys()).toEqual(["accept", "x-trace", "accept-language"]);
+        expect(headers(formRef)).toMatchObject({
+          accept: "application/json",
+          "accept-language": "en",
+        });
+      });
+
+      it("overwrites the earlier entry's value when its key is typed again", async () => {
+        const { user, formRef } = renderPanel(FETCH);
+        await openLevel(user, "Headers");
+        await addHeader(user, "accept", "text/plain");
+        expect(headers(formRef)).toMatchObject({ accept: "text/plain" });
+      });
+
+      it("gives the key back to the earlier entry when the later one is deleted", async () => {
+        const { user, formRef } = renderPanel(FETCH);
+        await openLevel(user, "Headers");
+        await addHeader(user, "accept", "text/plain");
+        await user.click(screen.getAllByRole("button", { name: "Delete entry" }).at(-1)!);
+
+        expect(headers(formRef)).toMatchObject({ accept: "application/json" });
+      });
+
+      // Every object inherits `toString`, so a check that sees inherited keys never clears it.
+      it.each([
+        {
+          name: "deleted",
+          leave: (user: UserEvent) =>
+            user.click(screen.getAllByRole("button", { name: "Delete entry" }).at(-1)!),
+          expected: ["accept", "x-trace"],
+        },
+        {
+          name: "renamed",
+          leave: (user: UserEvent) => user.type(keyInputs().at(-1)!, "{Backspace}"),
+          expected: ["accept", "x-trace", "toStrin"],
+        },
+      ])(
+        "clears a key named like an inherited property when it is $name",
+        async ({ leave, expected }) => {
+          const { user, formRef } = renderPanel(FETCH);
+          await openLevel(user, "Headers");
+          await addHeader(user, "toString", "x");
+          await leave(user);
+
+          expect(
+            Object.getOwnPropertyDescriptor(headers(formRef), "toString")?.value,
+          ).toBeUndefined();
+          await leaveLevel(user);
+          await openLevel(user, "Headers");
+          expect(keys()).toEqual(expected);
+        },
+      );
+
+      it("keeps a number typed into a map of strings as text", async () => {
+        const { user, formRef } = renderPanel(FETCH);
+        await openLevel(user, "Headers");
+        await addHeader(user, "x-retries", "3");
+        expect(headers(formRef)).toMatchObject({ "x-retries": "3" });
+      });
+
+      it("still reads a number typed into an open map as a number", async () => {
+        const { user, formRef } = renderPanel(PREPARE);
+        await addHeader(user, "count", "3");
+        expect(formRef.current!.getValues("set")).toMatchObject({ count: 3 });
+      });
+
+      // The stored rows still describe the committed value, so only the remove can retire them.
+      it("forgets a blank entry when the map is removed and added back", async () => {
+        const { user } = renderPanel(FETCH);
+        await openLevel(user, "Headers");
+        await user.click(screen.getByRole("button", { name: "Add property" }));
+        await leaveLevel(user);
+        await user.click(screen.getByRole("button", { name: "Remove Headers" }));
+        await user.click(screen.getByRole("button", { name: "Add Headers" }));
+
+        expect(keys()).toEqual(["accept", "x-trace"]);
+      });
+    });
   });
 });
