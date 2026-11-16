@@ -63,4 +63,15 @@ test("workflow Mermaid export can be copied and downloaded", async ({ page }) =>
   await page.getByRole("button", { name: "Download as Mermaid File" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("accumulate-room-readings.mmd");
+
+  const downloadStream = await download.createReadStream();
+  if (!downloadStream) throw new Error("Mermaid download stream was unavailable");
+
+  let downloadedContent = "";
+  for await (const chunk of downloadStream) {
+    downloadedContent += chunk.toString();
+  }
+
+  expect(downloadedContent).toContain("flowchart");
+  expect(downloadedContent).toContain("generateReport");
 });
