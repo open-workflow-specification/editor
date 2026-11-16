@@ -33,6 +33,7 @@ export default defineConfig({
       entry: {
         index: "src/index.ts",
         worker: "src/worker/language.worker.ts",
+        "editor-worker": "src/worker/editor.worker.ts",
       },
       formats: ["es"],
     },

@@ -16,6 +16,20 @@
 
 import "@openworkflowspec/dual-editor/styles.css";
 import { DualEditorElement } from "./dual-editor-element";
+// Vite transforms this module import into a Worker constructor.
+// oxlint-disable-next-line import/default
+import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
+
+Object.assign(self, {
+  MonacoEnvironment: {
+    getWorker(_workerId: string, label: string) {
+      if (label === "editorWorkerService") {
+        return new EditorWorker();
+      }
+      throw new Error(`Unexpected Monaco worker: ${label}`);
+    },
+  },
+});
 
 if (!customElements.get("openworkflowspec-dual-editor")) {
   customElements.define("openworkflowspec-dual-editor", DualEditorElement);
