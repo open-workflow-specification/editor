@@ -71,6 +71,8 @@ export async function renderTaskPanel(
     commitWorkflow,
     user: userEvent.setup(),
     form: () => session().form,
+    /** The edit session, for driving a re-baseline the way an undo does. */
+    session,
     /** The task the footer last committed. */
     committedTask: () =>
       nodeAt(commitWorkflow.mock.lastCall![0] as Specification.Workflow, nodeId).data.task!,

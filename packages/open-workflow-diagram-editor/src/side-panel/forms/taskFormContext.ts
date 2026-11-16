@@ -24,6 +24,7 @@ import {
   type OneOfField,
   type OneOfVariant,
 } from "../../core/schemaToFormFields";
+import { isAtOrBelow } from "../../core/paths";
 import { flattenTask, getNestedValue, setNestedPath } from "../../core/taskDraft";
 import { isObjectNotArray } from "../../core/utils";
 import { mapEntriesOf, customFieldsOwner, type CustomFieldsMap } from "./mapEntries";
@@ -62,8 +63,19 @@ export type TaskFormContextType = {
  * Reference/Policy selector and its Basic/Bearer/… selector share one, so the options join it.
  */
 
+const SNAPSHOT_KEY_SEPARATOR = "\u0000";
+
 export function variantSnapshotKey(field: OneOfField): string {
-  return [field.path, ...field.variants.map((v) => v.label)].join("\u0000");
+  return [field.path, ...field.variants.map((v) => v.label)].join(SNAPSHOT_KEY_SEPARATOR);
+}
+
+/** Forgets the parked options of every one-of strictly below `path` (not one at `path`). */
+export function dropSnapshotsBelow(snapshots: VariantSnapshots, path: string): void {
+  // Deleting from a Map while iterating it is safe: entries already visited are not revisited.
+  for (const key of snapshots.keys()) {
+    const oneOfPath = key.split(SNAPSHOT_KEY_SEPARATOR)[0]!;
+    if (oneOfPath !== path && isAtOrBelow(oneOfPath, path)) snapshots.delete(key);
+  }
 }
 
 /**
@@ -261,6 +273,24 @@ function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
 // tests/side-panel/forms/sectionWalkers.test.ts checks each one — add new walkers there.
 // ---------------------------------------------------------------------------
 
+/**
+ * The event-filter lists among `fields`, each with the entry-relative paths of the containers its
+ * entries' form owns: objects (`with`) and keyed objects (`correlate`), never JSON values (see
+ * `ApplyDirtyOptions.eventFilterLists`).
+ */
+export function collectEventFilterLists(fields: FormFieldDescriptor[]): Map<string, string[]> {
+  const lists = new Map<string, string[]>();
+  forEachField(fields, (field) => {
+    if (field.kind !== "event-filter-list") return;
+    const containers: string[] = [];
+    forEachField(field.itemFields, (inner) => {
+      if (inner.kind === "object" || inner.kind === "keyed-objects") containers.push(inner.path);
+    });
+    lists.set(field.path, containers);
+  });
+  return lists;
+}
+
 /*
  * Finds paths of arrays edited through form controls (ordered maps and event-filter lists).
  * These arrays get empty values pruned before saving, since clearing a control means "delete this key".
@@ -379,7 +409,8 @@ export function collectWholeValuePaths(
     for (const field of list) {
       // A "Custom fields" map's entries are the object's own leaves: its path holds nothing.
       if (field.kind === "map" && field.customFieldsOf !== undefined) continue;
-      if (field.kind === "map" || field.kind === "json") paths.add(field.path);
+      if (field.kind === "map" || field.kind === "json" || field.kind === "keyed-objects")
+        paths.add(field.path);
       else if (field.kind === "enum" && field.innerObjectFormat !== undefined)
         paths.add(field.path);
       else if (field.kind === "object" || field.kind === "section") walk(field.children);
@@ -502,6 +533,12 @@ export function filterReadOnlyFields(
       return Array.isArray(v) && v.length > 0 ? [field] : [];
     }
 
+    if (field.kind === "keyed-objects") {
+      // Shown while it has a key; each key's fields are filtered where they render.
+      const v = getNestedValue(task, field.path);
+      return isObjectNotArray(v) && Object.keys(v).length > 0 ? [field] : [];
+    }
+
     if (field.kind === "json") {
       // Show whenever the path has any defined value, including null, false, 0,
       // and empty strings — all are valid JSON values worth displaying.
@@ -553,6 +590,15 @@ function collectSentinelDefaults(
   for (const f of fields) {
     if (f.kind === "object" || f.kind === "section") {
       collectSentinelDefaults(f.children, taskData, currentSentinels, result, overwrite);
+    } else if (f.kind === "event-filter-list") {
+      // Each committed entry opens on the options its own data matches.
+      const entries = getNestedValue(taskData, f.path);
+      if (Array.isArray(entries)) {
+        entries.forEach((_entry, i) => {
+          const entryFields = prefixFields(f.itemFields, `${f.path}.${i}`);
+          collectSentinelDefaults(entryFields, taskData, currentSentinels, result, overwrite);
+        });
+      }
     } else if (f.kind === "one-of") {
       const dataAtPath = oneOfData(f, taskData);
       const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));

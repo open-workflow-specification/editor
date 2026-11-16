@@ -132,13 +132,19 @@ describe("buildActiveFormView", () => {
     });
   });
 
-  it("collects the event-filter lists of the selected variant", () => {
+  it("collects the event-filter lists of the selected variant, with each item's leaves and containers", () => {
     const { fields: listenFields, values } = buildTaskFormState("listen", {
       listen: { to: { any: [{ with: { type: "t" } }] } },
     });
 
-    expect([...buildActiveFormView(listenFields, {}, values).eventFilterLists]).toEqual([
-      "listen.to.any",
-    ]);
+    const lists = buildActiveFormView(listenFields, {}, values).eventFilterLists;
+    expect([...lists.keys()]).toEqual(["listen.to.any"]);
+    const list = lists.get("listen.to.any")!;
+    expect(list.parent).toBe("listen.to");
+    expect(list.itemLeaves).toContain("with.type");
+    expect(list.itemLeaves).toContain("correlate");
+    // "Custom fields" entries are user keys, never leaves.
+    expect([...list.itemLeaves].some((leaf) => leaf.includes("__custom__"))).toBe(false);
+    expect([...list.itemContainers]).toEqual(["with"]);
   });
 });

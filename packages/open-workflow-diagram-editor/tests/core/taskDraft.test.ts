@@ -15,7 +15,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { unflattenValues, applyDirtyValues, flattenTask } from "../../src/core/taskDraft";
+import {
+  unflattenValues,
+  applyDirtyValues,
+  flattenTask,
+  setNestedPath,
+} from "../../src/core/taskDraft";
 import { switchCase } from "../test-utils";
 import { ROOT_ONE_OF_PATH } from "../../src/core";
 import { ADD_FIELDS_WORKFLOW, SET_EXAMPLE_WORKFLOW } from "../fixtures/workflows";
@@ -582,5 +587,72 @@ describe("applyDirtyValues: removed fields", () => {
   it("never deletes the task type key", () => {
     const result = applyDirtyValues(createPet, { with: undefined }, new Set(["with"]));
     expect(result).toHaveProperty("call", "http");
+  });
+});
+
+describe("path helpers inside lists", () => {
+  const task = { listen: { to: { all: [{ with: { type: "a" } }, { with: { type: "b" } }] } } };
+
+  it("setNestedPath writes into an entry, copying the list, never replacing it", () => {
+    const target = structuredClone(task);
+    const before = target.listen.to.all;
+    setNestedPath(target, "listen.to.all.1.with.type", "c");
+    expect(target.listen.to.all).toHaveLength(2);
+    expect(target.listen.to.all[1]).toEqual({ with: { type: "c" } });
+    expect(target.listen.to.all).not.toBe(before);
+    expect(before[1]).toEqual({ with: { type: "b" } });
+  });
+});
+
+describe("applyDirtyValues: emptied objects inside event-filter-list entries", () => {
+  const original = {
+    listen: {
+      to: {
+        all: [
+          { with: { type: "a" }, correlate: { k: { from: ".a" } } },
+          { with: { type: "b" }, correlate: {} },
+        ],
+      },
+    },
+  };
+  const values = {
+    "listen.to.all": [
+      { with: { type: "a" }, correlate: { k: undefined } },
+      { with: { type: "b" }, correlate: {} },
+    ],
+  };
+  const apply = (options: Parameters<typeof applyDirtyValues>[3]) =>
+    applyDirtyValues(original, values, new Set(["listen.to.all"]), options);
+
+  const options = {
+    formListPaths: new Set(["listen.to.all"]),
+    eventFilterLists: new Map([["listen.to.all", ["with", "correlate"]]]),
+  };
+
+  it("drops an object the draft emptied, keeping a committed {} the user didn't touch", () => {
+    const result = apply(options);
+    expect((result.listen as typeof original.listen).to.all).toEqual([
+      { with: { type: "a" } },
+      { with: { type: "b" }, correlate: {} },
+    ]);
+  });
+
+  it("keeps a JSON value or an extension attribute the user set to {}: only the form's containers go", () => {
+    const committed = { listen: { to: { all: [{ with: { type: "a", data: { x: 1 } } }] } } };
+    const draft = { "listen.to.all": [{ with: { type: "a", data: {}, ext: {} } }] };
+    const result = applyDirtyValues(committed, draft, new Set(["listen.to.all"]), options);
+    expect((result.listen as typeof committed.listen).to.all).toEqual([
+      { with: { type: "a", data: {}, ext: {} } },
+    ]);
+  });
+
+  it("leaves other form lists (switch cases) as they were: an emptied case keeps its name", () => {
+    const result = applyDirtyValues(
+      { switch: [{ caseA: { when: "${ .a }" } }] },
+      { switch: [{ caseA: { when: undefined } }] },
+      new Set(["switch"]),
+      { formListPaths: new Set(["switch"]) },
+    );
+    expect(result.switch).toEqual([{ caseA: {} }]);
   });
 });

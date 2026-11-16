@@ -23,11 +23,13 @@ import {
   schemaToFormFields,
 } from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
+import { TASK_TYPE_KEYS } from "../../src/core/taskTypes";
 import type {
   OneOfField,
   StringField,
   ObjectField,
   EventFilterListField,
+  KeyedObjectsField,
   EnumField,
   JsonField,
   FormFieldDescriptor,
@@ -1502,5 +1504,104 @@ describe("schemaToFormFields json expression siblings", () => {
 
     expect(field).toBeDefined();
     expect(field?.hasExpressionSibling).toBeUndefined();
+  });
+});
+
+/** Paths of every `kind` descriptor, entering children, item fields and variants. */
+function collectKindPaths(
+  fields: FormFieldDescriptor[],
+  kind: FormFieldDescriptor["kind"],
+): string[] {
+  return fields.flatMap((f): string[] => {
+    const own = f.kind === kind ? [f.path] : [];
+    if (f.kind === "object" || f.kind === "section")
+      return [...own, ...collectKindPaths(f.children, kind)];
+    if (f.kind === "one-of")
+      return [...own, ...f.variants.flatMap((v) => collectKindPaths(v.fields, kind))];
+    if (f.kind === "event-filter-list" || f.kind === "ordered-map" || f.kind === "keyed-objects")
+      return [...own, ...collectKindPaths(f.itemFields, kind)];
+    return own;
+  });
+}
+
+/** Every one-of among `fields`, at any depth. */
+function collectOneOfs(fields: FormFieldDescriptor[]): OneOfField[] {
+  return fields.flatMap((f): OneOfField[] => {
+    if (f.kind === "one-of") return [f, ...f.variants.flatMap((v) => collectOneOfs(v.fields))];
+    if (f.kind === "object" || f.kind === "section") return collectOneOfs(f.children);
+    if (f.kind === "event-filter-list" || f.kind === "ordered-map")
+      return collectOneOfs(f.itemFields);
+    return [];
+  });
+}
+
+function listenEventFilterLists(): EventFilterListField[] {
+  return getListenToOneOf().variants.flatMap((v) =>
+    v.fields.filter((f): f is EventFilterListField => f.kind === "event-filter-list"),
+  );
+}
+
+describe("event-filter lists", () => {
+  it.each(["All Event Consumption Strategy", "Any Event Consumption Strategy"])(
+    "listen.to %s is a list of event filters",
+    (option) => {
+      const list = getListenToOneOf()
+        .variants.find((v) => v.label === option)!
+        .fields.find((f) => f.kind === "event-filter-list") as EventFilterListField;
+      expect(list.itemFields.map((f) => f.path)).toEqual(["with", "correlate"]);
+      expect(list.itemLabel).not.toBe("");
+    },
+  );
+
+  it("survey: listen.s two lists are the only event-filter lists", () => {
+    const found = [...TASK_TYPE_KEYS].flatMap((t) =>
+      collectKindPaths(getFormFieldsForNodeType(t), "event-filter-list").map((p) => `${t}:${p}`),
+    );
+    expect(found).toEqual(["listen:listen.to.all", "listen:listen.to.any"]);
+  });
+
+  // Apply writes a list whole, so there is no per-entry stale-path logic: a one-of inside an
+  // entry must keep every option at its own path, with no const writes or presence keys.
+  it("event-filter-list items contain no one-of whose options write elsewhere", () => {
+    const oneOfs = listenEventFilterLists().flatMap((l) => collectOneOfs(l.itemFields));
+    expect(oneOfs.length).toBeGreaterThan(0);
+    for (const oneOf of oneOfs) {
+      for (const variant of oneOf.variants) {
+        expect(variant.constWrites ?? {}, `${oneOf.path} ${variant.label}`).toEqual({});
+        expect(variant.presenceKey, `${oneOf.path} ${variant.label}`).toBeUndefined();
+        expect(
+          variant.fields.every((f) => f.path === oneOf.path),
+          `${oneOf.path} ${variant.label}`,
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("keyed objects (correlate)", () => {
+  const listenFields = () => getFormFieldsForNodeType("listen");
+
+  it("correlate is keyed-objects with From required and Expect optional, in list items and under one", () => {
+    const keyed = collectKindPaths(listenFields(), "keyed-objects");
+    expect(keyed).toEqual(["correlate", "correlate", "listen.to.one.correlate"]);
+    const one = getListenToOneOf()
+      .variants.find((v) => v.label === "One Event Consumption Strategy")!
+      .fields.flatMap((f) => (f.kind === "object" ? f.children : [f]))
+      .find((f) => f.path === "listen.to.one.correlate") as KeyedObjectsField;
+    expect(one.itemFields.map((f) => [f.path, f.required])).toEqual([
+      ["from", true],
+      ["expect", false],
+    ]);
+  });
+
+  it("survey: correlate is the only keyed-objects", () => {
+    const found = [...TASK_TYPE_KEYS].flatMap((t) =>
+      collectKindPaths(getFormFieldsForNodeType(t), "keyed-objects").map((p) => `${t}:${p}`),
+    );
+    expect(found).toEqual([
+      "listen:correlate",
+      "listen:correlate",
+      "listen:listen.to.one.correlate",
+    ]);
   });
 });

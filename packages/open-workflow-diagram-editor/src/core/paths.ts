@@ -31,6 +31,11 @@ export function getParentPath(path: string): string {
   return cut < 0 ? "" : path.slice(0, cut);
 }
 
+/** True when a dot-path segment indexes a list entry (`1` in `to.all.1.with`). */
+export function isIndexSegment(segment: string): boolean {
+  return /^\d+$/.test(segment);
+}
+
 /** True when a dot-notation `path` equals `base` or is nested under it; everything is under `""`. */
 export function isAtOrBelow(path: string, base: string): boolean {
   return base === "" || path === base || path.startsWith(`${base}.`);

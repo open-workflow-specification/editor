@@ -33,6 +33,7 @@ import {
 } from "./customFields/innerObjectText";
 import {
   collectFormListPaths,
+  collectEventFilterLists,
   collectJsonPaths,
   collectSelectedVariants,
   collectValueMapFields,
@@ -190,6 +191,7 @@ export function buildTaskFromDraft({
     sentinelConstWrites,
     sentinelStalePaths,
     formListPaths: collectFormListPaths(fields),
+    eventFilterLists: collectEventFilterLists(fields),
     sentinelPresenceKeys,
   });
   settleAddedFields(built, task, fields, selectedVariants, added);

@@ -15,8 +15,8 @@
  */
 
 import * as React from "react";
-import { useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
-import { X, Plus } from "lucide-react";
+import { useFormContext, type UseFormReturn } from "react-hook-form";
+import { X } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { RemoveFieldButton } from "../removeField";
 import { Input } from "../ui/input";
@@ -41,7 +41,9 @@ import { findShownField } from "../drill/drill";
 import { ChangedDot } from "../FieldLabel";
 import { useFieldChanged } from "../../EditSession";
 import { useFieldError, FieldWithError, formatEntryCount, newId } from "./fieldHelpers";
-import { MAP_ROWS_KEY, readAllMapRows, sentinelPath, type MapRowDraft } from "../sentinels";
+import { readAllMapRows, sentinelPath, type MapRowDraft } from "../sentinels";
+import { AddRowButton } from "./AddRowButton";
+import { useMapRows } from "./useMapRows";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -165,6 +167,8 @@ function liveMapRows(values: Record<string, unknown>, field: MapField): MapRowDr
   return structuralEqual(mapFromRows(written), current) ? rows : undefined;
 }
 
+const toDraft = ({ key, value }: MapEntry): MapRowDraft => ({ key, value });
+
 // ---------------------------------------------------------------------------
 // KeyValueMapField
 // ---------------------------------------------------------------------------
@@ -205,34 +209,20 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   // `taskData`: OneOfFieldRow may call setValue(field.path, savedObject) before this component
   // mounts (KeyValueMapField unmounts when its variant is not active). Otherwise fall back to
   // taskData (the committed task snapshot).
-  const [rows, setRows] = React.useState<MapEntry[]>(() => {
-    const stored = liveMapRows(getValues(), field);
-    if (stored) return stored.map((row) => ({ id: newId(), ...row }));
-    const rhfValue = mapEntriesOf(field, getValues());
-    if (isObjectNotArray(rhfValue)) {
-      return extractEntries(rhfValue);
-    }
-    return extractEntries(mapEntriesOf(field, taskData));
-  });
-
-  // Re-sync rows on any form reset (node switch, undo/redo, or cancel).
-  // `defaultValues` identity changes whenever form.reset(values) is called,
-  // which covers node switches and cancel (EditFormFooter passes the original
-  // task snapshot). Reading the map value directly from defaultValues is the
-  // most reliable signal because it is independent of taskData identity.
-  // Adjusted during render (not in an effect), so the reset rows show in the same render.
-  const { defaultValues } = useFormState({ control: form.control });
-  const [seenDefaults, setSeenDefaults] = React.useState(defaultValues);
-  if (seenDefaults !== defaultValues) {
-    setSeenDefaults(defaultValues);
-    setRows(extractEntries(mapEntriesOf(field, defaultValues)));
-  }
-
-  // Keep a stable ref to rows so event handlers can read the current snapshot
-  // without needing rows as a dependency (avoids stale-closure issues).
-  const rowsRef = React.useRef(rows);
-  React.useEffect(() => {
-    rowsRef.current = rows;
+  // A reset (node switch, undo/redo, Cancel, Apply) rebuilds the rows from the new defaults.
+  const { rows, rowsRef, storeRows, defaultValues } = useMapRows<MapEntry>({
+    path: field.path,
+    initial: () => {
+      const stored = liveMapRows(getValues(), field);
+      if (stored) return stored.map((row) => ({ id: newId(), ...row }));
+      const rhfValue = mapEntriesOf(field, getValues());
+      if (isObjectNotArray(rhfValue)) {
+        return extractEntries(rhfValue);
+      }
+      return extractEntries(mapEntriesOf(field, taskData));
+    },
+    fromDefaults: (defaults) => extractEntries(mapEntriesOf(field, defaults)),
+    toDraft,
   });
 
   // ── Entry mutation helpers ────────────────────────────────────────────────
@@ -260,21 +250,13 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   );
 
   /**
-   * Replaces the rows, stores them in the form (so a remount gets them back)
+   * Replaces the rows (stored in the form, so a remount gets them back) and rewrites the touched
+   * keys from the row that now owns each.
    */
   const commitRows = React.useCallback(
     (next: MapEntry[], touchedKeys: string[]) => {
-      rowsRef.current = next;
-      setRows(next);
-      const drafts: MapRowDraft[] = next.map(({ key, value }) => ({ key, value }));
-      setValue(
-        MAP_ROWS_KEY as never,
-        {
-          ...readAllMapRows(getValues()),
-          [field.path]: drafts,
-        } as never,
-      );
-      const map = mapFromRows(drafts);
+      storeRows(next);
+      const map = mapFromRows(next);
       for (const key of new Set(touchedKeys)) {
         if (key === "" || isHeld(key)) continue;
         if (Object.prototype.hasOwnProperty.call(map, key)) {
@@ -284,7 +266,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
         }
       }
     },
-    [field, getValues, setValue, clearKey, isHeld],
+    [field, storeRows, setValue, clearKey, isHeld],
   );
 
   const updateRow = React.useCallback(
@@ -300,13 +282,13 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
         [current.key, newKey],
       );
     },
-    [commitRows, field, keepShown],
+    [commitRows, field, keepShown, rowsRef],
   );
 
   const addRow = React.useCallback(() => {
     keepShown();
     commitRows([...rowsRef.current, { id: newId(), key: "", value: "" }], []);
-  }, [commitRows, keepShown]);
+  }, [commitRows, keepShown, rowsRef]);
 
   const deleteRow = React.useCallback(
     (id: string) => {
@@ -318,7 +300,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
       );
       validateField?.(field.path);
     },
-    [commitRows, validateField, field.path, keepShown],
+    [commitRows, validateField, field.path, keepShown, rowsRef],
   );
 
   // A held fixed-key row moves to its field when focus leaves it, if non-empty: a field with options
@@ -366,6 +348,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
       variantSnapshots,
       validateField,
       commitRows,
+      rowsRef,
     ],
   );
 
@@ -457,17 +440,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
         ) : null}
       </FieldWithError>
 
-      <div className="dec-map-add-btn-wrap">
-        <button
-          type="button"
-          className="dec-map-add-btn"
-          onClick={addRow}
-          aria-label={t("sidebar.map.addProperty")}
-        >
-          <Plus className="dec-map-add-icon" aria-hidden="true" />
-          {t("sidebar.map.addProperty")}
-        </button>
-      </div>
+      <AddRowButton label={t("sidebar.map.addProperty")} onClick={addRow} />
     </div>
   );
 }

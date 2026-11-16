@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
+import {
+  ROOT_ONE_OF_PATH,
+  forEachField,
+  type FormFieldDescriptor,
+} from "@/core/schemaToFormFields";
+import { isCustomFieldsMap } from "../mapEntries";
 import { collectLeafKinds, selectedVariantIndexFromSentinels } from "../taskFormContext";
 
 /**
@@ -31,6 +36,15 @@ export interface OrderedMapView {
   itemPaths: Set<string>;
 }
 
+/** An event-filter list: the container that shows it, and what one item renders (paths relative to it). */
+export interface EventFilterListView {
+  parent: string;
+  /** Value fields of one item ("Custom fields" maps excluded: their entries are user keys). */
+  itemLeaves: Set<string>;
+  /** Objects of one item (`with`), which show a level error at their heading. */
+  itemContainers: Set<string>;
+}
+
 /**
  * What the form shows right now: the selected variant of every one-of, derived from the field
  * descriptors alone. Errors are classified against it, so a schema change needs no code change.
@@ -44,8 +58,8 @@ export interface ActiveFormView {
   taskLists: Set<string>;
   /** Ordered maps: the container that shows them and the item-relative leaf paths each entry renders. */
   orderedMaps: Map<string, OrderedMapView>;
-  /** Event-filter lists: they render each item's `with` and `correlate` themselves. */
-  eventFilterLists: Set<string>;
+  /** Event-filter lists, whose entries are addressed by index (`<list>.<i>.<item path>`). */
+  eventFilterLists: Map<string, EventFilterListView>;
   /** Presence keys by one-of path (`""` for the root one-of). */
   presence: Map<string, PresenceKeys>;
 }
@@ -64,7 +78,7 @@ export function buildActiveFormView(
     containers: new Set([""]),
     taskLists: new Set(),
     orderedMaps: new Map(),
-    eventFilterLists: new Set(),
+    eventFilterLists: new Map(),
     presence: new Map(),
   };
 
@@ -96,9 +110,19 @@ export function buildActiveFormView(
           parent,
           itemPaths: new Set(collectLeafKinds(field.itemFields).keys()),
         });
+      } else if (field.kind === "event-filter-list") {
+        const itemContainers = new Set<string>();
+        const customFields = new Set<string>();
+        forEachField(field.itemFields, (inner) => {
+          if (inner.kind === "object") itemContainers.add(inner.path);
+          if (isCustomFieldsMap(inner)) customFields.add(inner.path);
+        });
+        const itemLeaves = new Set(
+          [...collectLeafKinds(field.itemFields).keys()].filter((leaf) => !customFields.has(leaf)),
+        );
+        view.eventFilterLists.set(field.path, { parent, itemLeaves, itemContainers });
       } else if (!isInternalPath(field.path) && !view.leaves.has(field.path)) {
         view.leaves.set(field.path, field);
-        if (field.kind === "event-filter-list") view.eventFilterLists.add(field.path);
       }
     }
   };

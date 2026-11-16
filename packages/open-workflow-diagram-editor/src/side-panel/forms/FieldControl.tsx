@@ -26,7 +26,6 @@ import {
   StringListField,
   ThenField,
   ChildTaskListField,
-  EventFilterListField,
   StructuredValueField,
 } from "./customFields";
 import { ReadOnlyValue, isReadOnlyTextField } from "./customFields/ReadOnlyValue";
@@ -43,6 +42,8 @@ export type FieldControlProps = {
     | { kind: "one-of" }
     | { kind: "map" }
     | { kind: "ordered-map" }
+    | { kind: "event-filter-list" }
+    | { kind: "keyed-objects" }
     | { kind: "section" }
   >;
   /** DOM id forwarded to the underlying <input>/<select>/<textarea> so that
@@ -78,8 +79,6 @@ export function FieldControl({ field, id }: FieldControlProps) {
       return <ChildTaskListField field={field} />;
     case "string-list":
       return <StringListField field={field} />;
-    case "event-filter-list":
-      return <EventFilterListField field={field} />;
     case "json":
       return <StructuredValueField field={field} {...idProp} />;
   }

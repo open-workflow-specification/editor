@@ -43,6 +43,8 @@ import { FieldList } from "./FieldList";
 import { RemoveFieldButton } from "./removeField";
 import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
 import { isInlineLevel, rendersAsDrillRow, STRUCTURED_KINDS } from "./drill/drill";
+import { EventFilterListField } from "./eventFilters/EventFilterListField";
+import { KeyedObjectsField } from "./customFields/KeyedObjectsField";
 
 /* useFieldArry's per entry key, not 'id': (an entry name could be 'id') */
 export const RHF_ENTRY_KEY = "__rhfEntryKey";
@@ -70,6 +72,12 @@ export function FormField({ field }: FormFieldProps) {
   }
   if (field.kind === "ordered-map") {
     return <OrderedMapRow field={field} />;
+  }
+  if (field.kind === "event-filter-list") {
+    return <EventFilterListField field={field} />;
+  }
+  if (field.kind === "keyed-objects") {
+    return <KeyedObjectsField field={field} />;
   }
 
   return <PlainFieldRow field={field} />;

@@ -20,11 +20,13 @@ import {
   type FormFieldDescriptor,
   type MapField,
   type ObjectField,
+  type EventFilterListField,
   type OneOfField,
   type OneOfVariant,
   type SectionField,
 } from "../../../core/schemaToFormFields";
-import { variantFieldsOf } from "../taskFormContext";
+import { isAtOrBelow, isIndexSegment, joinPath } from "../../../core/paths";
+import { prefixFields, variantFieldsOf } from "../taskFormContext";
 
 /**
  * Core types and utilities for drill-in navigation.
@@ -77,6 +79,8 @@ export function needsAtLeastOne(target: DrillTarget, selectVariant: VariantSelec
  */
 export function rendersAsDrillRow(field: FormFieldDescriptor, inline: boolean): boolean {
   if (field.kind === "section") return true;
+  // A list always stands in place (its entries are the rows), so Any and All keep one shape.
+  if (field.kind === "event-filter-list") return false;
   if (field.kind === "object" || field.kind === "map") return !inline;
   return field.kind === "one-of" && !inline && oneOfDrills(field);
 }
@@ -110,6 +114,7 @@ const FIXED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<FormFieldD
   "section",
   "child-task-list",
   "ordered-map",
+  "event-filter-list",
 ]);
 
 /** Whether a field is part of the task's shape, so it is never added or removed. */
@@ -128,7 +133,7 @@ export function isInlineLevel(fields: readonly FormFieldDescriptor[]): boolean {
 /** Kinds that hold more than one value; anything else is a single plain value. */
 export const STRUCTURED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<
   FormFieldDescriptor["kind"]
->(["object", "map", "one-of", "section", "ordered-map", "event-filter-list"]);
+>(["object", "map", "one-of", "section", "ordered-map", "event-filter-list", "keyed-objects"]);
 
 /** Whether a one-of variant's fields are one plain value, or none. */
 export function isSingleValue(fields: readonly FormFieldDescriptor[]): boolean {
@@ -165,6 +170,16 @@ export function findShownField(
 ): FormFieldDescriptor | undefined {
   for (const field of fields) {
     if (field.path === path) return field;
+    if (field.kind === "event-filter-list" && isAtOrBelow(path, field.path)) {
+      // An entry is addressed by path alone, so a new entry resolves before it has a value.
+      const index = path.slice(field.path.length + 1).split(".")[0]!;
+      if (!isIndexSegment(index)) continue;
+      const entry = listEntryField(field, Number(index), "");
+      if (entry.path === path) return entry;
+      const found = findShownField(entry.children, path, selectVariant);
+      if (found) return found;
+      continue;
+    }
     const variant = field.kind === "one-of" ? selectVariant(field) : undefined;
     const nested =
       field.kind === "object" || field.kind === "section"
@@ -176,6 +191,33 @@ export function findShownField(
     if (found) return found;
   }
   return undefined;
+}
+
+/** One entry of an event-filter list as a drill level: its item fields re-rooted at `<list>.<index>`. */
+export function listEntryField(
+  list: EventFilterListField,
+  index: number,
+  label: string,
+): ObjectField & { entryOf: string } {
+  const path = listEntryPath(list, index);
+  return {
+    kind: "object",
+    path,
+    label,
+    required: false,
+    children: prefixFields(list.itemFields, path),
+    entryOf: list.path,
+  };
+}
+
+/** The path of entry `index` of an event-filter list (`listen.to.all.1`). */
+export function listEntryPath(list: EventFilterListField, index: number): string {
+  return joinPath(list.path, String(index));
+}
+
+/** Whether a level is an event-filter-list entry (laid out like a task's top level). */
+export function isListEntry(field: FormFieldDescriptor): boolean {
+  return field.kind === "object" && field.entryOf !== undefined;
 }
 
 /** The drill target at `path` (see `findShownField`). */

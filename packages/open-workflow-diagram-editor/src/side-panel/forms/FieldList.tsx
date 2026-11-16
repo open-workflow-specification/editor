@@ -179,7 +179,8 @@ function EditableFieldList({ fields, before, ownerPath, atLeastOne }: FieldListP
     const { defaultValues } = liveFormState();
     const maps: string[] = [];
     forEachField([field], (inner) => {
-      if (inner.kind === "map") maps.push(inner.path);
+      // Both keep rows in `__maprows__` (a blank key, a held entry) that would revive on re-add.
+      if (inner.kind === "map" || inner.kind === "keyed-objects") maps.push(inner.path);
       const editorPath =
         inner.kind === "one-of"
           ? sentinelPath(inner.path)

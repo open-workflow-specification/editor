@@ -42,6 +42,7 @@ export type FormFieldDescriptor =
   | ObjectField
   | SectionField
   | EventFilterListField
+  | KeyedObjectsField
   | MapField
   | JsonField
   | OrderedMapField
@@ -129,16 +130,25 @@ export interface ChildTaskListField extends FieldBase {
 }
 
 /**
- * An array of schema-defined objects whose items match the `EventFilter` shape
- * (`with` required, `correlate` optional). Rendered by the specialised
- * `EventFilterListField` editor that understands `{ with, correlate }` items.
- *
- * Identified structurally: item schema has `"with"` in its `required` array
- * AND has both `"with"` and `"correlate"` in its `properties`.
+ * Listen's `to.all` / `to.any`: an array of event filters (`{ with, correlate? }`), each entry
+ * edited as its own level. Identified structurally (`isEventFilterItemSchema`); any other array of
+ * objects is a `json` field.
  */
 export interface EventFilterListField extends FieldBase {
   kind: "event-filter-list";
-  /** Schema-derived fields for a single item in the array. */
+  /** The event filter's fields, paths relative to one entry. */
+  itemFields: FormFieldDescriptor[];
+  /** Singular noun for one entry: the items schema's title ("Event Filter"), else the list's label. */
+  itemLabel: string;
+}
+
+/**
+ * User-defined keys where each value is an object with known fields (e.g., listen's `correlate`
+ * where each key has `{ from, expect? }`). Schema: `additionalProperties` with `properties`.
+ */
+export interface KeyedObjectsField extends FieldBase {
+  kind: "keyed-objects";
+  /** Fields of one entry's value, paths relative to that value. */
   itemFields: FormFieldDescriptor[];
 }
 
@@ -154,6 +164,8 @@ export interface ObjectField extends FieldBase {
   kind: "object";
   children: FormFieldDescriptor[];
   atLeastOne?: true;
+  /** Set on an event-filter entry synthesized by the side panel: the list's path. */
+  entryOf?: string;
 }
 
 /* Task base fields */
@@ -396,6 +408,24 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
 }
 
 /**
+ * The value schema of an object whose keys are free and whose values are objects of known fields
+ * (see `KeyedObjectsField`), following one `$ref`; undefined for any other schema.
+ */
+function keyedObjectSchema(
+  schema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (schema.type !== "object" || schema.properties !== undefined) return undefined;
+  let value = schema.additionalProperties;
+  if (isObjectNotArray(value) && typeof value.$ref === "string") {
+    value = resolveRef(value.$ref, defs) ?? value;
+  }
+  return isObjectNotArray(value) && value.type === "object" && isObjectNotArray(value.properties)
+    ? value
+    : undefined;
+}
+
+/**
  * Returns custom fields map for schemas allowing extra keys (e.g. event extension attributes).
  */
 function customFieldsMap(
@@ -576,6 +606,11 @@ function deriveLabel(schema: Record<string, unknown>, key: string): string {
   return key;
 }
 
+/** "EventFilter" → "Event Filter". */
+function titleToWords(title: string): string {
+  return title.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
 /** Formats a schema title or camelCase identifier into a user-friendly label. */
 function formatVariantLabel(title: string): string {
   if (
@@ -752,12 +787,10 @@ export function schemaToFormFields(
       continue;
     }
 
-    // ── Event-filter list / Generic object-list ─────────────────────────────
-    // Resolve the items schema (following one $ref) for both specialised and
-    // generic array field kinds.
+    // ── Event-filter list (any other array of objects is json) ─────────────
     const rawItems = arrayItemsSchema(resolved, localDefs);
     if (rawItems) {
-      // Follow one level of $ref so that both checks work on the concrete schema.
+      // Follow one level of $ref so the checks work on the concrete schema.
       let itemsResolved: Record<string, unknown> = rawItems;
       if (typeof rawItems.$ref === "string") {
         const r = resolveRef(rawItems.$ref, localDefs);
@@ -765,30 +798,33 @@ export function schemaToFormFields(
       }
 
       if (itemsResolved.type === "object" && itemsResolved.properties) {
+        const listLabel = deriveLabel(prop, key);
         if (isEventFilterItemSchema(itemsResolved)) {
-          const itemRequired = new Set<string>(
-            Array.isArray(itemsResolved.required) ? (itemsResolved.required as string[]) : [],
-          );
-          const itemFields = schemaToFormFields(
-            itemsResolved as DereferencedSchema,
-            localDefs,
-            itemRequired,
-            "",
-            format,
-          );
           fields.push({
             kind: "event-filter-list",
             path: fieldPath,
-            label: deriveLabel(prop, key),
+            label: listLabel,
             ...withDesc(description),
             required: isRequired,
-            itemFields,
+            itemFields: schemaToFormFields(
+              itemsResolved as DereferencedSchema,
+              localDefs,
+              new Set<string>(
+                Array.isArray(itemsResolved.required) ? (itemsResolved.required as string[]) : [],
+              ),
+              "",
+              format,
+            ),
+            itemLabel:
+              typeof itemsResolved.title === "string"
+                ? titleToWords(itemsResolved.title)
+                : listLabel,
           });
         } else {
           fields.push({
             kind: "json",
             path: fieldPath,
-            label: deriveLabel(prop, key),
+            label: listLabel,
             ...withDesc(description),
             required: isRequired,
             format,
@@ -1001,6 +1037,26 @@ export function schemaToFormFields(
           continue;
         }
       }
+    }
+
+    // ── Keyed objects (every value an object of known fields) ───────────────
+    const keyedValue = keyedObjectSchema(resolved, localDefs);
+    if (keyedValue) {
+      fields.push({
+        kind: "keyed-objects",
+        path: fieldPath,
+        label: deriveLabel(prop, key),
+        ...withDesc(description),
+        required: isRequired,
+        itemFields: schemaToFormFields(
+          keyedValue as DereferencedSchema,
+          localDefs,
+          new Set(Array.isArray(keyedValue.required) ? (keyedValue.required as string[]) : []),
+          "",
+          format,
+        ),
+      });
+      continue;
     }
 
     // ── Open-ended key-value map (additionalProperties, no fixed properties) ─

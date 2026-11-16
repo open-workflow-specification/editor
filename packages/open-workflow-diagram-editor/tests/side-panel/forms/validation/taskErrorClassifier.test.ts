@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { leaf } from "../../../test-utils/validation-helpers";
+import { buildTaskFormState, leaf } from "../../../test-utils/validation-helpers";
 import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
 import { buildActiveFormView } from "../../../../src/side-panel/forms/validation/activeFormView";
@@ -526,33 +526,26 @@ describe("NOISE_KEYWORDS", () => {
 });
 
 describe("classifyErrorPath in an event-filter list", () => {
-  const listFields: FormFieldDescriptor[] = [
-    { kind: "event-filter-list", path: "to.any", label: "any", required: true, itemFields: [] },
-  ];
-  const view = buildActiveFormView(listFields, {}, {});
-  const place = (path: string) => classifyErrorPath(path, "required", {}, view);
+  const { fields: listenFields, values } = buildTaskFormState("listen", {
+    listen: { to: { all: [{ with: { type: "a" } }, { with: { type: "b" } }] } },
+  });
+  const view = buildActiveFormView(listenFields, {}, values);
+  const place = (path: string, keyword = "required") => classifyErrorPath(path, keyword, {}, view);
 
   it.each([
-    { name: "an item", path: "to.any.0", placed: "to.any.0" },
-    { name: "the with of an item", path: "to.any.1.with", placed: "to.any.1.with" },
-    { name: "a shown event property", path: "to.any.1.with.type", placed: "to.any.1.with.type" },
-    {
-      name: "an event property with no input",
-      path: "to.any.0.with.time",
-      placed: "to.any.0.with",
-    },
-    { name: "a value inside the data", path: "to.any.0.with.data.x", placed: "to.any.0.with.data" },
-    { name: "the correlate of an item", path: "to.any.0.correlate", placed: "to.any.0.correlate" },
-    {
-      name: "a correlation key",
-      path: "to.any.0.correlate.id.from",
-      placed: "to.any.0.correlate",
-    },
-  ])("places an error on $name where the list shows it", ({ path, placed }) => {
-    expect(place(path)).toEqual({ kind: "field", path: placed });
-  });
-
-  it("places an error on the list itself on the list", () => {
-    expect(place("to.any")).toEqual({ kind: "field", path: "to.any" });
+    ["an attribute of an entry", "listen.to.all.1.with.type", "field", "listen.to.all.1.with.type"],
+    [
+      "a value inside an attribute",
+      "listen.to.all.0.with.data.x",
+      "field",
+      "listen.to.all.0.with.data",
+    ],
+    ["an entry's with (minProperties)", "listen.to.all.1.with", "level", "listen.to.all.1.with"],
+    ["an extension attribute", "listen.to.all.1.with.tenantid", "level", "listen.to.all.1.with"],
+    ["an entry itself (required with)", "listen.to.all.1", "level", "listen.to.all.1"],
+    ["a correlation key", "listen.to.all.1.correlate.k.from", "field", "listen.to.all.1.correlate"],
+    ["the list itself", "listen.to.all", "level", "listen.to"],
+  ])("places an error on %s", (_name, path, kind, placed) => {
+    expect(place(path)).toEqual({ kind, path: placed });
   });
 });

@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import { isAtOrBelow } from "@/core/paths";
+import { shiftEntryKey } from "./eventFilters/removeListEntry";
 
 /**
  * The optional fields added in this draft ("Fields you can add"). Held by the edit session, above
@@ -28,6 +29,11 @@ export type AddedFields = {
   add(path: string, label: string): void;
   /** Drops `path` and every added path at or below it. */
   drop(path: string): void;
+  /**
+   * After entry `removed` of the list at `listPath` is removed: drops its added paths and
+   * renumbers those of later entries (see `shiftEntryKey`).
+   */
+  shift(listPath: string, removed: number): void;
 };
 
 export const AddedFieldsContext = React.createContext<AddedFields | null>(null);
@@ -54,6 +60,22 @@ export function useAddedFieldsState(): AddedFields & { clear(): void } {
       ),
     [],
   );
+  const shift = React.useCallback(
+    (listPath: string, removed: number) =>
+      setAdded(
+        (current) =>
+          new Map(
+            [...current].flatMap(([path, label]): [string, string][] => {
+              const next = shiftEntryKey(path, listPath, removed);
+              return next === undefined ? [] : [[next, label]];
+            }),
+          ),
+      ),
+    [],
+  );
   const clear = React.useCallback(() => setAdded(NONE), []);
-  return React.useMemo(() => ({ added, add, drop, clear }), [added, add, drop, clear]);
+  return React.useMemo(
+    () => ({ added, add, drop, shift, clear }),
+    [added, add, drop, shift, clear],
+  );
 }

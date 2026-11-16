@@ -1368,6 +1368,42 @@
     @apply dec:text-xs dec:font-medium dec:text-gray-900;
   }
 
+  /* A list entry titled by one of its values (an event's type): a value, so mono and truncated. */
+  .dec-root .dec-form-drill-row-label.is-value {
+    @apply dec:truncate;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root .dec-form-entry-list {
+    @apply dec:flex dec:flex-col dec:gap-2;
+  }
+
+  /* Keyed objects (correlate): each key, then its value's fields, indented under it. */
+  .dec-root .dec-form-keyed-list {
+    @apply dec:flex dec:flex-col dec:gap-3;
+  }
+
+  .dec-root .dec-form-keyed-entry {
+    @apply dec:flex dec:flex-col dec:gap-2 dec:border-l-2 dec:border-gray-200 dec:pl-3;
+  }
+
+  .dec-root .dec-form-keyed-key {
+    @apply dec:flex dec:items-center dec:gap-1;
+  }
+
+  .dec-root .dec-form-keyed-key-readonly {
+    @apply dec:text-xs dec:font-medium dec:text-gray-900;
+    font-family: var(--dec-font-mono);
+  }
+
+  .dec-root.dark .dec-form-keyed-entry {
+    @apply dec:border-gray-700;
+  }
+
+  .dec-root.dark .dec-form-keyed-key-readonly {
+    @apply dec:text-gray-100;
+  }
+
   .dec-root .dec-form-drill-row-summary {
     @apply dec:truncate dec:text-xs dec:text-gray-600;
   }

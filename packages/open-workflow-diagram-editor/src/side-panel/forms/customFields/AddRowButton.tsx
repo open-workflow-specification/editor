@@ -14,14 +14,19 @@
  * limitations under the License.
  */
 
+import { Plus } from "lucide-react";
+
 /**
- * The event properties (`with.<key>`) an event filter item shows an input for. An error on any
- * other property has no input to sit on, so validation reports it on the `with` row instead.
+ * The "+ Add …" button under an editable list (map entries, string items, keys, list entries).
+ * `FIRST_TO_FILL` (`drill.ts`) finds it by its class to focus an empty list.
  */
-export const EVENT_PROPERTY_KEYS: ReadonlySet<string> = new Set([
-  "type",
-  "source",
-  "data",
-  "subject",
-  "id",
-]);
+export function AddRowButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <div className="dec-map-add-btn-wrap">
+      <button type="button" className="dec-map-add-btn" onClick={onClick}>
+        <Plus className="dec-map-add-icon" aria-hidden="true" />
+        {label}
+      </button>
+    </div>
+  );
+}

@@ -54,13 +54,21 @@ export function isFixedKey(field: MapField, key: string): boolean {
 const PATH_SYNTAX = /[.[\]'"]/;
 
 /**
- * Whether a "Custom fields" entry `key` can never be written or listed: its entries share their
- * object's form paths, and RHF reads `.`, `[`, `]`, `'` and `"` as path syntax, so `source.x` or
- * `source[x]` would write inside `source`. Nor can a name the path helpers refuse (`prototype`,
- * `constructor`, `__proto__`: `isSafeKey`), which RHF drops silently.
+ * Whether a key the user typed can never be a form path segment: RHF reads `.`, `[`, `]`, `'`,
+ * `"` as path syntax, so `source.x` or `source[x]` writes inside `source`. Silently drops unsafe
+ * names (`prototype`, `constructor`, `__proto__`). Editors with path-segment keys (Custom fields,
+ * keyed objects) hold invalid keys unwritten and exclude existing task keys.
+ */
+export function isUnwritableKeyName(key: string): boolean {
+  return PATH_SYNTAX.test(key) || !isSafeKey(key);
+}
+
+/**
+ * Whether a map entry `key` can never be written or listed. Only "Custom fields" entries are
+ * guarded: plain maps still write a path-syntax key as typed (a known, pre-existing limit).
  */
 export function isUnwritableKey(field: MapField, key: string): boolean {
-  return field.customFieldsOf !== undefined && (PATH_SYNTAX.test(key) || !isSafeKey(key));
+  return field.customFieldsOf !== undefined && isUnwritableKeyName(key);
 }
 
 /**

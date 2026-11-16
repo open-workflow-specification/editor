@@ -144,13 +144,58 @@ describe("EditFormFooter — error counter consistency", () => {
     expect(counter()).toBe("1 error");
 
     await panel.drillInto(user, "To");
-    await user.click(screen.getByRole("button", { name: "Remove filter 1" }));
+    await user.click(screen.getByRole("button", { name: "Remove Event Filter 1" }));
 
     expect(counter()).toBeNull();
     expect(inlineErrors()).toEqual([]);
 
     await panel.toTopLevel(user, "step1");
     expect(document.querySelector(".dec-form-drill-pill.error")).toBeNull();
+  });
+
+  describe("an error found on blur, before any Apply", () => {
+    const CORRELATED = {
+      listen: {
+        to: {
+          all: [
+            { with: { type: "com.example.a" } },
+            {
+              with: { type: "com.example.b" },
+              correlate: { orderId: { from: ".order.id" } },
+            },
+          ],
+        },
+      },
+    };
+
+    /** Opens filter `com.example.b` and clears its correlate key's required `from`. */
+    async function clearCorrelateFrom() {
+      const user = await openTask(CORRELATED);
+      await panel.drillInto(user, "To", "com.example.b");
+      await user.clear(screen.getByDisplayValue(".order.id"));
+      await user.tab();
+      expect(counter()).toBe("1 error");
+      expect(inlineErrors()).toEqual(["must have required property 'from'"]);
+      return user;
+    }
+
+    it("drops from the count with the event filter it was in", async () => {
+      const user = await clearCorrelateFrom();
+
+      await user.click(screen.getByRole("button", { name: "Up one level" }));
+      await user.click(screen.getByRole("button", { name: "Remove com.example.b" }));
+
+      expect(counter()).toBeNull();
+    });
+
+    it("drops from the count with the correlate key it was under", async () => {
+      const user = await clearCorrelateFrom();
+
+      await user.click(screen.getByRole("button", { name: "Remove orderId" }));
+
+      expect(counter()).toBeNull();
+      expect(inlineErrors()).toEqual([]);
+    });
   });
 });
 

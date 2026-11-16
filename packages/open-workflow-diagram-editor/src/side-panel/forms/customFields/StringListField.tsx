@@ -16,12 +16,13 @@
 
 import * as React from "react";
 import { useFormContext, useFormState, type UseFormReturn } from "react-hook-form";
-import { X, Plus } from "lucide-react";
+import { X } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { StringListField as StringListFieldDescriptor } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
 import { FieldWithError, newId, useFieldError } from "./fieldHelpers";
+import { AddRowButton } from "./AddRowButton";
 import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
@@ -182,17 +183,7 @@ export function StringListField({ field }: StringListFieldProps) {
         ) : null}
       </FieldWithError>
 
-      <div className="dec-map-add-btn-wrap">
-        <button
-          type="button"
-          className="dec-map-add-btn"
-          onClick={addRow}
-          aria-label={t("sidebar.stringList.addItem")}
-        >
-          <Plus className="dec-map-add-icon" aria-hidden="true" />
-          {t("sidebar.stringList.addItem")}
-        </button>
-      </div>
+      <AddRowButton label={t("sidebar.stringList.addItem")} onClick={addRow} />
     </div>
   );
 }

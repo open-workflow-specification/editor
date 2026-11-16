@@ -341,8 +341,9 @@ export const INVALID_TASKS: InvalidTaskCase[] = [
     name: "listen without events",
     nodeType: "listen",
     task: { listen: { to: {} } },
-    fieldPaths: ["listen.to.all"],
-    levelPaths: [],
+    // A missing list is shown on the level that holds it (its picker), not as a field.
+    fieldPaths: [],
+    levelPaths: ["listen.to"],
   },
   {
     name: "emit with a source that is not a uri",
