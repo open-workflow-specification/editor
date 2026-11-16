@@ -28,6 +28,7 @@ export default defineConfig({
     video: "retain-on-failure",
     trace: "retain-on-failure",
     baseURL: "http://localhost:6006",
+    permissions: ["clipboard-read", "clipboard-write"],
   },
 
   webServer: {
