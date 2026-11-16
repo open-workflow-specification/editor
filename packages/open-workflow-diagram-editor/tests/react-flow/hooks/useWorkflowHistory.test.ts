@@ -17,7 +17,18 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { Classes } from "@openworkflowspec/sdk";
-import { useWorkflowHistory } from "../../../src/react-flow/hooks/useWorkflowHistory";
+import {
+  INITIAL_WORKFLOW_HISTORY_STATE,
+  useWorkflowHistory,
+  workflowHistoryReducer,
+} from "../../../src/react-flow/hooks/useWorkflowHistory";
+import type {
+  ChangeOrigin,
+  HistorySnapshot,
+  WorkflowHistoryAction,
+  WorkflowHistoryState,
+} from "../../../src/react-flow/hooks/useWorkflowHistory";
+import { getPast, getPresent } from "../../../src/react-flow/hooks/historyReducer";
 import { structuralEqual } from "../../../src/core/structuralEqual";
 import {
   BASIC_VALID_WORKFLOW_JSON,
@@ -475,5 +486,188 @@ describe("useWorkflowHistory", () => {
       expect(result.current.canUndo).toBe(true);
       expect(result.current.canRedo).toBe(false);
     });
+  });
+});
+
+describe("useWorkflowHistory — batched updates", () => {
+  it("compares each seed against the previous queued one, not the last render", () => {
+    const { result } = renderHook(() => useWorkflowHistory(false));
+    const modelA = makeModel(BASIC_VALID_WORKFLOW_JSON);
+    act(() => result.current.seedModel(modelA, VP_A, null));
+
+    act(() => {
+      result.current.seedModel(makeModel(BASIC_VALID_WORKFLOW_JSON_TASKS), VP_A, null);
+      result.current.seedModel(makeModel(BASIC_VALID_WORKFLOW_JSON), VP_A, null);
+    });
+
+    expect(structuralEqual(result.current.model!, modelA)).toBe(true);
+    expect(result.current.changeOrigin).toBe("external");
+  });
+
+  it("marks a seed with an explicit internal origin as internal", () => {
+    const { result } = renderHook(() => useWorkflowHistory(false));
+    act(() => result.current.seedModel(makeModel(BASIC_VALID_WORKFLOW_JSON), VP_A, null));
+
+    act(() =>
+      result.current.seedModel(makeModel(BASIC_VALID_WORKFLOW_JSON_TASKS), VP_A, null, "internal"),
+    );
+
+    expect(result.current.changeOrigin).toBe("internal");
+  });
+});
+
+describe("workflowHistoryReducer", () => {
+  const SNAP_A: HistorySnapshot = {
+    model: makeModel(BASIC_VALID_WORKFLOW_JSON),
+    viewport: VP_A,
+    selectedNodeId: null,
+  };
+  const SNAP_B: HistorySnapshot = {
+    model: makeModel(BASIC_VALID_WORKFLOW_JSON_TASKS),
+    viewport: VP_A,
+    selectedNodeId: null,
+  };
+
+  function stateAt(
+    snapshots: HistorySnapshot[],
+    presentIndex: number,
+    changeOrigin: ChangeOrigin,
+  ): WorkflowHistoryState {
+    return { history: { history: snapshots, presentIndex }, changeOrigin };
+  }
+
+  const seed = (
+    snapshot: HistorySnapshot,
+    origin: ChangeOrigin,
+    isReadOnly = false,
+  ): WorkflowHistoryAction => ({ type: "SEED", snapshot, origin, isReadOnly });
+
+  const submit = (snapshot: HistorySnapshot, isReadOnly = false): WorkflowHistoryAction => ({
+    type: "SUBMIT",
+    snapshot,
+    isReadOnly,
+  });
+
+  type OriginCase = {
+    name: string;
+    state: WorkflowHistoryState;
+    action: WorkflowHistoryAction;
+    expected: ChangeOrigin;
+  };
+
+  const originCases: OriginCase[] = [
+    {
+      name: "first external seed",
+      state: INITIAL_WORKFLOW_HISTORY_STATE,
+      action: seed(SNAP_A, "external"),
+      expected: "external",
+    },
+    {
+      name: "first internal seed",
+      state: INITIAL_WORKFLOW_HISTORY_STATE,
+      action: seed(SNAP_A, "internal"),
+      expected: "internal",
+    },
+    {
+      name: "changed external seed after an internal change",
+      state: stateAt([SNAP_A], 0, "internal"),
+      action: seed(SNAP_B, "external"),
+      expected: "external",
+    },
+    {
+      name: "changed internal seed after an external change",
+      state: stateAt([SNAP_A], 0, "external"),
+      action: seed(SNAP_B, "internal"),
+      expected: "internal",
+    },
+    {
+      name: "unchanged seed keeps the current origin",
+      state: stateAt([SNAP_A], 0, "internal"),
+      action: seed(SNAP_A, "external"),
+      expected: "internal",
+    },
+    {
+      name: "read-only seed is never internal",
+      state: stateAt([SNAP_A], 0, "external"),
+      action: seed(SNAP_B, "internal", true),
+      expected: "external",
+    },
+    {
+      name: "submit of a changed model",
+      state: stateAt([SNAP_A], 0, "external"),
+      action: submit(SNAP_B),
+      expected: "internal",
+    },
+    {
+      name: "viewport-only submit keeps the current origin",
+      state: stateAt([SNAP_A], 0, "external"),
+      action: submit({ ...SNAP_A, viewport: VP_B }),
+      expected: "external",
+    },
+    {
+      name: "undo",
+      state: stateAt([SNAP_A, SNAP_B], 1, "external"),
+      action: { type: "UNDO" },
+      expected: "internal",
+    },
+    {
+      name: "redo",
+      state: stateAt([SNAP_A, SNAP_B], 0, "external"),
+      action: { type: "REDO" },
+      expected: "internal",
+    },
+    {
+      name: "undo with nothing to undo keeps the current origin",
+      state: stateAt([SNAP_A], 0, "external"),
+      action: { type: "UNDO" },
+      expected: "external",
+    },
+    {
+      name: "redo with nothing to redo keeps the current origin",
+      state: stateAt([SNAP_A], 0, "internal"),
+      action: { type: "REDO" },
+      expected: "internal",
+    },
+    {
+      name: "reset",
+      state: stateAt([SNAP_A, SNAP_B], 1, "internal"),
+      action: { type: "RESET" },
+      expected: "external",
+    },
+  ];
+
+  it.each(originCases)("$name -> $expected origin", ({ state, action, expected }) => {
+    expect(workflowHistoryReducer(state, action).changeOrigin).toBe(expected);
+  });
+
+  it("returns the same state for an unchanged seed", () => {
+    const state: WorkflowHistoryState = stateAt([SNAP_A], 0, "external");
+    expect(workflowHistoryReducer(state, seed(SNAP_A, "external"))).toBe(state);
+  });
+
+  it("returns the same state for a submit in read-only mode", () => {
+    const state: WorkflowHistoryState = stateAt([SNAP_A], 0, "external");
+    expect(workflowHistoryReducer(state, submit(SNAP_B, true))).toBe(state);
+  });
+
+  it("returns the same state for a submit with no model, viewport or selection change", () => {
+    const state: WorkflowHistoryState = stateAt([SNAP_A], 0, "internal");
+    expect(workflowHistoryReducer(state, submit(SNAP_A))).toBe(state);
+  });
+
+  it("sets the present without a past entry for a read-only seed", () => {
+    const next: WorkflowHistoryState = workflowHistoryReducer(
+      stateAt([SNAP_A], 0, "external"),
+      seed(SNAP_B, "external", true),
+    );
+    expect(getPresent(next.history)).toBe(SNAP_B);
+    expect(getPast(next.history)).toHaveLength(0);
+  });
+
+  it("keeps the current viewport when a changed model is seeded", () => {
+    const state: WorkflowHistoryState = stateAt([{ ...SNAP_A, viewport: VP_B }], 0, "external");
+    const next: WorkflowHistoryState = workflowHistoryReducer(state, seed(SNAP_B, "external"));
+    expect(getPresent(next.history)?.viewport).toBe(VP_B);
+    expect(getPast(next.history)).toHaveLength(1);
   });
 });

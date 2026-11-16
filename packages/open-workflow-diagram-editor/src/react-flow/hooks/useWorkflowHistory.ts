@@ -18,7 +18,14 @@ import * as React from "react";
 import type * as RF from "@xyflow/react";
 import type { Specification } from "@openworkflowspec/sdk";
 import { structuralEqual } from "../../core/structuralEqual";
-import { useHistory, getPresent, getPast, getFuture } from "./useHistory";
+import {
+  historyReducer,
+  initialHistoryState,
+  getPresent,
+  getPast,
+  getFuture,
+} from "./historyReducer";
+import type { HistoryAction, HistoryState } from "./historyReducer";
 
 /**
  * One atomic history entry capturing the full editor state at a point in time.
@@ -31,18 +38,26 @@ export type HistorySnapshot = {
   selectedNodeId: string | null;
 };
 
+/**
+ * Who caused the transition that produced the current present: the host
+ * (content prop, `setContent`) or the editor (edits, undo/redo).
+ */
+export type ChangeOrigin = "external" | "internal";
+
 export type UseWorkflowHistoryReturn = {
   model: Specification.Workflow | null;
   selectedNodeId: string | null;
+  /** Origin of the transition that produced the current model. */
+  changeOrigin: ChangeOrigin;
   /**
-   * Seeds the model from external props.content.
-   * Respects the isReadOnly guard — no history entry is created in read-only mode,
-   * but the present snapshot is still set so the diagram can render.
+   * Replaces the model wholesale (host content loads, side-panel commits).
+   * In read-only mode the present is set without creating an undoable entry.
    */
   seedModel: (
     newModel: Specification.Workflow,
     viewport: RF.Viewport,
     selectedNodeId: string | null,
+    origin?: ChangeOrigin,
   ) => void;
   submitModel: (
     newModel: Specification.Workflow,
@@ -63,31 +78,107 @@ export type UseWorkflowHistoryReturn = {
   clearPendingViewportRestore: () => void;
 };
 
+export type WorkflowHistoryState = {
+  history: HistoryState<HistorySnapshot>;
+  changeOrigin: ChangeOrigin;
+};
+
+export type WorkflowHistoryAction =
+  | { type: "SEED"; snapshot: HistorySnapshot; origin: ChangeOrigin; isReadOnly: boolean }
+  | { type: "SUBMIT"; snapshot: HistorySnapshot; isReadOnly: boolean }
+  | { type: "UNDO" }
+  | { type: "REDO" }
+  | { type: "RESET" };
+
+export const INITIAL_WORKFLOW_HISTORY_STATE: WorkflowHistoryState = {
+  history: initialHistoryState<HistorySnapshot>(),
+  changeOrigin: "external",
+};
+
 /**
- * Workflow-specific history hook wrapping the generic useHistory.
+ * Equality checks run here, against the latest queued state, rather than in the
+ * callbacks: several updates dispatched in one event must each see the result of
+ * the previous one, not the last committed render.
+ */
+export function workflowHistoryReducer(
+  state: WorkflowHistoryState,
+  action: WorkflowHistoryAction,
+): WorkflowHistoryState {
+  const present: HistorySnapshot | null = getPresent(state.history);
+
+  const withHistory = (
+    historyAction: HistoryAction<HistorySnapshot>,
+    changeOrigin: ChangeOrigin,
+  ): WorkflowHistoryState => ({
+    history: historyReducer(state.history, historyAction),
+    changeOrigin,
+  });
+
+  switch (action.type) {
+    case "SEED": {
+      const { snapshot, origin } = action;
+      // Read-only editors never report: only the host can change their content.
+      if (action.isReadOnly) {
+        return withHistory({ type: "SET_PRESENT", payload: snapshot }, "external");
+      }
+      if (present === null) return withHistory({ type: "PUSH", payload: snapshot }, origin);
+      if (structuralEqual(present.model, snapshot.model)) return state;
+      // Keep the current viewport so undo restores where the user was looking; the
+      // caller passes a placeholder and submitModel records the real one after layout.
+      return withHistory(
+        { type: "PUSH", payload: { ...snapshot, viewport: present.viewport } },
+        origin,
+      );
+    }
+
+    case "SUBMIT": {
+      if (action.isReadOnly) return state;
+      const { snapshot } = action;
+      if (present !== null && structuralEqual(present.model, snapshot.model)) {
+        const viewportChanged: boolean =
+          present.viewport.x !== snapshot.viewport.x ||
+          present.viewport.y !== snapshot.viewport.y ||
+          present.viewport.zoom !== snapshot.viewport.zoom;
+        const selectionChanged: boolean = present.selectedNodeId !== snapshot.selectedNodeId;
+        if (!viewportChanged && !selectionChanged) return state;
+        // Viewport/selection only: the model did not change, so neither does its origin.
+        return withHistory({ type: "SET_PRESENT", payload: snapshot }, state.changeOrigin);
+      }
+      return withHistory({ type: "PUSH", payload: snapshot }, "internal");
+    }
+
+    case "UNDO":
+    case "REDO": {
+      const history: HistoryState<HistorySnapshot> = historyReducer(state.history, {
+        type: action.type,
+      });
+      return history === state.history ? state : { history, changeOrigin: "internal" };
+    }
+
+    case "RESET":
+      return withHistory({ type: "RESET" }, "external");
+  }
+}
+
+/**
+ * Workflow-specific history hook.
  * Starts uninitialised (present = null). History is only recorded when
  * isReadOnly is false and the incoming model differs from the current present.
  */
 export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryReturn {
-  const {
-    state,
-    push,
-    setPresent,
-    reset,
-    undo: dispatchUndo,
-    redo: dispatchRedo,
-    canUndo,
-    canRedo,
-  } = useHistory<HistorySnapshot>();
+  const [state, dispatch] = React.useReducer(
+    workflowHistoryReducer,
+    INITIAL_WORKFLOW_HISTORY_STATE,
+  );
 
   const [pendingViewportRestore, setPendingViewportRestore] = React.useState<RF.Viewport | null>(
     null,
   );
 
-  // Keep a ref to the latest state so callbacks can read it at call time without
-  // closing over it — this prevents them from being recreated on every state change,
-  // which would retrigger layout effects and cause infinite re-render loops.
-  const stateRef = React.useRef(state);
+  // Keep a ref to the latest history so undo/redo can read the target snapshot at call
+  // time without closing over it — this prevents them from being recreated on every
+  // state change, which would retrigger layout effects and cause infinite re-render loops.
+  const stateRef = React.useRef(state.history);
 
   // Keep a ref to the latest isReadOnly so callbacks don't go stale when the prop
   // changes (e.g. Storybook controls toggling the isReadOnly arg).
@@ -95,84 +186,45 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
 
   // Assigned after commit rather than during render (a render must not have side effects)
   React.useLayoutEffect(() => {
-    stateRef.current = state;
+    stateRef.current = state.history;
     isReadOnlyRef.current = isReadOnly;
-  }, [state, isReadOnly]);
+  }, [state.history, isReadOnly]);
 
-  /**
-   * Seeds the model from external props.content.
-   * In read-only mode the present snapshot is updated so the diagram renders,
-   * but no past entry is created (history is edit-mode only).
-   */
   const seedModel = React.useCallback(
-    (newModel: Specification.Workflow, viewport: RF.Viewport, selectedNodeId: string | null) => {
+    (
+      newModel: Specification.Workflow,
+      viewport: RF.Viewport,
+      selectedNodeId: string | null,
+      origin: ChangeOrigin = "external",
+    ) => {
       // Null model is never stored in history.
       if (newModel == null) return;
-
-      const present = getPresent(stateRef.current);
-
-      // In read-only mode, update present so the diagram renders the new
-      // content, but leave past and future untouched (no undoable history entry).
-      if (isReadOnlyRef.current) {
-        setPresent({ model: newModel, viewport, selectedNodeId });
-        return;
-      }
-
-      // First load — no present yet. Set without creating a past entry.
-      if (present === null) {
-        push({ model: newModel, viewport, selectedNodeId });
-        return;
-      }
-
-      // No-op if model content is unchanged.
-      if (structuralEqual(present.model, newModel)) {
-        return;
-      }
-
-      // Content changed externally (e.g. props.content updated by host or addon panel).
-      // Preserve the current viewport so undo restores to where the user was looking,
-      // rather than the placeholder {x:0,y:0,zoom:1} passed by the caller.
-      // The real viewport will be updated by submitModel after layout settles.
-      push({ model: newModel, viewport: present.viewport, selectedNodeId });
+      dispatch({
+        type: "SEED",
+        snapshot: { model: newModel, viewport, selectedNodeId },
+        origin,
+        isReadOnly: isReadOnlyRef.current,
+      });
     },
-    [push, setPresent],
+    [],
   );
 
   const submitModel = React.useCallback(
     (newModel: Specification.Workflow, viewport: RF.Viewport, selectedNodeId: string | null) => {
-      // No-op in read-only mode.
-      if (isReadOnlyRef.current) return;
-
       // Null model is never stored in history.
       if (newModel == null) return;
-
-      const present = getPresent(stateRef.current);
-
-      // First load — no present yet. Set it without creating a past entry.
-      if (present === null) {
-        push({ model: newModel, viewport, selectedNodeId });
-        return;
-      }
-
-      // Model content unchanged — update viewport/selection on the present snapshot
-      // without creating a new history entry. This keeps the saved viewport
-      // current as the user pans/zooms between edits and after undo/redo restores.
-      if (structuralEqual(present.model, newModel)) {
-        const vp = present.viewport;
-        const viewportChanged =
-          vp.x !== viewport.x || vp.y !== viewport.y || vp.zoom !== viewport.zoom;
-        const selectionChanged = present.selectedNodeId !== selectedNodeId;
-        if (viewportChanged || selectionChanged) {
-          setPresent({ model: newModel, viewport, selectedNodeId });
-        }
-        return;
-      }
-
-      // New distinct model — push snapshot (future is discarded inside reducer).
-      push({ model: newModel, viewport, selectedNodeId });
+      dispatch({
+        type: "SUBMIT",
+        snapshot: { model: newModel, viewport, selectedNodeId },
+        isReadOnly: isReadOnlyRef.current,
+      });
     },
-    [push, setPresent],
+    [],
   );
+
+  const resetHistory = React.useCallback(() => {
+    dispatch({ type: "RESET" });
+  }, []);
 
   const undo = React.useCallback(
     (setSelectedNodeId: React.Dispatch<React.SetStateAction<string | null>>) => {
@@ -183,9 +235,9 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
       // Restore selectedNodeId via direct callback, not via useEffect.
       setSelectedNodeId(target.selectedNodeId);
       setPendingViewportRestore(target.viewport);
-      dispatchUndo();
+      dispatch({ type: "UNDO" });
     },
-    [dispatchUndo],
+    [],
   );
 
   const redo = React.useCallback(
@@ -196,25 +248,28 @@ export function useWorkflowHistory(isReadOnly: boolean): UseWorkflowHistoryRetur
       const target = future[0]!;
       setSelectedNodeId(target.selectedNodeId);
       setPendingViewportRestore(target.viewport);
-      dispatchRedo();
+      dispatch({ type: "REDO" });
     },
-    [dispatchRedo],
+    [],
   );
 
   const clearPendingViewportRestore = React.useCallback(() => {
     setPendingViewportRestore(null);
   }, []);
 
+  const present: HistorySnapshot | null = getPresent(state.history);
+
   return {
-    model: getPresent(state)?.model ?? null,
-    selectedNodeId: getPresent(state)?.selectedNodeId ?? null,
+    model: present?.model ?? null,
+    selectedNodeId: present?.selectedNodeId ?? null,
+    changeOrigin: state.changeOrigin,
     seedModel,
     submitModel,
-    resetHistory: reset,
+    resetHistory,
     undo,
     redo,
-    canUndo,
-    canRedo,
+    canUndo: state.history.presentIndex > 0,
+    canRedo: state.history.presentIndex < state.history.history.length - 1,
     pendingViewportRestore,
     clearPendingViewportRestore,
   };

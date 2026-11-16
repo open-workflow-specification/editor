@@ -16,15 +16,22 @@
 
 import * as React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi, expect, afterEach, describe, it, beforeEach } from "vitest";
 import { useDiagramEditorContext } from "../../src/store/DiagramEditorContext";
 import { DiagramEditorContextProvider } from "../../src/store/DiagramEditorContextProvider";
 import type { DiagramEditorRef } from "../../src/diagram-editor/DiagramEditor";
+import { EditFormFooter } from "../../src/side-panel/EditFormFooter";
+import { TaskForm } from "../../src/side-panel/forms/TaskForm";
 import {
   BASIC_INVALID_WORKFLOW_YAML,
   BASIC_VALID_WORKFLOW_JSON,
   BASIC_VALID_WORKFLOW_YAML,
+  MANAGING_GITHUB_ISSUES_WORKFLOW,
 } from "../fixtures/workflows";
+import { clickApply, EDITABLE_TASK_NODE_ID, methodField } from "../test-utils/edit-helpers";
+import { renderWithEditorProviders } from "../test-utils/render-helpers";
+import { nodeAt } from "../test-utils/workflow-helpers";
 
 const renderSpy = vi.fn();
 
@@ -402,5 +409,125 @@ describe("commitWorkflow", () => {
     await waitFor(() => {
       expect(screen.getByTestId("workflow-name")).toHaveTextContent("updated-workflow");
     });
+  });
+});
+
+describe("errors follow the model through undo, redo and setContent", () => {
+  const NO_ERRORS = /^0$/;
+  const SOME_ERRORS = /^[1-9]\d*$/;
+
+  const HistoryProbe: React.FC = () => {
+    const { commitWorkflow, model, errors, undo, redo } = useDiagramEditorContext();
+
+    return (
+      <div>
+        <button
+          data-testid="commit-invalid"
+          onClick={() => {
+            // Dropping the required `document` makes the workflow invalid.
+            if (model) commitWorkflow({ ...model, document: undefined! });
+          }}
+        >
+          Commit invalid
+        </button>
+        <button data-testid="undo" onClick={undo}>
+          Undo
+        </button>
+        <button data-testid="redo" onClick={redo}>
+          Redo
+        </button>
+        <p data-testid="error-count">{errors.length}</p>
+      </div>
+    );
+  };
+
+  const renderProbe = (ref?: React.Ref<DiagramEditorRef>) =>
+    render(
+      <DiagramEditorContextProvider
+        ref={ref}
+        content={BASIC_VALID_WORKFLOW_YAML}
+        isReadOnly={false}
+        locale="en"
+      >
+        <HistoryProbe />
+      </DiagramEditorContextProvider>,
+    );
+
+  it("clears the errors when undo restores a valid workflow, and restores them on redo", async () => {
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(NO_ERRORS));
+
+    fireEvent.click(screen.getByTestId("commit-invalid"));
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(SOME_ERRORS));
+
+    fireEvent.click(screen.getByTestId("undo"));
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(NO_ERRORS));
+
+    fireEvent.click(screen.getByTestId("redo"));
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(SOME_ERRORS));
+  });
+
+  it("reports the errors of the restored workflow when undo reverts a setContent", async () => {
+    const ref = React.createRef<DiagramEditorRef>();
+    renderProbe(ref);
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(NO_ERRORS));
+
+    act(() => {
+      ref.current?.setContent(BASIC_INVALID_WORKFLOW_YAML);
+    });
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(SOME_ERRORS));
+
+    fireEvent.click(screen.getByTestId("undo"));
+    await waitFor(() => expect(screen.getByTestId("error-count")).toHaveTextContent(NO_ERRORS));
+  });
+});
+
+describe("side-panel form after undo and redo", () => {
+  const FORM_ERROR_COUNT = /^\d+ errors?$/;
+
+  const SidePanel: React.FC = () => {
+    const { model, undo, redo } = useDiagramEditorContext();
+    if (!model) return null;
+    const node = nodeAt(model, EDITABLE_TASK_NODE_ID);
+    return (
+      <>
+        <button data-testid="undo" onClick={undo}>
+          Undo
+        </button>
+        <button data-testid="redo" onClick={redo}>
+          Redo
+        </button>
+        <TaskForm
+          nodeType={node.type!}
+          task={node.data.task!}
+          nodeId={EDITABLE_TASK_NODE_ID}
+          taskReference={node.data.taskReference}
+        />
+        <EditFormFooter node={node} />
+      </>
+    );
+  };
+
+  const errorCounter = () => screen.queryByText(FORM_ERROR_COUNT);
+
+  it("drops the errors of an applied invalid task on undo and brings them back on redo", async () => {
+    const user = userEvent.setup();
+    renderWithEditorProviders(<SidePanel />, {
+      content: JSON.stringify(MANAGING_GITHUB_ISSUES_WORKFLOW),
+    });
+    await screen.findByLabelText(/^Method$/i);
+    expect(errorCounter()).not.toBeInTheDocument();
+
+    // Clearing the required `method` and applying anyway commits an invalid workflow.
+    await user.clear(methodField());
+    await clickApply(user);
+    await waitFor(() => expect(errorCounter()).toBeInTheDocument());
+
+    await user.click(screen.getByTestId("undo"));
+    await waitFor(() => expect(errorCounter()).not.toBeInTheDocument());
+    expect(methodField()).not.toHaveValue("");
+
+    await user.click(screen.getByTestId("redo"));
+    await waitFor(() => expect(errorCounter()).toBeInTheDocument());
   });
 });
