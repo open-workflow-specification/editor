@@ -106,6 +106,9 @@ test("language and read-only attributes update the embedded editor", async ({ pa
   const editor = page.locator(".monaco-editor").first();
   await expect(editor).toBeVisible();
 
+  await component.evaluate((element) => element.setAttribute("language", "json"));
+  await expect(editor).toHaveAttribute("data-uri", "inmemory://openworkflow/workflow.json");
+
   await component.evaluate((element) => element.setAttribute("language", "yaml"));
   await expect(editor).toHaveAttribute("data-uri", "inmemory://openworkflow/workflow.yaml");
 
@@ -114,10 +117,6 @@ test("language and read-only attributes update the embedded editor", async ({ pa
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type("\nreadOnlyEdit");
 
-  await expect
-    .poll(() =>
-      component.evaluate((element) => (element as HTMLElement & { content: string }).content),
-    )
-    .not.toContain("readOnlyEdit");
+  await expect(editor).not.toContainText("readOnlyEdit");
   await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
 });
