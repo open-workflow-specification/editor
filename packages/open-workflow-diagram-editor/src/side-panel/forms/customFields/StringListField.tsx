@@ -20,8 +20,9 @@ import { X, Plus } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { StringListField as StringListFieldDescriptor } from "../../../core/schemaToFormFields";
-import { getNestedValue, useTaskFormContext } from "../taskFormContext";
+import { useTaskFormContext } from "../taskFormContext";
 import { newId } from "./fieldHelpers";
+import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -21,7 +21,7 @@ import {
   buildTaskFromDraft,
   computeDraftChanges,
 } from "../../../src/side-panel/forms/draft";
-import { getNestedValue } from "../../../src/side-panel/forms/taskFormContext";
+import { getNestedValue } from "../../../src/core/taskDraft";
 import {
   ADD_FIELDS_WORKFLOW,
   EMPTY_MAPS_WORKFLOW,

@@ -172,6 +172,41 @@ export interface MapField extends FieldBase {
   kind: "map";
   /** The schema allows only string values (`headers`, `query`), so typed text is never read as a number, boolean or JSON. */
   stringValues?: true;
+  /**
+   * Marks a "Custom fields" map. Entries are stored in the parent object, not at this path.
+   */
+  customFieldsOf?: CustomFieldsOf;
+}
+
+export interface CustomFieldsOf {
+  /** The object whose extra keys the map edits. */
+  objectPath: string;
+  /** The object's own properties, which have their own fields and are never map entries. */
+  fixedKeys: readonly string[];
+}
+
+/** The last segment of a "Custom fields" map's identity path (see `MapField.customFieldsOf`). */
+export const CUSTOM_FIELDS_KEY = "__custom__";
+
+/** English fallback for a "Custom fields" map's label; the side panel translates it. */
+export const CUSTOM_FIELDS_LABEL = "Custom fields";
+
+/**
+ * Calls `visit` for every descriptor in the tree, parents before their children. Enters the
+ * children of `object` and `section` fields and the fields of every variant of a `one-of`.
+ */
+export function forEachField(
+  fields: readonly FormFieldDescriptor[],
+  visit: (field: FormFieldDescriptor) => void,
+): void {
+  for (const field of fields) {
+    visit(field);
+    if (field.kind === "object" || field.kind === "section") {
+      forEachField(field.children, visit);
+    } else if (field.kind === "one-of") {
+      for (const variant of field.variants) forEachField(variant.fields, visit);
+    }
+  }
 }
 
 /**
@@ -358,6 +393,31 @@ function isMapSchema(schema: Record<string, unknown>): boolean {
   // Bare { type: "object" } with no structural constraints — treat as an open key-value map.
   if (schema.additionalProperties === undefined && !schema.oneOf && !schema.anyOf) return true;
   return false;
+}
+
+/**
+ * Returns custom fields map for schemas allowing extra keys (e.g. event extension attributes).
+ */
+function customFieldsMap(
+  schema: Record<string, unknown>,
+  objectPath: string,
+): MapField | undefined {
+  const extra = schema.additionalProperties;
+  if (extra === undefined || extra === false || !isObjectNotArray(schema.properties)) {
+    return undefined;
+  }
+  return {
+    kind: "map",
+    path: joinPath(objectPath, CUSTOM_FIELDS_KEY),
+    label: CUSTOM_FIELDS_LABEL,
+    ...withDesc(
+      isObjectNotArray(extra) && typeof extra.description === "string"
+        ? extra.description
+        : undefined,
+    ),
+    required: false,
+    customFieldsOf: { objectPath, fixedKeys: Object.keys(schema.properties) },
+  };
 }
 
 /**
@@ -1005,13 +1065,14 @@ export function schemaToFormFields(
         fields.push(onlyChild);
         continue;
       }
+      const customFields = customFieldsMap(resolved, fieldPath);
       fields.push({
         kind: "object",
         path: fieldPath,
         label: deriveLabel(prop, key),
         ...withDesc(description),
         required: isRequired,
-        children,
+        children: customFields ? [...children, customFields] : children,
         ...atLeastOneOf(resolved),
       });
       continue;

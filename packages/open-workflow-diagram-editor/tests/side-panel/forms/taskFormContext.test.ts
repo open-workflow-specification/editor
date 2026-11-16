@@ -17,9 +17,7 @@
 import { describe, expect, it } from "vitest";
 import { leaf } from "../../test-utils/validation-helpers";
 import {
-  forEachField,
   computeSentinelDefaults,
-  getNestedValue,
   hasValue,
   filterReadOnlyFields,
   collectFormListPaths,
@@ -28,8 +26,10 @@ import {
   collectWholeValuePaths,
 } from "../../../src/side-panel/forms/taskFormContext";
 import { getFormFieldsForNodeType } from "../../../src/core";
+import { getNestedValue } from "../../../src/core/taskDraft";
 import {
   COMMON_FIELDS_PATH,
+  forEachField,
   type EnumField,
   type FormFieldDescriptor,
 } from "../../../src/core/schemaToFormFields";

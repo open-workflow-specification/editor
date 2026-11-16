@@ -17,12 +17,13 @@
 import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenSentinels } from "../sentinels";
-import { collectValueMapFields, getNestedValue } from "../taskFormContext";
+import { collectValueMapFields } from "../taskFormContext";
 import { getValueMapInnerObject } from "../customFields/innerObjectText";
 import { validateTaskData } from "@/core/schemaValidator";
 import { prepareValuesForValidation, extractFieldErrors } from "./fieldErrorMapper";
 import { buildActiveFormView } from "./activeFormView";
 import { classifyTaskErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
+import { getNestedValue } from "../../../core/taskDraft";
 
 /** Translation function for localised messages. */
 export type Translate = (key: string) => string;

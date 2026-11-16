@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import { workflowSchema } from "@openworkflowspec/sdk";
 import {
   COMMON_FIELDS_PATH,
+  CUSTOM_FIELDS_KEY,
   ROOT_ONE_OF_PATH,
   schemaToFormFields,
 } from "../../src/core/schemaToFormFields";
@@ -32,6 +33,7 @@ import type {
   FormFieldDescriptor,
   OrderedMapField,
   SectionField,
+  MapField,
 } from "../../src/core/schemaToFormFields";
 
 /** A task's taskBase fields, which the walker groups into one section at the end. */
@@ -433,6 +435,69 @@ describe("schemaToFormFields emitTask transparent-wrapper elimination", () => {
     expect(withChild).toBeDefined();
     expect(withChild?.kind).toBe("object");
   });
+});
+
+/** Every "Custom fields" map among `fields`, at any depth (one-of variants and list items too). */
+function collectCustomFieldsMaps(fields: FormFieldDescriptor[]): MapField[] {
+  return fields.flatMap((f): MapField[] => {
+    if (f.kind === "map") return f.customFieldsOf ? [f] : [];
+    if (f.kind === "object" || f.kind === "section") return collectCustomFieldsMaps(f.children);
+    if (f.kind === "one-of") return f.variants.flatMap((v) => collectCustomFieldsMaps(v.fields));
+    if (f.kind === "event-filter-list" || f.kind === "ordered-map")
+      return collectCustomFieldsMaps(f.itemFields);
+    return [];
+  });
+}
+
+const EVENT_PROPERTY_KEYS = [
+  "id",
+  "source",
+  "type",
+  "time",
+  "subject",
+  "datacontenttype",
+  "dataschema",
+  "data",
+];
+
+describe("schemaToFormFields custom fields (properties beside additionalProperties)", () => {
+  it("gives emit's event attributes an Custom fields map after its fixed fields", () => {
+    const emitField = getFormFieldsForNodeType("emit").find((f) => f.path === "emit") as
+      | ObjectField
+      | undefined;
+    const withField = emitField?.children.find((f) => f.path === "emit.event.with") as
+      | ObjectField
+      | undefined;
+
+    expect(withField?.children.at(-1)).toEqual({
+      kind: "map",
+      path: `emit.event.with.${CUSTOM_FIELDS_KEY}`,
+      label: "Custom fields",
+      required: false,
+      customFieldsOf: { objectPath: "emit.event.with", fixedKeys: EVENT_PROPERTY_KEYS },
+    });
+  });
+
+  it("keeps emit.event hoisted: its own extra keys get no map", () => {
+    const paths = collectCustomFieldsMaps(getFormFieldsForNodeType("emit")).map((f) => f.path);
+    expect(paths).toEqual([`emit.event.with.${CUSTOM_FIELDS_KEY}`]);
+  });
+
+  it("gives every listen strategy's event attributes one", () => {
+    const paths = collectCustomFieldsMaps(getFormFieldsForNodeType("listen")).map((f) => f.path);
+    expect(paths).toEqual([
+      `with.${CUSTOM_FIELDS_KEY}`,
+      `with.${CUSTOM_FIELDS_KEY}`,
+      `listen.to.one.with.${CUSTOM_FIELDS_KEY}`,
+    ]);
+  });
+
+  it.each(["set", "call", "run", "raise", "switch", "for", "fork", "try", "wait", "do"])(
+    "gives %s none: no other schema has properties beside additionalProperties",
+    (nodeType) => {
+      expect(collectCustomFieldsMaps(getFormFieldsForNodeType(nodeType))).toEqual([]);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------

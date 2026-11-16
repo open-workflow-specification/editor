@@ -60,6 +60,22 @@ export function flattenTask(
   return prefix ? { [prefix]: value } : {};
 }
 
+/**
+ * Walks an arbitrary nested object along a dot-notation path.
+ * Returns `undefined` if any segment is missing.
+ */
+export function getNestedValue(data: Record<string, unknown>, path: string): unknown {
+  const parts = path.split(".");
+  let current: unknown = data;
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    if (typeof current !== "object" || Array.isArray(current)) return undefined;
+    if (!Object.prototype.hasOwnProperty.call(current, part)) return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
 export function setNestedPath(obj: Record<string, unknown>, dotPath: string, value: unknown): void {
   const parts = dotPath.split(".");
   if (parts.some((part) => !isSafeKey(part))) {

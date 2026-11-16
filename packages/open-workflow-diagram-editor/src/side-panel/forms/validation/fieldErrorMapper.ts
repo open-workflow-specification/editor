@@ -17,15 +17,13 @@
 import type { ErrorObject } from "ajv/dist/2020";
 import { getMissingProperty } from "@/core/ajvErrorUtils";
 import { getParentPath, isAtOrBelow, joinPath, pointerToDotPath } from "@/core/paths";
-import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { flattenTask, pruneEmptyLeaves, unflattenValues } from "@/core/taskDraft";
+import { forEachField, type FormFieldDescriptor } from "@/core/schemaToFormFields";
+import { flattenTask, getNestedValue, pruneEmptyLeaves, unflattenValues } from "@/core/taskDraft";
 import { isReservedPath, sentinelPath } from "../sentinels";
 import {
   collectFormListPaths,
   collectLeafKinds,
   collectValueMapFields,
-  forEachField,
-  getNestedValue,
   selectedVariantIndex,
   valueMapModelValue,
 } from "../taskFormContext";

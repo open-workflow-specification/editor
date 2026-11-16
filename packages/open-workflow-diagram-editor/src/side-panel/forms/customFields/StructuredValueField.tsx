@@ -19,8 +19,9 @@ import { Controller, useFormContext, useFormState } from "react-hook-form";
 import { Textarea } from "../ui/textarea";
 import { RUNTIME_EXPRESSION_PATTERN, type JsonField } from "../../../core/schemaToFormFields";
 import { parseText, valueToText } from "./innerObjectText";
-import { useTaskFormContext, getNestedValue } from "../taskFormContext";
+import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
+import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
 // StructuredValueField — textarea that stores an arbitrary parsed value

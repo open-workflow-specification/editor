@@ -20,7 +20,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { Specification } from "@openworkflowspec/sdk";
 import { TaskForm } from "../../../src/side-panel/forms/TaskForm";
 import { EditFormFooter } from "../../../src/side-panel/EditFormFooter";
-import { getNestedValue } from "../../../src/side-panel/forms/taskFormContext";
+import { getNestedValue } from "../../../src/core/taskDraft";
 import { COMMON_FIELDS_WORKFLOW } from "../../fixtures/workflows";
 import { renderWithProviders, FormSpy, type FormRef } from "../../test-utils/render-helpers";
 import { nodeAt, parseFixture } from "../../test-utils/workflow-helpers";

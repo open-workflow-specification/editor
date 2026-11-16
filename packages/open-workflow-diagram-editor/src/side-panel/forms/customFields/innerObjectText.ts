@@ -17,7 +17,7 @@
 import { dump, load } from "js-yaml";
 import type { ContentFormat, EnumField } from "../../../core/schemaToFormFields";
 import { isObjectNotArray } from "../../../core/utils";
-import { getNestedValue } from "../taskFormContext";
+import { getNestedValue } from "../../../core/taskDraft";
 import { innerTextPath } from "../sentinels";
 
 // ---------------------------------------------------------------------------

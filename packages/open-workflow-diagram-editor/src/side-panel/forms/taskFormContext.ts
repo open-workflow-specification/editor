@@ -15,16 +15,18 @@
  */
 
 import * as React from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch, type UseFormReturn } from "react-hook-form";
 import {
   ROOT_ONE_OF_PATH,
+  forEachField,
   type EnumField,
   type FormFieldDescriptor,
   type OneOfField,
   type OneOfVariant,
 } from "../../core/schemaToFormFields";
-import { flattenTask, setNestedPath } from "../../core/taskDraft";
+import { flattenTask, getNestedValue, setNestedPath } from "../../core/taskDraft";
 import { isObjectNotArray } from "../../core/utils";
+import { mapEntriesOf, customFieldsOwner, type CustomFieldsMap } from "./mapEntries";
 import { SENTINEL_SELF_KEY, isReservedPath, sentinelPath } from "./sentinels";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +42,11 @@ export type TaskFormContextType = {
    * additionally for field-visibility filtering in read-only mode.
    */
   taskData: Record<string, unknown>;
+  /**
+   * The task's whole field tree. A "Custom fields" map reads it to move a value typed under a
+   * fixed key into that key's own field.
+   */
+  fields?: readonly FormFieldDescriptor[];
   /**
    * Handler to trigger schema validation for a specific field path on blur or interaction.
    */
@@ -129,25 +136,89 @@ export function useVariantSnapshots(): VariantSnapshots {
   return snapshots;
 }
 
+/**
+ * Switches the one-of `field` from variant `from` to `to`, as picking it in its picker does. The one switch for the picker and anything else that changes a variant (a value moved into
+ * a field with options), so they never drift apart.
+ */
+export function switchVariant({
+  field,
+  from,
+  to,
+  form,
+  snapshots,
+}: {
+  field: OneOfField;
+  from: number;
+  to: number;
+  form: Pick<UseFormReturn<Record<string, unknown>>, "getValues" | "setValue" | "clearErrors">;
+  snapshots: VariantSnapshots | null;
+}): void {
+  const { getValues, setValue, clearErrors } = form;
+  const key = variantSnapshotKey(field);
+  const saved = snapshots?.get(key) ?? new Map<number, Record<string, unknown>>();
+  snapshots?.set(key, saved);
+
+  // Save current variant's field values before switching
+  const currentVariant = field.variants[from];
+  if (currentVariant) {
+    const snapshot: Record<string, unknown> = {};
+    const allValues = getValues();
+    for (const p of collectLeafKinds(currentVariant.fields).keys()) {
+      snapshot[p] = getNestedValue(allValues, p);
+    }
+    saved.set(from, snapshot);
+  }
+
+  // Always mark sentinel dirty — the default is the committed label, so switching back clears it.
+  setValue(sentinelPath(field.path), field.variants[to]?.label ?? "", { shouldDirty: true });
+
+  // Restore saved values for the new variant if available; otherwise clear
+  // leaf paths, keeping shared paths whose field kind is unchanged.
+  const restored = saved.get(to);
+  const newVariant = field.variants[to];
+  const currentKindByPath = currentVariant
+    ? collectLeafKinds(currentVariant.fields)
+    : new Map<string, string>();
+  const newKindByPath = newVariant
+    ? collectLeafKinds(newVariant.fields)
+    : new Map<string, string>();
+
+  if (restored) {
+    // Restore deepest paths first to handle overlapping paths correctly.
+    const deepestFirst = Object.entries(restored).sort(
+      ([a], [b]) => b.split(".").length - a.split(".").length,
+    );
+    for (const [path, value] of deepestFirst) {
+      setValue(path, value, { shouldDirty: true });
+    }
+  } else if (newVariant) {
+    for (const [path, newKind] of newKindByPath) {
+      if (currentKindByPath.get(path) !== newKind) {
+        setValue(path, "", { shouldDirty: true });
+      }
+    }
+  }
+
+  // Paths exclusive to the old variant: clear them silently (no dirty
+  // needed — dirty is tracked via the sentinel).
+  const newPaths = [...newKindByPath.keys()];
+  const pathsToClear = [...currentKindByPath.keys()];
+  for (const path of pathsToClear) {
+    const overlapsNewVariant =
+      newKindByPath.has(path) ||
+      newPaths.some((p) => p.startsWith(`${path}.`) || path.startsWith(`${p}.`));
+    if (!overlapsNewVariant) {
+      setValue(path, undefined, { shouldDirty: false });
+    }
+  }
+  if (pathsToClear.length > 0) {
+    clearErrors(pathsToClear);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Read-only field filtering
 // ---------------------------------------------------------------------------
-
-/**
- * Walks an arbitrary nested object along a dot-notation path.
- * Returns `undefined` if any segment is missing.
- */
-export function getNestedValue(data: Record<string, unknown>, path: string): unknown {
-  const parts = path.split(".");
-  let current: unknown = data;
-  for (const part of parts) {
-    if (current === null || current === undefined) return undefined;
-    if (typeof current !== "object" || Array.isArray(current)) return undefined;
-    if (!Object.prototype.hasOwnProperty.call(current, part)) return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
 
 /**
  * Returns true when the task actually has a meaningful value at `path`:
@@ -177,24 +248,6 @@ function hasObjectAtPath(task: Record<string, unknown>, path: string): boolean {
 // and must enter a `section` wherever they enter an `object`.
 // tests/side-panel/forms/sectionWalkers.test.ts checks each one — add new walkers there.
 // ---------------------------------------------------------------------------
-
-/**
- * Calls `visit` for every descriptor in the tree, parents before their children. Enters the
- * children of `object` and `section` fields and the fields of every variant of a `one-of`.
- */
-export function forEachField(
-  fields: FormFieldDescriptor[],
-  visit: (field: FormFieldDescriptor) => void,
-): void {
-  for (const field of fields) {
-    visit(field);
-    if (field.kind === "object" || field.kind === "section") {
-      forEachField(field.children, visit);
-    } else if (field.kind === "one-of") {
-      for (const variant of field.variants) forEachField(variant.fields, visit);
-    }
-  }
-}
 
 /*
  * Finds paths of arrays edited through form controls (ordered maps and event-filter lists).
@@ -312,6 +365,8 @@ export function collectWholeValuePaths(
 
   const walk = (list: FormFieldDescriptor[]): void => {
     for (const field of list) {
+      // A "Custom fields" map's entries are the object's own leaves: its path holds nothing.
+      if (field.kind === "map" && field.customFieldsOf !== undefined) continue;
       if (field.kind === "map" || field.kind === "json") paths.add(field.path);
       else if (field.kind === "enum" && field.innerObjectFormat !== undefined)
         paths.add(field.path);
@@ -328,18 +383,23 @@ export function collectWholeValuePaths(
   return paths;
 }
 
-/** RHF reset() skips Controllers for absent paths — pad removed ones with "". */
+/**
+ * RHF reset() skips Controllers for absent paths — pad removed ones with "". Never the entries of
+ * a "Custom fields" map
+ */
 export function padRemovedPaths(
   resetVals: Record<string, unknown>,
   oldTask: Record<string, unknown>,
   newTask: Record<string, unknown>,
   wholeValuePaths: ReadonlySet<string> = new Set(),
+  customFieldsMaps: readonly CustomFieldsMap[] = [],
 ): void {
   const oldFlat = flattenTask(oldTask, "", wholeValuePaths);
   const newFlat = flattenTask(newTask, "", wholeValuePaths);
   const newPaths = Object.keys(newFlat);
   for (const path of Object.keys(oldFlat)) {
     if (path in newFlat || isReservedPath(path)) continue;
+    if (customFieldsOwner(customFieldsMaps, path) !== undefined) continue;
     const conflicts = newPaths.some((np) => path.startsWith(np + ".") || np.startsWith(path + "."));
     if (!conflicts) {
       setNestedPath(resetVals, path, "");
@@ -368,6 +428,10 @@ export function prefixFields(fields: FormFieldDescriptor[], prefix: string): For
           fields: prefixFields(variant.fields, prefix),
         })),
       };
+    }
+    if (field.kind === "map" && field.customFieldsOf !== undefined) {
+      const objectPath = `${prefix}.${field.customFieldsOf.objectPath}`;
+      return { ...field, path, customFieldsOf: { ...field.customFieldsOf, objectPath } };
     }
     return { ...field, path };
   });
@@ -418,10 +482,7 @@ export function filterReadOnlyFields(
     if (field.kind === "map") {
       // Show the map group only when the task contains a non-empty object at this path: an empty
       // one has no entries to list, and its drill row would open onto nothing.
-      const value = getNestedValue(task, field.path);
-      return hasObjectAtPath(task, field.path) && Object.keys(value as object).length > 0
-        ? [field]
-        : [];
+      return Object.keys(mapEntriesOf(field, task) ?? {}).length > 0 ? [field] : [];
     }
 
     if (field.kind === "event-filter-list" || field.kind === "ordered-map") {

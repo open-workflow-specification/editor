@@ -108,6 +108,9 @@ do:
           with:
             source: https://api.example.com
             type: com.example.user.processed.v1
+            # CloudEvents extension attributes: the form shows them under "Custom fields".
+            tenantid: acme-eu
+            traceparent: ${ $context.trace }
             data:
               userId: ${ .userId }
               userName: ${ .userName }

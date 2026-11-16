@@ -21,6 +21,7 @@ import { useI18n } from "@openworkflowspec/i18n";
 import { countChangedUnder, countFieldErrors, hasDraftValue } from "./rowCounts";
 import { useDraftChanges } from "../../EditSession";
 import { isObjectNotArray } from "../../../core/utils";
+import { isCustomFieldsMap, mapEntriesIn, mapValuePath } from "../mapEntries";
 import { drillLabel, type DrillTarget } from "./drill";
 import { useDrill } from "./DrillContext";
 import { filterReadOnlyFields, useTaskFormContext } from "../taskFormContext";
@@ -28,6 +29,7 @@ import { formatEntryCount } from "../customFields/fieldHelpers";
 import { countLevelErrorsUnder, useTaskValidation } from "../validation";
 import { COMMON_FIELDS_PATH } from "@/core/schemaToFormFields";
 import { RemoveFieldButton, useRemoveField } from "../removeField";
+import { HelpTooltip } from "../FieldLabel";
 
 /**
  * Displays a clickable row for a section, object, map or one-of, showing:
@@ -74,6 +76,12 @@ export function DrillRow({
 
   /** Only re-renders when values change, not on every keystroke */
   const values = useWatch({ control, name: childPaths as never }) as unknown as unknown[];
+  // A map's entries, or an object's value: a "Custom fields" map among an object's children keeps
+  // its entries in that object, beside the fixed fields, so its own path holds nothing.
+  const mapValue = useWatch({
+    control,
+    name: (field.kind === "map" ? mapValuePath(field) : field.path) as never,
+  }) as unknown;
   const { errors } = useFormState({ control, name: childPaths as never });
   const { paths: changed } = useDraftChanges();
   const changedCount = childPaths.reduce((sum, path) => sum + countChangedUnder(changed, path), 0);
@@ -94,7 +102,7 @@ export function DrillRow({
   let summary: string;
   if (field.kind === "map" || (field.kind === "one-of" && countEntries)) {
     // A removed entry stays in the draft as `undefined` until Apply drops it.
-    const map = values[0];
+    const map = field.kind === "map" ? mapEntriesIn(field, mapValue) : values[0];
     const entries = isObjectNotArray(map)
       ? Object.values(map).filter((value) => value !== undefined).length
       : 0;
@@ -113,7 +121,11 @@ export function DrillRow({
     ).length;
     summary = `${setCount} ${t(setCount === 1 ? "sidebar.drill.field" : "sidebar.drill.fields")}`;
   } else {
-    const setCount = values.filter(hasDraftValue).length;
+    const setCount = field.children.filter((child, index) =>
+      isCustomFieldsMap(child)
+        ? Object.keys(mapEntriesIn(child, mapValue) ?? {}).length > 0
+        : hasDraftValue(values[index]),
+    ).length;
     summary = `${setCount} ${t("sidebar.drill.of")} ${field.children.length} ${t("sidebar.drill.set")}`;
   }
   const changedText = `${changedCount} ${t("sidebar.form.changed")}`;
@@ -152,11 +164,16 @@ export function DrillRow({
       <ChevronRight className="dec-form-drill-row-chevron" aria-hidden="true" />
     </button>
   );
-  // The ✕ sits beside the row, never inside its button.
-  return removable ? (
+  // A "Custom fields" map's help: from editor not the schema as it has none
+  const help =
+    isCustomFieldsMap(field) && field.description !== undefined ? (
+      <HelpTooltip label={label} description={field.description} />
+    ) : null;
+  return removable || help !== null ? (
     <div className="dec-form-drill-row-wrap">
       {row}
-      <RemoveFieldButton path={field.path} />
+      {help}
+      {removable && <RemoveFieldButton path={field.path} />}
     </div>
   ) : (
     row
