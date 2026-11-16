@@ -15,7 +15,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { getFormFieldsForNodeType, partitionTaskBaseFields } from "../../src/core/schemaWalker";
+import { GraphNodeType } from "@openworkflowspec/sdk";
+import {
+  CATCH_CONTAINER_NODE_TYPE,
+  getFormFieldsForNodeType,
+  partitionTaskBaseFields,
+} from "../../src/core/schemaWalker";
 import { getTaskBaseKeys } from "../../src/core/schemaFilter";
 import { TASK_TYPE_KEYS } from "../../src/core/taskTypes";
 import {
@@ -50,6 +55,17 @@ describe("taskBase partition", () => {
       );
       const reachable = [...own, ...(root?.variants.flatMap((variant) => variant.fields) ?? [])];
       expect(reachable.filter((field) => baseKeys.has(field.path))).toEqual([]);
+    },
+  );
+});
+
+describe("try task frames", () => {
+  it.each([GraphNodeType.TryCatch, GraphNodeType.Catch, CATCH_CONTAINER_NODE_TYPE])(
+    "%s shows the same form as the Try frame",
+    (type) => {
+       expect(JSON.stringify(getFormFieldsForNodeType(type))).toBe(
+         JSON.stringify(getFormFieldsForNodeType(GraphNodeType.Try)),
+       );
     },
   );
 });
