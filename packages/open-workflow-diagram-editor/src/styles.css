@@ -82,6 +82,10 @@
     --dec-surface-dark-raised: #1f2937;
     --dec-surface-dark-elevated: #2d3748;
 
+    /* Empty and loading state text */
+    --dec-state-title-color: #111827;
+    --dec-state-message-color: #4b5563;
+
     /* edges */
     --dec-edge-selected: #aea6a6;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
@@ -97,6 +101,9 @@
   }
 
   .dec-root.dark {
+    --dec-state-title-color: #f3f4f6;
+    --dec-state-message-color: #d1d5db;
+
     /* canvas */
     --dec-canvas-bg: #1c222c;
     --dec-canvas-pattern: #4a5568;
@@ -122,5 +129,33 @@
 
   .dec-root .dec-diagram-content {
     @apply dec:flex-1 dec:min-w-0 dec:h-full;
+  }
+
+  .dec-root .dec-empty-state {
+    @apply dec:flex dec:h-full dec:min-h-0 dec:items-center dec:justify-center dec:p-6;
+  }
+
+  .dec-root .dec-empty-state,
+  .dec-root .dec-loading-state {
+    background-color: var(--dec-canvas-bg);
+  }
+
+  .dec-root .dec-empty-state__content {
+    @apply dec:max-w-sm dec:text-center;
+  }
+
+  .dec-root .dec-empty-state__title {
+    @apply dec:text-base dec:font-semibold;
+    color: var(--dec-state-title-color);
+  }
+
+  .dec-root .dec-empty-state__message {
+    @apply dec:mt-1 dec:text-sm;
+    color: var(--dec-state-message-color);
+  }
+
+  .dec-root .dec-loading-state {
+    @apply dec:flex dec:h-full dec:items-center dec:justify-center dec:text-sm;
+    color: var(--dec-state-message-color);
   }
 }

@@ -23,6 +23,8 @@ export type DiagramEditorContextType = {
   isReadOnly: boolean;
   locale: string;
   contentFormat: ContentFormat;
+  /** Content string whose most recent parse attempt has completed. */
+  processedContent: string | null;
   model: Specification.Workflow | null;
   errors: SdkError[];
   nodes: RF.Node[];

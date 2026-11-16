@@ -15,7 +15,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DualEditor } from "../src/DualEditor";
@@ -28,17 +28,21 @@ vi.mock("@openworkflowspec/text-editor", () => ({
     content: string;
     onContentChange?: (content: string) => void;
   }) => {
-    const [editorContent, setEditorContent] = useState(content);
-    useEffect(() => setEditorContent(content), [content]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+      if (textareaRef.current && textareaRef.current.value !== content) {
+        textareaRef.current.value = content;
+      }
+    }, [content]);
 
     return (
       <textarea
         aria-label="Text source"
         data-testid="text-source"
-        value={editorContent}
+        ref={textareaRef}
+        defaultValue={content}
         onChange={(event) => {
           const nextContent = event.currentTarget.value;
-          setEditorContent(nextContent);
           onContentChange?.(nextContent);
         }}
       />
@@ -56,18 +60,22 @@ vi.mock("@openworkflowspec/diagram-editor", () => ({
     language?: "json" | "yaml";
     onContentChange?: (content: string) => void;
   }) => {
-    const [diagramContent, setDiagramContent] = useState(content);
-    useEffect(() => setDiagramContent(content), [content]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+      if (textareaRef.current && textareaRef.current.value !== content) {
+        textareaRef.current.value = content;
+      }
+    }, [content]);
 
     return (
       <textarea
         aria-label="Diagram source"
         data-testid="diagram-source"
         data-format={language}
-        value={diagramContent}
+        ref={textareaRef}
+        defaultValue={content}
         onChange={(event) => {
           const nextContent = event.currentTarget.value;
-          setDiagramContent(nextContent);
           onContentChange?.(nextContent);
         }}
       />
