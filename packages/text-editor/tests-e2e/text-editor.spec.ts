@@ -145,7 +145,9 @@ test.describe("TextEditor", () => {
 
       await page.keyboard.press("Escape");
       await pasteText(page, "{}");
+      await page.keyboard.press("ArrowLeft");
       await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, "do")).toBeVisible();
       await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).not.toBeVisible();
       await expect(monacoContainer).toContainText("{}");
     });
@@ -156,10 +158,11 @@ test.describe("TextEditor", () => {
       await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).toBeVisible();
 
       await page.keyboard.press("Escape");
-      await pasteText(page, "document:\n  dsl: '1.0.3'\n");
+      await pasteText(page, "document:\n  dsl: '1.0.3'\n  namespace: examples\n  ");
       await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, "name")).toBeVisible();
       await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).not.toBeVisible();
-      await expect(monacoContainer).toContainText("dsl:");
+      await expect(monacoContainer).toContainText("namespace: examples");
     });
   });
 
