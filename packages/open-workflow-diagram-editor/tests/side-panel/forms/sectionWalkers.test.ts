@@ -30,6 +30,10 @@ import {
   computeSentinelDefaults,
 } from "../../../src/side-panel/forms/taskFormContext";
 import { findShownField } from "../../../src/side-panel/forms/drill/drill";
+import {
+  collectCustomFieldsMaps,
+  withCustomFieldsLabel,
+} from "../../../src/side-panel/forms/mapEntries";
 
 const NODE_TYPES = [...TASK_TYPE_KEYS];
 
@@ -62,6 +66,12 @@ const WALKERS: [string, Walker][] = [
     "findShownField",
     (fields) =>
       ["if", "timeout", "metadata"].map((path) => findShownField(fields, path, () => undefined)),
+  ],
+  ["collectCustomFieldsMaps", (fields) => collectCustomFieldsMaps(fields).map((map) => map.path)],
+  [
+    "withCustomFieldsLabel",
+    (fields) =>
+      collectCustomFieldsMaps(withCustomFieldsLabel(fields, "Relabelled")).map((map) => map.label),
   ],
   [
     "collectVariantFieldPaths",

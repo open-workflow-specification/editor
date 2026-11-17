@@ -17,7 +17,7 @@
 import { describe, it, expect } from "vitest";
 import { NODE_TYPE_TO_DEF, getFormFieldsForNodeType } from "../../../../src/core/schemaWalker";
 import { SENTINEL_KEY } from "../../../../src/side-panel/forms/sentinels";
-import { forEachField } from "../../../../src/side-panel/forms/taskFormContext";
+import { forEachField } from "../../../../src/core/schemaToFormFields";
 import { collectTaskErrors } from "../../../../src/side-panel/forms/validation/collectSchemaFieldErrors";
 import {
   INVALID_SUBTASK_TASKS,

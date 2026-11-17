@@ -26,12 +26,13 @@ import type {
 } from "../../../core/schemaToFormFields";
 import { RUNTIME_EXPRESSION_PATTERN } from "../../../core/schemaToFormFields";
 import { isObjectNotArray } from "../../../core/utils";
-import { useTaskFormContext, getNestedValue } from "../taskFormContext";
+import { useTaskFormContext } from "../taskFormContext";
 import { MapRow } from "./KeyValueMapField";
 import type { MapEntry } from "./KeyValueMapField";
 import { EVENT_PROPERTY_KEYS } from "./eventFilterProperties";
 import { newId, useFieldError, FieldWithError } from "./fieldHelpers";
 import { parseText, valueToText } from "./innerObjectText";
+import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
 // Types

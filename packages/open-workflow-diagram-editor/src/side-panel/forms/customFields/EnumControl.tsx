@@ -25,12 +25,13 @@ import {
   ComboboxList,
 } from "../ui/combobox";
 import type { EnumField } from "../../../core/schemaToFormFields";
-import { useTaskFormContext, getNestedValue } from "../taskFormContext";
+import { useTaskFormContext } from "../taskFormContext";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 import { Textarea } from "../ui/textarea";
 import { innerTextPath } from "../sentinels";
 import { useRemoveField } from "../removeField";
 import { deriveInnerObject, serializeInnerObject } from "./innerObjectText";
+import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
 // Inner-object text stash

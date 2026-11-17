@@ -1504,7 +1504,7 @@
     @apply dec:min-w-0 dec:flex-1;
   }
 
-  .dec-root .dec-form-drill-row-wrap .dec-form-remove-btn {
+  .dec-root .dec-form-drill-row-wrap :is(.dec-form-remove-btn, .dec-form-field-help) {
     @apply dec:h-7 dec:w-7;
   }
 

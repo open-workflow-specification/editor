@@ -946,3 +946,63 @@ export const ADD_FIELDS_WORKFLOW = {
     },
   ],
 };
+
+/**
+ * Emit tasks for the "Custom fields" map: CloudEvents extension attributes beside an event's own
+ * attributes (`eventProperties` allows keys beyond its properties), and one without any.
+ */
+export const EMIT_CUSTOM_FIELDS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "emit-custom-fields", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      notifyShipped: {
+        emit: {
+          event: {
+            with: {
+              type: "com.acme.order.shipped",
+              source: "https://acme.com/shipping",
+              tenantid: "acme-eu",
+              traceparent: "${ $context.trace }",
+            },
+          },
+        },
+      },
+    },
+    {
+      notifyPlain: {
+        emit: {
+          event: { with: { type: "com.acme.order.placed", source: "https://acme.com/orders" } },
+        },
+      },
+    },
+    {
+      notifyExpressionData: {
+        emit: {
+          event: {
+            with: {
+              type: "com.acme.order.placed",
+              source: "https://acme.com/orders",
+              data: "${ .order }",
+            },
+          },
+        },
+      },
+    },
+    {
+      // A literal key RHF would read as a path (`data` › `foo`): the form must never address it.
+      notifyLiteralPath: {
+        emit: {
+          event: {
+            with: {
+              type: "com.acme.order.placed",
+              source: "https://acme.com/orders",
+              data: { foo: "keep" },
+              "data.foo": "literal",
+              tenantid: "acme-eu",
+            },
+          },
+        },
+      },
+    },
+  ],
+};

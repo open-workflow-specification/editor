@@ -19,7 +19,8 @@ import type { ValidationError } from "../../src/core";
 import type { FormFieldDescriptor } from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
 import { SENTINEL_KEY } from "../../src/side-panel/forms/sentinels";
-import { computeSentinelDefaults, forEachField } from "../../src/side-panel/forms/taskFormContext";
+import { computeSentinelDefaults } from "../../src/side-panel/forms/taskFormContext";
+import { forEachField } from "../../src/core/schemaToFormFields";
 
 /** A plain string field descriptor at `path`, labelled by its path. */
 export const leaf = (path: string, required = false): FormFieldDescriptor => ({

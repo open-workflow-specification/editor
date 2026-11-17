@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
+import { collectCustomFieldsMaps, customFieldsOwner } from "./mapEntries";
 import { getParentPath, isAtOrBelow } from "@/core/paths";
-import { applyDirtyValues, deletePath, flattenTask, setNestedPath } from "@/core/taskDraft";
+import {
+  applyDirtyValues,
+  deletePath,
+  flattenTask,
+  getNestedValue,
+  setNestedPath,
+} from "@/core/taskDraft";
 import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { structuralEqual } from "@/core/structuralEqual";
 import { isObjectNotArray } from "@/core/utils";
@@ -32,7 +39,6 @@ import {
   collectVariantFieldPaths,
   collectWholeValuePaths,
   computeSentinelDefaults,
-  getNestedValue,
   padRemovedPaths,
   valueMapModelValue,
 } from "./taskFormContext";
@@ -81,7 +87,13 @@ export function buildFormValues(
   }
   if (previousTask === undefined) return values;
 
-  padRemovedPaths(values, previousTask, task, collectWholeValuePaths(fields, task));
+  padRemovedPaths(
+    values,
+    previousTask,
+    task,
+    collectWholeValuePaths(fields, task),
+    collectCustomFieldsMaps(fields),
+  );
   for (const enumField of collectValueMapFields(fields)) {
     if (getNestedValue(task, enumField.path) === undefined) {
       setNestedPath(values, enumField.path, "");
@@ -334,7 +346,16 @@ export function computeDraftChanges({
       (!switched.some((oneOf) => isUnder(path, oneOf)) || (path in after && edited(path))),
   );
 
-  const paths = [...switched, ...removed, ...differing, ...unparsed];
+  // A "Custom fields" map is one field like any map: its entries are leaves of its object, so
+  // each entry's path counts as the map's.
+  const customFieldsMaps = collectCustomFieldsMaps(fields);
+  const paths = [
+    ...new Set(
+      [...switched, ...removed, ...differing, ...unparsed].map(
+        (path) => customFieldsOwner(customFieldsMaps, path)?.path ?? path,
+      ),
+    ),
+  ];
   return { hasChanges: true, paths: paths.length > 0 ? paths : [""] };
 }
 

@@ -15,6 +15,7 @@
  */
 
 import * as React from "react";
+import { withCustomFieldsLabel } from "./mapEntries";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import "./forms.css";
 import type { Specification } from "@openworkflowspec/sdk";
@@ -77,9 +78,17 @@ export function TaskForm({ nodeType, task, nodeId, taskReference, topLevelFooter
   const siblingTaskNames = useSiblingTaskNames(model, nodeId);
 
   // ── Resolve form fields from schema ───────────────────────────────────────
+  // "Custom fields" is the editor's own label, not schema text
+  const customFieldsLabel = t("sidebar.map.customFields");
+  const customFieldsHelp = t("sidebar.map.customFieldsHelp");
   const allFields = React.useMemo(
-    () => getFormFieldsForNodeType(nodeType, contentFormat),
-    [nodeType, contentFormat],
+    () =>
+      withCustomFieldsLabel(
+        getFormFieldsForNodeType(nodeType, contentFormat),
+        customFieldsLabel,
+        customFieldsHelp,
+      ),
+    [nodeType, contentFormat, customFieldsLabel, customFieldsHelp],
   );
 
   const { resetValidation } = useTaskValidation();
@@ -201,6 +210,7 @@ export function TaskForm({ nodeType, task, nodeId, taskReference, topLevelFooter
         isReadOnly,
         siblingTaskNames,
         taskData,
+        fields: allFields,
         validateField,
         revalidateIfAttempted,
       }}
