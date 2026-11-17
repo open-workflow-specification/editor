@@ -22,9 +22,9 @@ import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { flattenTask } from "@/core/taskDraft";
 import { collectSchemaFieldErrors } from "./collectSchemaFieldErrors";
 import { isSectionEmpty, buildOptionalSectionSet } from "./fieldErrorMapper";
-import { isCountingErrors } from "./footerValidationState";
 import { validateTaskForm, type TaskValidationResult } from "./taskLevelValidation";
-import { useTaskValidation } from "./taskValidationContext";
+import { isCountingErrors, useTaskValidation } from "./taskValidationContext";
+import { useClearFormErrors } from "./useClearFormErrors";
 import { isReservedPath } from "../sentinels";
 
 export type FieldValidationHandler = (path: string) => void;
@@ -46,16 +46,17 @@ export function useFieldLevelValidation(
   fields: FormFieldDescriptor[] = [],
 ): { validateField: FieldValidationHandler; revalidateIfAttempted: () => void } {
   const { t } = useI18n();
-  const { taskValidation, recordValidationResult } = useTaskValidation();
+  const { taskValidation, recordValidationResult, recordFieldError } = useTaskValidation();
+  const clearFormErrors = useClearFormErrors(form.clearErrors);
   const optionalSections = React.useMemo(() => buildOptionalSectionSet(fields), [fields]);
-  const { hasWorkflowErrors } = taskValidation;
-  // Once the footer shows a count, every change re-runs whole-task validation so the count stays live.
+  const { seededOnOpen } = taskValidation;
+  // Once counting (Apply attempted or errors seeded on open), every change re-runs whole-task validation.
   const isCounting: boolean = isCountingErrors(taskValidation);
 
   // Re-validation keeps the source of the errors the context already holds.
   const recordKeepingSource = React.useCallback(
-    (result: TaskValidationResult) => recordValidationResult(result, { hasWorkflowErrors }),
-    [recordValidationResult, hasWorkflowErrors],
+    (result: TaskValidationResult) => recordValidationResult(result, { seededOnOpen }),
+    [recordValidationResult, seededOnOpen],
   );
 
   const revalidateIfAttempted = React.useCallback(() => {
@@ -70,44 +71,65 @@ export function useFieldLevelValidation(
       }
 
       if (isCounting) {
-        // Clear any error on the blurred field (including workflow) before running task validation
+        // Cleared in RHF only: validateTaskForm below records the whole result, so the task
+        // validation state needs no separate clear.
         form.clearErrors(path);
         recordKeepingSource(validateTaskForm(nodeType, form, fields, { t }));
         return;
       }
 
-      const formValues = form.getValues();
-      const flat = flattenTask(formValues);
+      const formValues: Record<string, unknown> = form.getValues();
+      const flat: Record<string, unknown> = flattenTask(formValues);
 
       // Required sections must still be validated when empty so a cleared required field
       // surfaces a missing-field error; only optional sections are skipped.
-      const parentSection = getParentPath(path);
+      const parentSection: string = getParentPath(path);
       if (
         parentSection &&
         optionalSections.has(parentSection) &&
         isSectionEmpty(parentSection, formValues)
       ) {
         // Clear errors for all paths under this now-empty optional section
-        const sectionPathsToClear = Object.keys(flat).filter((k) => isAtOrBelow(k, parentSection));
+        const sectionPathsToClear: string[] = Object.keys(flat).filter((k) =>
+          isAtOrBelow(k, parentSection),
+        );
         if (sectionPathsToClear.length > 0) {
-          form.clearErrors(sectionPathsToClear);
+          clearFormErrors(sectionPathsToClear);
         }
         return;
       }
 
-      const fieldErrors = collectSchemaFieldErrors(nodeType, formValues, fields, path, t);
+      const fieldErrors: Record<string, string> = collectSchemaFieldErrors(
+        nodeType,
+        formValues,
+        fields,
+        path,
+        t,
+      );
 
-      const errorMessage = fieldErrors[path];
+      const errorMessage: string | undefined = fieldErrors[path];
       if (errorMessage) {
         form.setError(path, {
           type: "schema",
           message: errorMessage,
         });
+        recordFieldError(path, errorMessage);
       } else {
-        form.clearErrors(path);
+        clearFormErrors([path]);
       }
     },
-    [isReadOnly, isCounting, nodeType, form, fields, recordKeepingSource, optionalSections, t],
+    [
+      isReadOnly,
+      isCounting,
+      nodeType,
+      form,
+      fields,
+      recordKeepingSource,
+      optionalSections,
+      t,
+      recordFieldError,
+      clearFormErrors,
+    ],
   );
 
   return { validateField, revalidateIfAttempted };

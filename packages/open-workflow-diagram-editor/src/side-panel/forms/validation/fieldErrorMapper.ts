@@ -17,14 +17,25 @@
 import type { ErrorObject } from "ajv/dist/2020";
 import { getMissingProperty } from "@/core/ajvErrorUtils";
 import { getParentPath, isAtOrBelow, joinPath, pointerToDotPath } from "@/core/paths";
-import { forEachField, type FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { flattenTask, getNestedValue, pruneEmptyLeaves, unflattenValues } from "@/core/taskDraft";
-import { isReservedPath, sentinelPath } from "../sentinels";
+import {
+  ROOT_ONE_OF_PATH,
+  forEachField,
+  type FormFieldDescriptor,
+} from "@/core/schemaToFormFields";
+import { isObjectNotArray } from "@/core/utils";
+import {
+  flattenTask,
+  getNestedValue,
+  pruneEmptyLeaves,
+  setNestedPath,
+  unflattenValues,
+} from "@/core/taskDraft";
+import { isReservedPath } from "../sentinels";
 import {
   collectFormListPaths,
   collectLeafKinds,
   collectValueMapFields,
-  selectedVariantIndex,
+  selectedVariantIndexFromSentinels,
   valueMapModelValue,
 } from "../taskFormContext";
 import { getValueMapInnerObject } from "../customFields/innerObjectText";
@@ -88,11 +99,7 @@ export function prepareValuesForValidation(
   // Inject constWrites from active oneOf variants
   for (const field of fields) {
     if (field.kind === "one-of") {
-      const activeIdx = selectedVariantIndex(
-        field,
-        sentinels[sentinelPath(field.path)] as string | undefined,
-        formValues,
-      );
+      const activeIdx = selectedVariantIndexFromSentinels(field, sentinels, formValues);
       const activeVariant = field.variants[activeIdx];
       if (activeVariant?.constWrites) {
         for (const [writePath, writeVal] of Object.entries(activeVariant.constWrites)) {
@@ -103,7 +110,52 @@ export function prepareValuesForValidation(
     }
   }
 
-  return unflattenValues(cleanedFlat);
+  const prepared: Record<string, unknown> = unflattenValues(cleanedFlat);
+  keepEmptiedRequiredContainers(prepared, formValues, fields, sentinels);
+  return prepared;
+}
+
+/**
+ * Pruning drops a container whose fields were all cleared, but Apply keeps a required one
+ * (such as `wait: {}`). Puts it back so validation reports what is wrong inside it, instead of the
+ * container itself being missing ("must have required property 'wait'").
+ */
+function keepEmptiedRequiredContainers(
+  prepared: Record<string, unknown>,
+  formValues: Record<string, unknown>,
+  fields: FormFieldDescriptor[],
+  sentinels: Record<string, unknown>,
+): void {
+  const walk = (list: FormFieldDescriptor[], parentPresent: boolean): void => {
+    for (const field of list) {
+      if (field.kind === "section") {
+        walk(field.children, parentPresent);
+        continue;
+      }
+      if (field.kind !== "object" && field.kind !== "one-of") continue;
+
+      const isRoot: boolean = field.path === ROOT_ONE_OF_PATH;
+      if (
+        !isRoot &&
+        parentPresent &&
+        field.required &&
+        isObjectNotArray(getNestedValue(formValues, field.path)) &&
+        getNestedValue(prepared, field.path) === undefined
+      ) {
+        setNestedPath(prepared, field.path, {});
+      }
+      const present: boolean = isRoot || getNestedValue(prepared, field.path) !== undefined;
+
+      if (field.kind === "object") {
+        walk(field.children, present);
+      } else {
+        const selected: number = selectedVariantIndexFromSentinels(field, sentinels, formValues);
+        const variant: (typeof field.variants)[number] | undefined = field.variants[selected];
+        if (variant) walk(variant.fields, present);
+      }
+    }
+  };
+  walk(fields, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,11 +218,7 @@ function collectInactiveVariantPaths(
 
   forEachField(fields, (d) => {
     if (d.kind !== "one-of") return;
-    const activeIdx = selectedVariantIndex(
-      d,
-      sentinels[sentinelPath(d.path)] as string | undefined,
-      formValues,
-    );
+    const activeIdx = selectedVariantIndexFromSentinels(d, sentinels, formValues);
     const activeVariant = d.variants[activeIdx];
     const activePaths = new Set(activeVariant ? collectLeafKinds(activeVariant.fields).keys() : []);
 

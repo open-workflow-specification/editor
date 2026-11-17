@@ -20,8 +20,24 @@ import {
   TaskValidationProvider,
   useTaskValidation,
   useLevelErrors,
+  isCountingErrors,
   INITIAL_TASK_VALIDATION_STATE,
+  type TaskValidationContextValue,
 } from "../../../../src/side-panel/forms/validation/taskValidationContext";
+
+describe("isCountingErrors", () => {
+  it.each([
+    { attempted: false, seededOnOpen: false, expected: false },
+    { attempted: true, seededOnOpen: false, expected: true },
+    { attempted: false, seededOnOpen: true, expected: true },
+    { attempted: true, seededOnOpen: true, expected: true },
+  ])(
+    "attempted=$attempted seededOnOpen=$seededOnOpen -> $expected",
+    ({ attempted, seededOnOpen, expected }) => {
+      expect(isCountingErrors({ attempted, seededOnOpen })).toBe(expected);
+    },
+  );
+});
 
 describe("taskValidationContext", () => {
   it("returns default fallback state when useTaskValidation is used outside provider", () => {
@@ -88,7 +104,7 @@ describe("taskValidationContext", () => {
     expect(result.current.taskValidation).toEqual(INITIAL_TASK_VALIDATION_STATE);
     expect(result.current.errorCount).toBe(0);
   });
-  it("flags workflow-seeded results without latching attempted, and clears the flag on the next record", () => {
+  it("flags results seeded on open without latching attempted, and clears the flag on the next record", () => {
     const { result } = renderHook(() => useTaskValidation(), {
       wrapper: TaskValidationProvider,
     });
@@ -100,10 +116,10 @@ describe("taskValidationContext", () => {
     };
 
     act(() => {
-      result.current.recordValidationResult(seeded, { hasWorkflowErrors: true });
+      result.current.recordValidationResult(seeded, { seededOnOpen: true });
     });
 
-    expect(result.current.taskValidation.hasWorkflowErrors).toBe(true);
+    expect(result.current.taskValidation.seededOnOpen).toBe(true);
     expect(result.current.taskValidation.attempted).toBe(false);
     expect(result.current.errorCount).toBe(1);
 
@@ -111,8 +127,116 @@ describe("taskValidationContext", () => {
       result.current.recordValidationResult(seeded, { attempted: true });
     });
 
-    expect(result.current.taskValidation.hasWorkflowErrors).toBe(false);
+    expect(result.current.taskValidation.seededOnOpen).toBe(false);
     expect(result.current.taskValidation.attempted).toBe(true);
+  });
+
+  it("sets and clears individual field errors via recordFieldError", () => {
+    const { result } = renderHook(() => useTaskValidation(), {
+      wrapper: TaskValidationProvider,
+    });
+
+    act(() => {
+      result.current.recordFieldError("with.uri", "Required");
+    });
+
+    expect(result.current.taskValidation.fieldErrors).toEqual({ "with.uri": "Required" });
+    expect(result.current.errorCount).toBe(1);
+
+    act(() => {
+      result.current.recordFieldError("with.method", "Invalid method");
+    });
+
+    expect(result.current.taskValidation.fieldErrors).toEqual({
+      "with.uri": "Required",
+      "with.method": "Invalid method",
+    });
+    expect(result.current.errorCount).toBe(2);
+
+    act(() => {
+      result.current.recordFieldError("with.uri", undefined);
+    });
+
+    expect(result.current.taskValidation.fieldErrors).toEqual({
+      "with.method": "Invalid method",
+    });
+    expect(result.current.errorCount).toBe(1);
+  });
+
+  it("clears matching field errors and subpaths via clearFieldErrors", () => {
+    const { result } = renderHook(() => useTaskValidation(), {
+      wrapper: TaskValidationProvider,
+    });
+
+    act(() => {
+      result.current.recordFieldError("auth.token", "Required");
+      result.current.recordFieldError("auth.header", "Invalid");
+      result.current.recordFieldError("other", "Error");
+    });
+
+    expect(result.current.errorCount).toBe(3);
+
+    act(() => {
+      result.current.clearFieldErrors(["auth"]);
+    });
+
+    expect(result.current.taskValidation.fieldErrors).toEqual({ other: "Error" });
+    expect(result.current.errorCount).toBe(1);
+  });
+
+  describe("no-op updates keep the same state object", () => {
+    function renderSeeded() {
+      const hook = renderHook(() => useTaskValidation(), { wrapper: TaskValidationProvider });
+      act(() => {
+        hook.result.current.recordFieldError("auth.token", "Required");
+      });
+      return hook;
+    }
+
+    it.each([
+      {
+        name: "recording an identical message",
+        run: (v: TaskValidationContextValue) => v.recordFieldError("auth.token", "Required"),
+      },
+      {
+        name: "clearing an absent path",
+        run: (v: TaskValidationContextValue) => v.recordFieldError("missing", undefined),
+      },
+      {
+        name: "clearing paths that match no error",
+        run: (v: TaskValidationContextValue) => v.clearFieldErrors(["other", "auth.tok"]),
+      },
+      {
+        name: "clearing an empty path list",
+        run: (v: TaskValidationContextValue) => v.clearFieldErrors([]),
+      },
+    ])("$name", ({ run }) => {
+      const { result } = renderSeeded();
+      const before = result.current.taskValidation;
+
+      act(() => {
+        run(result.current);
+      });
+
+      expect(result.current.taskValidation).toBe(before);
+    });
+  });
+
+  it("clears every field error when the root path is cleared", () => {
+    const { result } = renderHook(() => useTaskValidation(), {
+      wrapper: TaskValidationProvider,
+    });
+
+    act(() => {
+      result.current.recordFieldError("a", "Error");
+      result.current.recordFieldError("b.c", "Error");
+    });
+    act(() => {
+      result.current.clearFieldErrors([""]);
+    });
+
+    expect(result.current.taskValidation.fieldErrors).toEqual({});
+    expect(result.current.errorCount).toBe(0);
   });
 
   describe("useLevelErrors", () => {

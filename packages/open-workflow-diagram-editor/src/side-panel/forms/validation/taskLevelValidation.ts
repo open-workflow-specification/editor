@@ -75,7 +75,7 @@ export function collectSchemaErrorPaths(
  * clears previously set schema errors that are now resolved, and returns the categorized
  * validation result.
  *
- * Workflow-seeded errors (`type === "workflow"`) are never cleared by this function.
+ * Errors seeded when the task is opened are schema errors too, so they are cleared once resolved.
  * Level errors are returned but not written into RHF.
  */
 export function validateTaskForm(

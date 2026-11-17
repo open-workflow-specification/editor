@@ -24,6 +24,7 @@ import {
   useTaskFormContext,
   useVariantSnapshots,
 } from "./taskFormContext";
+import { useClearFormErrors } from "./validation";
 import {
   Combobox,
   ComboboxContent,
@@ -50,6 +51,7 @@ export function VariantPicker({
   const { t } = useI18n();
   const { isReadOnly, revalidateIfAttempted } = useTaskFormContext();
   const { getValues, setValue, register, clearErrors } = useFormContext<Record<string, unknown>>();
+  const clearFormErrors: (paths: string[]) => void = useClearFormErrors(clearErrors);
   const sentinelPath = toSentinelPath(field.path);
   const selectedVariantIdx = useSelectedVariant(field);
   // Only the switch itself: the chosen variant's fields mark their own changes below the picker.
@@ -67,7 +69,7 @@ export function VariantPicker({
         field,
         from: selectedVariantIdx,
         to: newIdx,
-        form: { getValues, setValue, clearErrors },
+        form: { getValues, setValue, clearErrors: clearFormErrors },
         snapshots: variantSnapshots,
       });
       revalidateIfAttempted?.();
@@ -77,7 +79,7 @@ export function VariantPicker({
       selectedVariantIdx,
       getValues,
       setValue,
-      clearErrors,
+      clearFormErrors,
       revalidateIfAttempted,
       variantSnapshots,
     ],

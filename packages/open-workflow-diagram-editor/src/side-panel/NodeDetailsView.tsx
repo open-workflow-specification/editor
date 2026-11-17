@@ -30,12 +30,24 @@ type NodeDetailsViewProps = {
   node: RF.Node<BaseNodeData>;
 };
 
+/**
+ * The reference of the task the node edits. The Try and Catch nodes have none of their own: they
+ * edit their try/catch task, the parent node, so its errors are theirs too.
+ */
+function resolveTaskReference(node: RF.Node<BaseNodeData>, nodes: RF.Node[]): string | undefined {
+  if (node.data.taskReference !== undefined) return node.data.taskReference;
+  if (node.data.task === undefined || node.parentId === undefined) return undefined;
+  const parent: RF.Node | undefined = nodes.find((candidate) => candidate.id === node.parentId);
+  const parentData: Partial<BaseNodeData> | undefined = parent?.data;
+  return parentData?.taskReference;
+}
+
 export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const { t } = useI18n();
-  const { errors, taskReferences, isReadOnly } = useDiagramEditorContext();
+  const { errors, taskReferences, isReadOnly, nodes } = useDiagramEditorContext();
   const { taskValidation } = useTaskValidation();
   const task = node.data.task;
-  const taskReference = node.data.taskReference;
+  const taskReference = resolveTaskReference(node, nodes);
 
   /* Layout-only nodes (entry/exit/start/end) have no taskReference. Only read-only mode lists them all */
   const nodeErrors: ValidationError[] =

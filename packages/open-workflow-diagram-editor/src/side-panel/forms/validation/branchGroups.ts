@@ -123,7 +123,7 @@ function collapseGroup(
     if (only === "nested") return rest;
     return [...rest, ...members.filter((e) => `b${branchOf(e)}` === only)];
   }
-  const typeOnly = typeMismatched.size === candidates.size;
+  const typeOnly: boolean = typeMismatched.size === candidates.size;
   return [
     ...rest,
     { ...group, keyword: GROUP_KEYWORD, params: { ...group.params, typeMismatch: typeOnly } },

@@ -24,7 +24,6 @@ import {
   classifyErrorPath,
   classifyTaskErrors,
   emptyClassifiedErrors,
-  mergeClassifiedErrors,
   recordClassification,
   NOISE_KEYWORDS,
   type ClassifiedTaskErrors,
@@ -333,6 +332,52 @@ describe("classifyErrorPath", () => {
   });
 });
 
+describe("classifyErrorPath for a path the form only shows fields below", () => {
+  const nested: FormFieldDescriptor[] = [
+    {
+      kind: "object",
+      path: "outer",
+      label: "outer",
+      required: true,
+      children: [leaf("outer.hidden.x")],
+    },
+    leaf("flat.y"),
+  ];
+  const view = buildActiveFormView(nested, {}, {});
+
+  it.each([
+    { name: "the nearest container", path: "outer.hidden", expected: "outer" },
+    { name: "the task root when no container holds it", path: "flat", expected: "" },
+  ])("places it on $name", ({ path, expected }) => {
+    expect(classifyErrorPath(path, "type", {}, view)).toEqual({ kind: "level", path: expected });
+  });
+
+  it("keeps an error on the task root at the root", () => {
+    expect(classifyErrorPath("", "required", {}, view)).toEqual({ kind: "level", path: "" });
+  });
+});
+
+describe("classifyTaskErrors with a group error", () => {
+  const group = (instancePath: string): ErrorObject => ({
+    ...error("oneOf", instancePath),
+    keyword: GROUP_KEYWORD,
+  });
+
+  it("drops a group error that another error below it already explains", () => {
+    const result = classify([group("/obj"), error("type", "/obj/a")]);
+
+    expect(result.fieldErrors).toEqual({ "obj.a": "type message" });
+    expect(result.levelErrors).toEqual({});
+  });
+
+  it("keeps a group error when nothing else is reported below it", () => {
+    const result = classify([group("/obj"), error("type", "/name")]);
+
+    expect(Object.keys(result.levelErrors)).toEqual(["obj"]);
+    expect(Object.keys(result.fieldErrors)).toEqual(["name"]);
+  });
+});
+
 describe("recordClassification", () => {
   it.each([
     {
@@ -385,27 +430,6 @@ describe("emptyClassifiedErrors", () => {
       fieldErrors: {},
       levelErrors: {},
       unplacedErrors: {},
-    });
-  });
-});
-
-describe("mergeClassifiedErrors", () => {
-  it("unions every map, keeping the primary message on a path both hold", () => {
-    const primary: ClassifiedTaskErrors = {
-      fieldErrors: { a: "primary" },
-      levelErrors: { obj: "primary" },
-      unplacedErrors: {},
-    };
-    const secondary: ClassifiedTaskErrors = {
-      fieldErrors: { a: "secondary", b: "secondary" },
-      levelErrors: { x: "secondary" },
-      unplacedErrors: { x: "secondary" },
-    };
-
-    expect(mergeClassifiedErrors(primary, secondary)).toEqual({
-      fieldErrors: { a: "primary", b: "secondary" },
-      levelErrors: { obj: "primary", x: "secondary" },
-      unplacedErrors: { x: "secondary" },
     });
   });
 });

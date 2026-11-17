@@ -25,6 +25,7 @@ import { FormField } from "./FormField";
 import { useAddedFields } from "./addedFields";
 import { holdsValue } from "./draft";
 import { useTaskFormContext } from "./taskFormContext";
+import { useClearFormErrors } from "./validation";
 import { MAP_ROWS_KEY, innerTextPath, sentinelPath, withoutMapRows } from "./sentinels";
 import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
 import {
@@ -102,6 +103,7 @@ function EditableFieldList({ fields, before, ownerPath, atLeastOne }: FieldListP
   const { announce, open } = useDrill();
   const inline = React.useContext(InlineLevelsContext);
   const { control, getValues, setValue, clearErrors } = useFormContext<Record<string, unknown>>();
+  const clearFormErrors: (paths: string[]) => void = useClearFormErrors(clearErrors);
   const paths = React.useMemo(
     () => fields.flatMap((field) => [field.path, sentinelPath(field.path)]),
     [fields],
@@ -188,16 +190,18 @@ function EditableFieldList({ fields, before, ownerPath, atLeastOne }: FieldListP
       setValue(editorPath, get(defaultValues, editorPath), { shouldDirty: true });
     });
     if (maps.length > 0) setValue(MAP_ROWS_KEY, withoutMapRows(getValues(), maps));
+    const clearedPaths: string[] = [field.path];
     if (isCustomFieldsMap(field)) {
       // Its entries, never its path (nothing is there) nor its object (the fixed fields' too)
       for (const key of Object.keys(mapEntriesOf(field, getValues()) ?? {})) {
         setValue(mapEntryPath(field, key), undefined, { shouldDirty: true });
-        clearErrors(mapEntryPath(field, key));
+        clearedPaths.push(mapEntryPath(field, key));
       }
     } else {
       setValue(field.path, undefined, { shouldDirty: true });
     }
-    clearErrors(field.path);
+    // Both RHF and the task validation, so the footer count drops them too
+    clearFormErrors(clearedPaths);
     drop(field.path);
     // The footer count and row badges read the task validation, not RHF's errors
     revalidateIfAttempted?.();

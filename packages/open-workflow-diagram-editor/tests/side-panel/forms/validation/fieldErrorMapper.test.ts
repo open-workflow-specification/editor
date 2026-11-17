@@ -17,6 +17,7 @@
 import { describe, it, expect } from "vitest";
 import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
+import { leaf } from "../../../test-utils/validation-helpers";
 import {
   prepareValuesForValidation,
   isSectionEmpty,
@@ -180,6 +181,122 @@ describe("fieldErrorMapper", () => {
         };
         const prepared = prepareValuesForValidation({ mode: "fast" }, [plain]);
         expect(prepared).toEqual({ mode: { speed: "fast" } });
+      });
+    });
+
+    describe("a required container whose fields were all cleared", () => {
+      const container = (
+        path: string,
+        required: boolean,
+        children: FormFieldDescriptor[],
+      ): FormFieldDescriptor => ({ kind: "object", path, label: path, required, children });
+
+      it.each([
+        {
+          name: "is kept as an empty object",
+          fields: [container("wait", true, [leaf("wait.seconds")])],
+          values: { wait: { seconds: "" } },
+          expected: { wait: {} },
+        },
+        {
+          name: "is not kept when it is optional",
+          fields: [container("wait", false, [leaf("wait.seconds")])],
+          values: { wait: { seconds: "" } },
+          expected: {},
+        },
+        {
+          name: "is not kept when the form holds no object for it",
+          fields: [container("wait", true, [leaf("wait.seconds")])],
+          values: {},
+          expected: {},
+        },
+        {
+          name: "is not kept inside an absent optional parent",
+          fields: [
+            container("outer", false, [container("outer.inner", true, [leaf("outer.inner.x")])]),
+          ],
+          values: { outer: { inner: { x: "" } } },
+          expected: {},
+        },
+        {
+          name: "is kept inside a kept parent",
+          fields: [
+            container("outer", true, [container("outer.inner", true, [leaf("outer.inner.x")])]),
+          ],
+          values: { outer: { inner: { x: "" } } },
+          expected: { outer: { inner: {} } },
+        },
+        {
+          name: "is kept inside a section",
+          fields: [
+            {
+              kind: "section",
+              path: "__common__",
+              label: "common",
+              required: false,
+              children: [container("wait", true, [leaf("wait.seconds")])],
+            },
+          ],
+          values: { wait: { seconds: "" } },
+          expected: { wait: {} },
+        },
+        {
+          name: "is kept inside the selected variant of the root one-of",
+          fields: [
+            {
+              kind: "one-of",
+              path: "__root__",
+              label: "Type",
+              required: true,
+              variants: [
+                {
+                  label: "Wait",
+                  fields: [container("wait", true, [leaf("wait.seconds")])],
+                  matchesData: () => true,
+                  constWrites: {},
+                },
+              ],
+            },
+          ],
+          values: { wait: { seconds: "" } },
+          expected: { wait: {} },
+        },
+        {
+          name: "is kept as an empty object for a required one-of without variants",
+          fields: [
+            { kind: "one-of", path: "choice", label: "Choice", required: true, variants: [] },
+          ],
+          values: { choice: { sub: { x: "" } } },
+          expected: { choice: {} },
+        },
+        {
+          name: "is kept inside a required one-of that is kept itself",
+          fields: [
+            {
+              kind: "one-of",
+              path: "choice",
+              label: "Choice",
+              required: true,
+              variants: [
+                {
+                  label: "Sub",
+                  fields: [container("choice.sub", true, [leaf("choice.sub.x")])],
+                  matchesData: () => true,
+                  constWrites: {},
+                },
+              ],
+            },
+          ],
+          values: { choice: { sub: { x: "" } } },
+          expected: { choice: { sub: {} } },
+        },
+      ] satisfies Array<{
+        name: string;
+        fields: FormFieldDescriptor[];
+        values: Record<string, unknown>;
+        expected: Record<string, unknown>;
+      }>)("$name", ({ fields, values, expected }) => {
+        expect(prepareValuesForValidation(values, fields)).toEqual(expected);
       });
     });
   });

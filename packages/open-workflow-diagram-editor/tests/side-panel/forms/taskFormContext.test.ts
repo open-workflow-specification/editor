@@ -24,6 +24,7 @@ import {
   collectValueMapFields,
   valueMapModelValue,
   collectWholeValuePaths,
+  selectedVariantIndexFromSentinels,
 } from "../../../src/side-panel/forms/taskFormContext";
 import { getFormFieldsForNodeType } from "../../../src/core";
 import { getNestedValue } from "../../../src/core/taskDraft";
@@ -32,7 +33,9 @@ import {
   forEachField,
   type EnumField,
   type FormFieldDescriptor,
+  type OneOfField,
 } from "../../../src/core/schemaToFormFields";
+import { sentinelPath } from "../../../src/side-panel/forms/sentinels";
 import { RAISE_BOTH_ERROR_SHAPES_WORKFLOW, SET_EXAMPLE_WORKFLOW } from "../../fixtures/workflows";
 import { nodeAt, parseFixture } from "../../test-utils/workflow-helpers";
 
@@ -308,6 +311,38 @@ describe("filterReadOnlyFields — one-of fields", () => {
   it("excludes a property-level one-of when the task has no value at that path", () => {
     const result = filterReadOnlyFields([makeOneOf("output.as")], initializeTask);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// selectedVariantIndexFromSentinels
+// ---------------------------------------------------------------------------
+
+describe("selectedVariantIndexFromSentinels", () => {
+  const field: OneOfField = {
+    kind: "one-of",
+    path: "choice",
+    label: "choice",
+    required: false,
+    variants: [
+      { label: "A", fields: [], matchesData: () => false, constWrites: {} },
+      { label: "B", fields: [], matchesData: () => false, constWrites: {} },
+    ],
+  };
+
+  it.each([
+    {
+      name: "the variant named by the sentinel",
+      sentinels: { [sentinelPath("choice")]: "B" },
+      expected: 1,
+    },
+    {
+      name: "the first variant when no sentinel is set and no data matches",
+      sentinels: {},
+      expected: 0,
+    },
+  ])("selects $name", ({ sentinels, expected }) => {
+    expect(selectedVariantIndexFromSentinels(field, sentinels, {})).toBe(expected);
   });
 });
 

@@ -120,10 +120,8 @@ describe("remove field", () => {
 describe("removing a field that has an error", () => {
   const createPet = ADD_FIELDS_WORKFLOW.do[0]!.createPet!;
   const counter = () => document.querySelector(".dec-footer-validation-counter");
-
-  // The footer counts the task validation's errors, which RHF's `clearErrors` doesn't reach.
-  it("takes its error out of the footer count", async () => {
-    const { user } = await renderTaskPanel(
+  const renderInvalidRedirect = () =>
+    renderTaskPanel(
       parseFixture({
         ...ADD_FIELDS_WORKFLOW,
         do: [
@@ -133,8 +131,23 @@ describe("removing a field that has an error", () => {
       }),
       CREATE_PET,
     );
+
+  // The footer counts the task validation's errors, which RHF's `clearErrors` doesn't reach.
+  it("takes its error out of the footer count", async () => {
+    const { user } = await renderInvalidRedirect();
     await user.type(screen.getByLabelText("Method"), "x");
     await user.click(panel.apply());
+    expect(counter()).toHaveTextContent("1 error");
+
+    await user.click(removeButton("Redirect")!);
+
+    expect(counter()).toBeNull();
+  });
+
+  it("takes a blur-time error out of the footer count before any Apply", async () => {
+    const { user } = await renderInvalidRedirect();
+    await user.type(screen.getByLabelText("Method"), "x");
+    await user.tab();
     expect(counter()).toHaveTextContent("1 error");
 
     await user.click(removeButton("Redirect")!);

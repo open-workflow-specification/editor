@@ -81,6 +81,8 @@ function useHook(
     taskValidation: INITIAL_TASK_VALIDATION_STATE,
     errorCount: 0,
     recordValidationResult: mocks.recordValidationResult,
+    recordFieldError: vi.fn(),
+    clearFieldErrors: vi.fn(),
     resetValidation: mocks.resetValidation,
   });
   const form = {
@@ -117,7 +119,9 @@ describe("useWorkflowErrorsForForm", () => {
     expect(mocks.setError).not.toHaveBeenCalled();
   });
 
-  it("sets a workflow field error and seeds the context with hasWorkflowErrors", () => {
+  // The node type has no schema, so task-level validation finds nothing and these tests seed the
+  // workflow errors, the fallback. Seeding task-level errors is covered by the panel tests.
+  it("sets a field error and seeds the context with seededOnOpen", () => {
     const mocks = setup();
     const errors: SdkError[] = [
       { path: `${taskRef}/call/endpoint`, errorType: "#/x/type", message: "Bad endpoint" },
@@ -126,7 +130,7 @@ describe("useWorkflowErrorsForForm", () => {
     renderHook(() => useHook(mocks, errors, taskRef, "node-1"));
 
     expect(mocks.setError).toHaveBeenCalledWith("call.endpoint", {
-      type: "workflow",
+      type: "schema",
       message: "Bad endpoint",
     });
     expect(mocks.recordValidationResult).toHaveBeenCalledWith(
@@ -136,7 +140,7 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: {},
         hasUnparseableValueMapPayload: false,
       },
-      { hasWorkflowErrors: true },
+      { seededOnOpen: true },
     );
   });
 
@@ -154,20 +158,22 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: { mystery: "Unknown" },
         levelErrors: { mystery: "Unknown" },
       }),
-      { hasWorkflowErrors: true },
+      { seededOnOpen: true },
     );
   });
 
   it("seeds a task-root error as a level error", () => {
     const mocks = setup();
-    const errors: SdkError[] = [{ path: taskRef, errorType: "#/x/type", message: "General" }];
+    const errors: SdkError[] = [
+      { path: taskRef, errorType: "#/minProperties", message: "General" },
+    ];
 
     renderHook(() => useHook(mocks, errors, taskRef, "node-1"));
 
     expect(mocks.setError).not.toHaveBeenCalled();
     expect(mocks.recordValidationResult).toHaveBeenCalledWith(
       expect.objectContaining({ levelErrors: { "": "General" }, unplacedErrors: {} }),
-      { hasWorkflowErrors: true },
+      { seededOnOpen: true },
     );
   });
 
@@ -182,7 +188,7 @@ describe("useWorkflowErrorsForForm", () => {
     });
 
     expect(mocks.setError).toHaveBeenCalledWith("then", {
-      type: "workflow",
+      type: "schema",
       message: "Target task does not exist",
     });
 

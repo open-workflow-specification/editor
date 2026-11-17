@@ -40,12 +40,17 @@ function Wrapper({
   defaultValues = {},
   taskData = {},
   isReadOnly = false,
+  errorMessage,
 }: {
   defaultValues?: Record<string, unknown>;
   taskData?: Record<string, unknown>;
   isReadOnly?: boolean;
+  errorMessage?: string;
 }) {
   const form = useForm<Record<string, unknown>>({ defaultValues });
+  React.useEffect(() => {
+    if (errorMessage) form.setError(field.path, { type: "schema", message: errorMessage });
+  }, [form, errorMessage]);
 
   return (
     <I18nProvider locale="en" dictionaries={{ en }}>
@@ -122,5 +127,20 @@ describe("StringListField", () => {
   it("renders nothing in read-only mode when the list is empty", () => {
     const { container } = render(<Wrapper isReadOnly />);
     expect(container.innerHTML).toBe("");
+  });
+
+  it.each([
+    { name: "with items", defaultValues: { with: { tools: ["hammer"] } } },
+    { name: "when empty", defaultValues: {} },
+  ])("shows the field error $name", async ({ defaultValues }) => {
+    render(<Wrapper defaultValues={defaultValues} errorMessage="must be string" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("must be string");
+  });
+
+  it("shows no error when the field is valid", () => {
+    render(<Wrapper defaultValues={{ with: { tools: ["hammer"] } }} />);
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

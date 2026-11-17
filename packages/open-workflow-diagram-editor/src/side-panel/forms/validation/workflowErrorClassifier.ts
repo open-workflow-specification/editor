@@ -22,6 +22,7 @@ import {
   pointerToDotPath,
   type ValidationError,
 } from "@/core";
+import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD } from "./branchGroups";
@@ -98,7 +99,15 @@ export function classifyWorkflowErrors(
 
     if (isInactiveBranchEcho(error, path, view)) continue;
 
-    const placed: Classification = classifyErrorPath(path, GROUP_KEYWORD, {}, view);
+    // The real keyword lets a container drop what another `oneOf` branch reports about it, as
+    // task-level validation does.
+    const params: ErrorObject["params"] = error.object ?? {};
+    const placed: Classification = classifyErrorPath(
+      path,
+      keyword === undefined || keyword === "anyOf" ? GROUP_KEYWORD : keyword,
+      params,
+      view,
+    );
     recordClassification(classified, placed, error.message);
   }
 

@@ -23,8 +23,8 @@ import { emptyClassifiedErrors } from "./taskErrorClassifier";
 export interface TaskValidationState {
   /** True after the first Apply click attempted validation (the "latch"). */
   attempted: boolean;
-  /** True while the errors come from workflow-level validation rather than an Apply run. */
-  hasWorkflowErrors: boolean;
+  /** True while the errors were seeded when the task was opened rather than found by an Apply run. */
+  seededOnOpen: boolean;
   /** Form-field paths with schema errors. */
   fieldErrors: Record<string, string>;
   /** Container paths with level errors ("" = task root). */
@@ -37,16 +37,26 @@ export interface TaskValidationState {
 
 export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
   attempted: false,
-  hasWorkflowErrors: false,
+  seededOnOpen: false,
   ...emptyClassifiedErrors(),
   hasUnparseableValueMapPayload: false,
 };
 
+/**
+ * True once whole-task validation re-runs on every change: after an Apply attempt,
+ * or when the errors were seeded when the task was opened.
+ */
+export function isCountingErrors(
+  state: Pick<TaskValidationState, "attempted" | "seededOnOpen">,
+): boolean {
+  return state.attempted || state.seededOnOpen;
+}
+
 export interface RecordValidationOptions {
   /** Sets the attempted flag (the Apply "latch"); left as it is when omitted. */
   attempted?: boolean;
-  /** Marks a result seeded from workflow validation; cleared when omitted. */
-  hasWorkflowErrors?: boolean;
+  /** Marks a result seeded when the task was opened; cleared when omitted. */
+  seededOnOpen?: boolean;
 }
 
 export interface TaskValidationContextValue {
@@ -55,6 +65,10 @@ export interface TaskValidationContextValue {
   errorCount: number;
   /** Records a validation result into state; see `RecordValidationOptions`. */
   recordValidationResult: (result: TaskValidationResult, options?: RecordValidationOptions) => void;
+  /** Sets or clears a single field error without triggering whole-task validation. */
+  recordFieldError: (path: string, message: string | undefined) => void;
+  /** Clears errors for matching field paths and their subpaths. */
+  clearFieldErrors: (paths: string[]) => void;
   /** Resets validation state to initial clean state. */
   resetValidation: () => void;
 }
@@ -73,11 +87,11 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
   const recordValidationResult = React.useCallback(
     (
       result: TaskValidationResult,
-      { attempted, hasWorkflowErrors = false }: RecordValidationOptions = {},
+      { attempted, seededOnOpen = false }: RecordValidationOptions = {},
     ) => {
       setState((prev) => ({
         attempted: attempted ?? prev.attempted,
-        hasWorkflowErrors,
+        seededOnOpen,
         fieldErrors: result.fieldErrors,
         levelErrors: result.levelErrors,
         unplacedErrors: result.unplacedErrors,
@@ -86,6 +100,33 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
     },
     [],
   );
+
+  const recordFieldError = React.useCallback((path: string, message: string | undefined) => {
+    setState((prev) => {
+      if (message !== undefined) {
+        if (prev.fieldErrors[path] === message) return prev;
+        return {
+          ...prev,
+          fieldErrors: { ...prev.fieldErrors, [path]: message },
+        };
+      }
+      if (!(path in prev.fieldErrors)) return prev;
+      const rest: Record<string, string> = { ...prev.fieldErrors };
+      delete rest[path];
+      return { ...prev, fieldErrors: rest };
+    });
+  }, []);
+
+  const clearFieldErrors = React.useCallback((paths: string[]) => {
+    setState((prev) => {
+      const entries: [string, string][] = Object.entries(prev.fieldErrors);
+      const kept: [string, string][] = entries.filter(
+        ([errPath]) => !paths.some((p) => isAtOrBelow(errPath, p)),
+      );
+      if (kept.length === entries.length) return prev;
+      return { ...prev, fieldErrors: Object.fromEntries(kept) };
+    });
+  }, []);
 
   const errorCount = React.useMemo(
     () => countErrors(state.fieldErrors, state.levelErrors),
@@ -97,9 +138,18 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
       taskValidation: state,
       errorCount,
       recordValidationResult,
+      recordFieldError,
+      clearFieldErrors,
       resetValidation,
     }),
-    [state, errorCount, recordValidationResult, resetValidation],
+    [
+      state,
+      errorCount,
+      recordValidationResult,
+      recordFieldError,
+      clearFieldErrors,
+      resetValidation,
+    ],
   );
 
   return <TaskValidationContext.Provider value={value}>{children}</TaskValidationContext.Provider>;
@@ -109,6 +159,8 @@ const DEFAULT_TASK_VALIDATION_CONTEXT: TaskValidationContextValue = {
   taskValidation: INITIAL_TASK_VALIDATION_STATE,
   errorCount: 0,
   recordValidationResult: () => {},
+  recordFieldError: () => {},
+  clearFieldErrors: () => {},
   resetValidation: () => {},
 };
 

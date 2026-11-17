@@ -18,7 +18,6 @@ import { describe, it, expect } from "vitest";
 import {
   countErrors,
   deriveFooterValidationState,
-  isCountingErrors,
 } from "../../../../src/side-panel/forms/validation/footerValidationState";
 import {
   INITIAL_TASK_VALIDATION_STATE,
@@ -29,26 +28,23 @@ function stateWith(overrides: Partial<TaskValidationState>): TaskValidationState
   return { ...INITIAL_TASK_VALIDATION_STATE, ...overrides };
 }
 
-describe("isCountingErrors", () => {
-  it.each([
-    { attempted: false, hasWorkflowErrors: false, expected: false },
-    { attempted: true, hasWorkflowErrors: false, expected: true },
-    { attempted: false, hasWorkflowErrors: true, expected: true },
-    { attempted: true, hasWorkflowErrors: true, expected: true },
-  ])(
-    "attempted=$attempted hasWorkflowErrors=$hasWorkflowErrors -> $expected",
-    ({ attempted, hasWorkflowErrors, expected }) => {
-      expect(isCountingErrors({ attempted, hasWorkflowErrors })).toBe(expected);
-    },
-  );
-});
-
 describe("deriveFooterValidationState", () => {
   it.each([
     {
-      name: "hides the error UI before an attempt with no seeded errors",
+      name: "shows the error UI for field-level errors before an attempt with Apply default",
       state: stateWith({}),
       count: 3,
+      expected: {
+        showErrorUI: true,
+        applyLabelKey: "sidebar.form.apply",
+        applyVariant: "default",
+        isBypassable: false,
+      },
+    },
+    {
+      name: "hides the error UI when the counter is 0 before an attempt",
+      state: stateWith({}),
+      count: 0,
       expected: {
         showErrorUI: false,
         applyLabelKey: "sidebar.form.apply",
@@ -57,7 +53,7 @@ describe("deriveFooterValidationState", () => {
       },
     },
     {
-      name: "hides the error UI when the counter reaches 0",
+      name: "hides the error UI when the counter reaches 0 after an attempt",
       state: stateWith({ attempted: true }),
       count: 0,
       expected: {
@@ -79,8 +75,8 @@ describe("deriveFooterValidationState", () => {
       },
     },
     {
-      name: "shows the error UI but keeps Apply default for seeded workflow errors",
-      state: stateWith({ hasWorkflowErrors: true }),
+      name: "shows the error UI but keeps Apply default for errors seeded on open",
+      state: stateWith({ seededOnOpen: true }),
       count: 3,
       expected: {
         showErrorUI: true,

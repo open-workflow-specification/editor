@@ -16,6 +16,7 @@
 
 export { useWorkflowErrorsForForm } from "./useWorkflowErrorsForForm";
 export { useFieldLevelValidation, type FieldValidationHandler } from "./useFieldLevelValidation";
+export { useClearFormErrors } from "./useClearFormErrors";
 export { collectSchemaFieldErrors, collectTaskErrors } from "./collectSchemaFieldErrors";
 export { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 export { collapseBranchGroups, GROUP_KEYWORD } from "./branchGroups";

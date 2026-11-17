@@ -42,13 +42,13 @@ describe("collectSchemaErrorPaths", () => {
     expect(paths).toEqual(["with.method", "with.endpoint", "name"]);
   });
 
-  it("ignores non-schema error types such as workflow errors", () => {
+  it("ignores errors that are not of the schema type", () => {
     const errors = {
       with: {
         method: { type: "schema", message: "Required" },
-        endpoint: { type: "workflow", message: "Workflow warning" },
+        endpoint: { type: "manual", message: "Manual warning" },
       },
-      timeout: { type: "workflow", message: "Timeout invalid" },
+      timeout: { type: "manual", message: "Timeout invalid" },
     };
     const paths = collectSchemaErrorPaths(errors);
     expect(paths).toEqual(["with.method"]);
@@ -179,10 +179,10 @@ describe("validateTaskForm", () => {
     expect(clearErrors).toHaveBeenCalledWith("wait");
   });
 
-  it("does not clear workflow errors on valid or invalid passes", () => {
+  it("does not clear errors that are not of the schema type", () => {
     const { form, clearErrors } = createMockForm(
       { wait: "PT5S" },
-      { timeout: { type: "workflow", message: "workflow error" } },
+      { timeout: { type: "manual", message: "manual error" } },
     );
     const result = validateTaskForm("waitTask", form, waitFields);
 

@@ -177,6 +177,35 @@ describe("EditFormFooter — task-level validation", () => {
     expect(errorCounter()).not.toBeInTheDocument();
   });
 
+  it("shows the error counter when field-level validation finds an error on blur before Apply is clicked", async () => {
+    const WAIT_WORKFLOW = parseFixture({
+      document: { dsl: "1.0.3", namespace: "default", name: "test", version: "0.1.0" },
+      do: [{ step1: { wait: "PT5S" } }],
+    });
+    const { user } = renderFooter(WAIT_WORKFLOW);
+    await act(async () => {});
+
+    expect(errorCounter()).not.toBeInTheDocument();
+
+    const durationInput = screen.getByLabelText("wait");
+    await user.clear(durationInput);
+    await user.type(durationInput, "invalid-duration");
+    await user.tab();
+
+    // Field-level error shows error counter immediately
+    expect(errorCounter()).toBeInTheDocument();
+    // But Apply button remains standard "Apply", not "Apply anyway"
+    expect(applyButton()).toBeInTheDocument();
+    expect(applyAnywayButton()).not.toBeInTheDocument();
+
+    // Fixing the field clears the error counter
+    await user.clear(durationInput);
+    await user.type(durationInput, "PT10S");
+    await user.tab();
+
+    expect(errorCounter()).not.toBeInTheDocument();
+  });
+
   it("decrements the counter to 0 when the user fixes the error before the second click", async () => {
     // INVALID_WORKFLOW: raise with missing type. Type is a required string field.
     const { commitWorkflow, user } = renderFooter(INVALID_WORKFLOW);
@@ -206,7 +235,7 @@ describe("EditFormFooter — task-level validation", () => {
     expect(commitWorkflow).toHaveBeenCalledTimes(1);
   });
 
-  describe("seeded workflow errors", () => {
+  describe("errors seeded on open", () => {
     const WORKFLOW_ERRORS = [
       { relativePath: "raise/error/type", message: "workflow says type is wrong" },
     ];
@@ -215,8 +244,9 @@ describe("EditFormFooter — task-level validation", () => {
       renderFooter(INVALID_WORKFLOW, WORKFLOW_ERRORS);
       await act(async () => {});
 
-      expect(errorCounter()).toBeInTheDocument();
-      expect(screen.getByText("workflow says type is wrong")).toBeInTheDocument();
+      expect(errorCounter()).toHaveTextContent("1 error");
+      // Seeded from the task-level validation every later change re-runs, not the SDK message.
+      expect(screen.getByText("must have required property 'type'")).toBeInTheDocument();
       // Seeded errors are informational: the label stays the plain "Apply".
       expect(applyAnywayButton()).not.toBeInTheDocument();
     });
@@ -254,14 +284,25 @@ describe("EditFormFooter — task-level validation", () => {
     it("clears the seeded field error when the user blurs the field", async () => {
       const { user } = renderFooter(INVALID_WORKFLOW, WORKFLOW_ERRORS);
       await act(async () => {});
-      expect(screen.getByText("workflow says type is wrong")).toBeInTheDocument();
+      expect(screen.getByText("must have required property 'type'")).toBeInTheDocument();
 
       const typeField = screen.getByLabelText("Type");
       await user.click(typeField);
       await user.type(typeField, "https://errors.example.com/not-found");
       await user.tab();
 
-      expect(screen.queryByText("workflow says type is wrong")).not.toBeInTheDocument();
+      expect(screen.queryByText("must have required property 'type'")).not.toBeInTheDocument();
+    });
+
+    it("keeps the seeded count when a field is blurred without a change", async () => {
+      const { user } = renderFooter(INVALID_WORKFLOW, WORKFLOW_ERRORS);
+      await act(async () => {});
+      expect(errorCounter()).toHaveTextContent("1 error");
+
+      await user.click(screen.getByLabelText("Status"));
+      await user.tab();
+
+      expect(errorCounter()).toHaveTextContent("1 error");
     });
   });
 });

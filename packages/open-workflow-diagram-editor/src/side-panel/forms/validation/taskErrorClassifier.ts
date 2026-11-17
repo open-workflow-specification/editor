@@ -15,7 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
-import { getParentPath, isAtOrBelow, joinPath } from "@/core/paths";
+import { getParentPath, isAtOrBelow, isPointerAtOrBelow, joinPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { EVENT_PROPERTY_KEYS } from "../customFields/eventFilterProperties";
 import type { ActiveFormView } from "./activeFormView";
@@ -38,18 +38,6 @@ export interface ClassifiedTaskErrors {
 /** A fresh set of classified errors with nothing in it. */
 export function emptyClassifiedErrors(): ClassifiedTaskErrors {
   return { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
-}
-
-/** The union of two sets of classified errors; on a path both hold, `primary` keeps its message. */
-export function mergeClassifiedErrors(
-  primary: ClassifiedTaskErrors,
-  secondary: ClassifiedTaskErrors,
-): ClassifiedTaskErrors {
-  return {
-    fieldErrors: { ...secondary.fieldErrors, ...primary.fieldErrors },
-    levelErrors: { ...secondary.levelErrors, ...primary.levelErrors },
-    unplacedErrors: { ...secondary.unplacedErrors, ...primary.unplacedErrors },
-  };
 }
 
 /** Keywords that describe the structure of a container; other value-shape errors on containers are branch noise. */
@@ -161,9 +149,28 @@ export function classifyErrorPath(
     return keep ? { kind: "level", path } : DROP;
   }
 
+  // A path the form does not show on its own, but whose fields it shows (such as `emit.event`,
+  // whose `with` fields are rendered under `emit`), belongs to the nearest level that shows them.
+  if (showsFieldsBelow(path, view)) {
+    return { kind: "level", path: nearestContainer(path, view) };
+  }
+
   // Errors that cannot be traced back to fields or containers still block Apply, so they are kept
   // and listed in the footer, as no level of the form shows them.
   return { kind: "unplaced", path };
+}
+
+function showsFieldsBelow(path: string, view: ActiveFormView): boolean {
+  const below: (candidate: string) => boolean = (candidate) =>
+    candidate !== path && isAtOrBelow(candidate, path);
+  return [...view.leaves.keys()].some(below) || [...view.containers].some(below);
+}
+
+/** The closest container at or above the path; the task root (`""`) when none is. */
+function nearestContainer(path: string, view: ActiveFormView): string {
+  let current: string = getParentPath(path);
+  while (current !== "" && !view.containers.has(current)) current = getParentPath(current);
+  return current;
 }
 
 /** Records a classified error into the result; the first message of a path wins. */
@@ -180,6 +187,21 @@ export function recordClassification(
     result.levelErrors[placed.path] ??= message;
     result.unplacedErrors[placed.path] ??= message;
   }
+}
+
+/**
+ * A group error whose branch could not be identified only summarises the failures below it when
+ * another error is reported deeper inside the same value: that error says what is wrong, so the
+ * group would count the same mistake twice.
+ */
+function isSummarisedBelow(error: ErrorObject, errors: ErrorObject[]): boolean {
+  if (error.keyword !== GROUP_KEYWORD) return false;
+  return errors.some(
+    (other) =>
+      other !== error &&
+      other.instancePath !== error.instancePath &&
+      isPointerAtOrBelow(other.instancePath, error.instancePath),
+  );
 }
 
 function isInsideEmptyOptionalSection(
@@ -213,18 +235,19 @@ export function classifyTaskErrors(
   const inTaskList = (path: string): boolean =>
     [...view.taskLists].some((listPath) => isAtOrBelow(path, listPath));
 
-  for (const error of collapseBranchGroups(ajvErrors, view.presence)) {
-    if (NOISE_KEYWORDS.has(error.keyword) || !error.message) continue;
-
-    const path = ajvErrorToFieldPath(error) ?? "";
-    if (inTaskList(path)) continue;
-    if (
+  const kept: ErrorObject[] = collapseBranchGroups(ajvErrors, view.presence).filter((error) => {
+    if (NOISE_KEYWORDS.has(error.keyword) || !error.message) return false;
+    const path: string = ajvErrorToFieldPath(error) ?? "";
+    if (inTaskList(path)) return false;
+    return !(
       error.keyword === "required" &&
       isInsideEmptyOptionalSection(path, optionalSections, formValues)
-    ) {
-      continue;
-    }
+    );
+  });
 
+  for (const error of kept) {
+    if (!error.message || isSummarisedBelow(error, kept)) continue;
+    const path: string = ajvErrorToFieldPath(error) ?? "";
     recordClassification(
       result,
       classifyErrorPath(path, error.keyword, error.params, view),

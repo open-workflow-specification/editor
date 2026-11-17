@@ -299,7 +299,8 @@ export const INVALID_TASKS: InvalidTaskCase[] = [
     nodeType: "run",
     task: { run: {} },
     fieldPaths: [],
-    levelPaths: ["run"],
+    // Apply keeps the emptied `run`, so the error is the default variant's missing key.
+    levelPaths: ["run.container"],
   },
   {
     name: "wait that is neither a duration nor an object",
