@@ -98,3 +98,25 @@ test("JSON mode provides Open Workflow schema diagnostics", async ({ page }) => 
 
   await expect(monacoEditor.locator(".squiggly-warning").first()).toBeVisible();
 });
+
+test("language and read-only attributes update the embedded editor", async ({ page }) => {
+  await page.goto("/");
+
+  const component = page.locator("openworkflowspec-dual-editor");
+  const editor = page.locator(".monaco-editor").first();
+  await expect(editor).toBeVisible();
+
+  await component.evaluate((element) => element.setAttribute("language", "json"));
+  await expect(editor).toHaveAttribute("data-uri", "inmemory://openworkflow/workflow.json");
+
+  await component.evaluate((element) => element.setAttribute("language", "yaml"));
+  await expect(editor).toHaveAttribute("data-uri", "inmemory://openworkflow/workflow.yaml");
+
+  await component.evaluate((element) => element.setAttribute("read-only", ""));
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type("\nreadOnlyEdit");
+
+  await expect(editor).not.toContainText("readOnlyEdit");
+  await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
+});

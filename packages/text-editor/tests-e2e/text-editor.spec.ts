@@ -38,9 +38,18 @@ const storyUrl = (story: string, args = "") =>
   `/iframe.html?id=${story}${args ? `&args=${args}` : ""}`;
 
 const EMPTY_JSON_URL = storyUrl("text-editor--empty-json");
+const EMPTY_JSON_DARK_URL = `${EMPTY_JSON_URL}&globals=colorMode:dark`;
 const EMPTY_JSON_READ_ONLY_URL = storyUrl("text-editor--empty-json", "isReadOnly:!true");
 const EMPTY_YAML_URL = storyUrl("text-editor--empty-yaml");
 const EMPTY_YAML_READ_ONLY_URL = storyUrl("text-editor--empty-yaml", "isReadOnly:!true");
+const EMPTY_EDITORS = [
+  { language: "JSON", url: EMPTY_JSON_URL },
+  { language: "YAML", url: EMPTY_YAML_URL },
+];
+const READ_ONLY_EDITORS = [
+  { language: "JSON", url: EMPTY_JSON_READ_ONLY_URL },
+  { language: "YAML", url: EMPTY_YAML_READ_ONLY_URL },
+];
 
 const waitForLanguageServiceReady = (page: Page) =>
   page.waitForFunction(() => window.textEditorLanguageServiceReady === true);
@@ -89,6 +98,72 @@ test.describe("TextEditor", () => {
     await page.keyboard.type("Lorem ipsum");
 
     await expect(monacoContainer).toContainText("Lorem ipsum");
+  });
+
+  test("dark color mode applies Monaco's dark theme", async ({ page }) => {
+    await openTextEditor(page, EMPTY_JSON_DARK_URL);
+
+    await expect(page.locator(".monaco-editor.vs-dark")).toBeVisible();
+  });
+
+  test.describe("Read-only input", () => {
+    for (const { language, url } of READ_ONLY_EDITORS) {
+      test(`${language} rejects keyboard edits in read-only mode`, async ({ page }) => {
+        const monacoContainer = await openTextEditor(page, url);
+
+        await page.keyboard.type("readOnlyAttempt");
+
+        await expect(monacoContainer).not.toContainText("readOnlyAttempt");
+      });
+    }
+
+    for (const { language, url } of EMPTY_EDITORS) {
+      test(`${language} applies read-only changes without recreating the editor`, async ({
+        page,
+      }) => {
+        const monacoContainer = await openTextEditor(page, url);
+
+        await page.keyboard.type("editable");
+        await expect(monacoContainer).toContainText("editable");
+
+        await page.evaluate(() => window.textEditorSetIsReadOnly?.(true));
+        await monacoContainer.click();
+        await page.keyboard.press("ControlOrMeta+End");
+        await page.keyboard.type("readOnlyAttempt");
+
+        await expect(monacoContainer).toContainText("editable");
+        await expect(monacoContainer).not.toContainText("readOnlyAttempt");
+      });
+    }
+  });
+
+  test.describe("Hello World completion context", () => {
+    test("is offered only for an empty JSON document", async ({ page }) => {
+      const monacoContainer = await openTextEditor(page, EMPTY_JSON_URL);
+      await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await pasteText(page, "{}");
+      await page.keyboard.press("ArrowLeft");
+      await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, "do")).toBeVisible();
+      await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).not.toBeVisible();
+      await expect(monacoContainer).toContainText("{}");
+    });
+
+    test("is offered only for an empty YAML document", async ({ page }) => {
+      const monacoContainer = await openTextEditor(page, EMPTY_YAML_URL);
+      await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).toBeVisible();
+
+      await page.keyboard.press("Escape");
+      await pasteText(page, "document:\n  dsl: '1.0.3'\n  namespace: examples\n  ");
+      await page.keyboard.press("Control+Space");
+      await expect(getCompletion(page, "name")).toBeVisible();
+      await expect(getCompletion(page, HELLO_WORLD_COMPLETION)).not.toBeVisible();
+      await expect(monacoContainer).toContainText("namespace: examples");
+    });
   });
 
   test.describe("JSON", () => {

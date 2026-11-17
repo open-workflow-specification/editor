@@ -32,6 +32,16 @@ test("renders both editors and the resizable divider", async ({ page }) => {
   await expect(divider).toHaveAttribute("aria-valuenow", "50");
 });
 
+test("YAML workflows render in the text and diagram panes", async ({ page }) => {
+  await page.goto("/iframe.html?id=dual-editor--yaml-editor");
+
+  const editor = page.locator(".monaco-editor").first();
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveAttribute("data-uri", "inmemory://openworkflow/workflow.yaml");
+  await expect(editor).toContainText("hello-world");
+  await expect(page.getByTestId("rf__node-/do/greet")).toContainText("greet");
+});
+
 test("text edits update the diagram", async ({ page }) => {
   await openDualEditor(page);
   const editor = page.locator(".monaco-editor").first();
@@ -58,6 +68,20 @@ test("text edits update the diagram", async ({ page }) => {
   await page.keyboard.press("ControlOrMeta+v");
 
   await expect(page.locator(".dec-leaf-node-name", { hasText: "updatedTask" })).toBeVisible();
+});
+
+test("read-only mode keeps the text and diagram content unchanged", async ({ page }) => {
+  await page.goto("/iframe.html?id=dual-editor--read-only");
+  await expect(page.locator(".monaco-editor").first()).toBeVisible();
+  await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
+
+  const editor = page.locator(".monaco-editor").first();
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.type("\nreadOnlyEdit");
+
+  await expect(editor).not.toContainText("readOnlyEdit");
+  await expect(page.getByText("readOnlyEdit", { exact: true })).toHaveCount(0);
 });
 
 test("clicking the divider focuses it and keyboard shortcuts resize panes", async ({ page }) => {
