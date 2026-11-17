@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { createYamlCodeLensesPlugin } from "../../../src/index";
 import { CANCELLATION_TOKEN, treat, MINIMAL_CONTEXT } from "../../testUtils";
 
@@ -33,6 +34,13 @@ describe("createYamlCodeLensesPlugin", () => {
       expect(command?.arguments?.[0]).toBeTypeOf("string");
       expect(command?.arguments?.[0]).toContain("name: hello-world");
       expect(command?.arguments?.[0]).not.toContain("{");
+    });
+
+    it("provides a code lens when the YAML document contains only whitespace", async () => {
+      const doc = TextDocument.create("file:///whitespace.yaml", "yaml", 1, "  \n  \t");
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      expect(result).toHaveLength(1);
+      expect(result?.[0]?.command?.command).toBe("openworkflow.insertHelloWorld");
     });
 
     it("does not provide a code lens on partial OWS content", async () => {

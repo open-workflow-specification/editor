@@ -32,4 +32,19 @@ describe("createI18n", () => {
     const i18n = createI18n(dictionaries, "fr");
     expect(i18n.t("cancel")).toBe("cancel");
   });
+
+  it("returns the key when the locale has no dictionary", () => {
+    const i18n = createI18n(dictionaries, "de");
+    expect(i18n.t("save")).toBe("save");
+  });
+
+  it("preserves an intentionally empty translation", () => {
+    const i18n = createI18n({ en: { optional: "" } }, "en");
+    expect(i18n.t("optional")).toBe("");
+  });
+
+  it("exposes the selected locale", () => {
+    const i18n = createI18n(dictionaries, "fr");
+    expect(i18n.locale).toBe("fr");
+  });
 });

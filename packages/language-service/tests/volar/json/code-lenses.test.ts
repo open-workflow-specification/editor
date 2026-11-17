@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { createJsonCodeLensesPlugin } from "../../../src/index";
 import { CANCELLATION_TOKEN, treat, MINIMAL_CONTEXT } from "../../testUtils";
 
@@ -32,6 +33,13 @@ describe("createJsonCodeLensesPlugin", () => {
       expect(command?.arguments).toHaveLength(1);
       expect(command?.arguments?.[0]).toBeTypeOf("string");
       expect(command?.arguments?.[0]).toContain("hello-world");
+    });
+
+    it("provides a code lens when the document contains only whitespace", async () => {
+      const doc = TextDocument.create("file:///whitespace.json", "json", 1, "  \n  \t");
+      const result = await getPluginInstance().provideCodeLenses!(doc, CANCELLATION_TOKEN);
+      expect(result).toHaveLength(1);
+      expect(result?.[0]?.command?.command).toBe("openworkflow.insertHelloWorld");
     });
 
     it("does not provide a code lens on bare {}", async () => {

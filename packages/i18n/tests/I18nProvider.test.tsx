@@ -37,4 +37,41 @@ describe("I18nProvider", () => {
 
     expect(screen.getByText("Save")).toBeInTheDocument();
   });
+
+  it("updates translations when the locale changes", () => {
+    const { rerender } = render(
+      <I18nProvider locale="en" dictionaries={dictionaries}>
+        <TestComponent />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByText("Save")).toBeInTheDocument();
+
+    rerender(
+      <I18nProvider
+        locale="fr"
+        dictionaries={{ en: { save: "Save" }, fr: { save: "Sauvegarder" } }}
+      >
+        <TestComponent />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByText("Sauvegarder")).toBeInTheDocument();
+  });
+
+  it("uses the updated dictionary when dictionary contents change", () => {
+    const { rerender } = render(
+      <I18nProvider locale="en" dictionaries={dictionaries}>
+        <TestComponent />
+      </I18nProvider>,
+    );
+
+    rerender(
+      <I18nProvider locale="en" dictionaries={{ en: { save: "Save changes" } }}>
+        <TestComponent />
+      </I18nProvider>,
+    );
+
+    expect(screen.getByText("Save changes")).toBeInTheDocument();
+  });
 });

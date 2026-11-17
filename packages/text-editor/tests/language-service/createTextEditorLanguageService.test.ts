@@ -135,6 +135,21 @@ describe("createTextEditorLanguageService", () => {
       expect(onReady).not.toHaveBeenCalled();
       expect(mockProvidersDispose).toHaveBeenCalledTimes(2);
     });
+
+    it("reports provider registration failures and does not call onReady", async () => {
+      const onReady = vi.fn();
+      const error = new Error("provider registration failed");
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      mockRegisterProviders.mockRejectedValueOnce(error);
+
+      createTextEditorLanguageService(mockModel as never, makeWorker, onReady);
+      await vi.waitFor(() =>
+        expect(consoleError).toHaveBeenCalledWith("Language service initialization failed", error),
+      );
+
+      expect(onReady).not.toHaveBeenCalled();
+      consoleError.mockRestore();
+    });
   });
 
   describe("dispose", () => {
