@@ -305,4 +305,71 @@ describe("EditFormFooter — task-level validation", () => {
       expect(errorCounter()).toHaveTextContent("1 error");
     });
   });
+
+  describe("workflow-only errors seeded on open", () => {
+    // Only workflow validation reports these; the missing `type` is the schema error next to them.
+    const TRANSITION_ERROR = [{ relativePath: "then", message: "Target task does not exist" }];
+    const STATUS_ERROR = [{ relativePath: "raise/error/status", message: "Status is not allowed" }];
+
+    async function renderWith(errors: { relativePath: string; message: string }[]) {
+      const rendered = renderFooter(INVALID_WORKFLOW, errors);
+      await act(async () => {});
+      return rendered;
+    }
+
+    async function editStatus(user: ReturnType<typeof userEvent.setup>) {
+      const status = screen.getByLabelText("Status");
+      await user.clear(status);
+      await user.type(status, "500");
+      await user.tab();
+    }
+
+    it("counts it next to the schema error", async () => {
+      await renderWith(TRANSITION_ERROR);
+
+      expect(errorCounter()).toHaveTextContent("2 errors");
+      expect(screen.getByText("Target task does not exist")).toBeInTheDocument();
+    });
+
+    it("keeps it when a schema error is fixed on another field", async () => {
+      const { user } = await renderWith(TRANSITION_ERROR);
+
+      await user.type(screen.getByLabelText("Type"), "https://errors.example.com/not-found");
+      await user.tab();
+
+      expect(errorCounter()).toHaveTextContent("1 error");
+      expect(screen.getByText("Target task does not exist")).toBeInTheDocument();
+    });
+
+    it("keeps it in the count when Apply is blocked by a schema error", async () => {
+      const { commitWorkflow, user } = await renderWith(TRANSITION_ERROR);
+      await editStatus(user);
+
+      await user.click(applyButton());
+
+      expect(commitWorkflow).not.toHaveBeenCalled();
+      expect(errorCounter()).toHaveTextContent("2 errors");
+      expect(screen.getByText("Target task does not exist")).toBeInTheDocument();
+    });
+
+    it("drops it once its own field is edited and left", async () => {
+      const { user } = await renderWith(STATUS_ERROR);
+      expect(screen.getByText("Status is not allowed")).toBeInTheDocument();
+
+      await editStatus(user);
+
+      expect(screen.queryByText("Status is not allowed")).not.toBeInTheDocument();
+      expect(errorCounter()).toHaveTextContent("1 error");
+    });
+
+    it("keeps it when its own field is left without an edit", async () => {
+      const { user } = await renderWith(STATUS_ERROR);
+
+      await user.click(screen.getByLabelText("Status"));
+      await user.tab();
+
+      expect(screen.getByText("Status is not allowed")).toBeInTheDocument();
+      expect(errorCounter()).toHaveTextContent("2 errors");
+    });
+  });
 });

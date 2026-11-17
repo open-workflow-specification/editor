@@ -22,6 +22,11 @@ export function isGroupError(error: ErrorObject): boolean {
   return error.keyword === "oneOf" || error.keyword === "anyOf";
 }
 
+/** Whether the `oneOf` error reports that several branches matched (`passingSchemas`). */
+export function hasPassingSchemas(error: ErrorObject): boolean {
+  return (error.params as { passingSchemas?: unknown }).passingSchemas != null;
+}
+
 /** The `missingProperty` param of a `required` error, when it has one. */
 export function getMissingProperty(error: ErrorObject): string | undefined {
   const missing: unknown = (error.params as { missingProperty?: unknown }).missingProperty;

@@ -15,6 +15,7 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
+import { hasPassingSchemas } from "@/core/ajvErrorUtils";
 import { getParentPath, isAtOrBelow, isPointerAtOrBelow, joinPath } from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { EVENT_PROPERTY_KEYS } from "../customFields/eventFilterProperties";
@@ -38,6 +39,34 @@ export interface ClassifiedTaskErrors {
 /** A fresh set of classified errors with nothing in it. */
 export function emptyClassifiedErrors(): ClassifiedTaskErrors {
   return { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} };
+}
+
+/** Merges classified error sets into a new one; on a shared path the later set wins. */
+export function mergeClassifiedErrors(...sets: ClassifiedTaskErrors[]): ClassifiedTaskErrors {
+  const merged: ClassifiedTaskErrors = emptyClassifiedErrors();
+  for (const set of sets) {
+    Object.assign(merged.fieldErrors, set.fieldErrors);
+    Object.assign(merged.levelErrors, set.levelErrors);
+    Object.assign(merged.unplacedErrors, set.unplacedErrors);
+  }
+  return merged;
+}
+
+/** The errors of `errors` whose path is not also in `excluded`. */
+export function omitClassifiedErrors(
+  errors: ClassifiedTaskErrors,
+  excluded: ClassifiedTaskErrors,
+): ClassifiedTaskErrors {
+  const omit = (
+    source: Record<string, string>,
+    other: Record<string, string>,
+  ): Record<string, string> =>
+    Object.fromEntries(Object.entries(source).filter(([path]) => !(path in other)));
+  return {
+    fieldErrors: omit(errors.fieldErrors, excluded.fieldErrors),
+    levelErrors: omit(errors.levelErrors, excluded.levelErrors),
+    unplacedErrors: omit(errors.unplacedErrors, excluded.unplacedErrors),
+  };
 }
 
 /** Keywords that describe the structure of a container; other value-shape errors on containers are branch noise. */
@@ -192,10 +221,11 @@ export function recordClassification(
 /**
  * A group error whose branch could not be identified only summarises the failures below it when
  * another error is reported deeper inside the same value: that error says what is wrong, so the
- * group would count the same mistake twice.
+ * group would count the same mistake twice. A group reporting that several branches matched is
+ * never summarised, as nothing below it explains it.
  */
 function isSummarisedBelow(error: ErrorObject, errors: ErrorObject[]): boolean {
-  if (error.keyword !== GROUP_KEYWORD) return false;
+  if (error.keyword !== GROUP_KEYWORD || hasPassingSchemas(error)) return false;
   return errors.some(
     (other) =>
       other !== error &&

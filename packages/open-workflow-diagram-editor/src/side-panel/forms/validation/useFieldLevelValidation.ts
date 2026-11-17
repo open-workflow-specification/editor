@@ -46,11 +46,12 @@ export function useFieldLevelValidation(
   fields: FormFieldDescriptor[] = [],
 ): { validateField: FieldValidationHandler; revalidateIfAttempted: () => void } {
   const { t } = useI18n();
-  const { taskValidation, recordValidationResult, recordFieldError } = useTaskValidation();
+  const { taskValidation, recordValidationResult, recordFieldError, clearFieldErrors } =
+    useTaskValidation();
   const clearFormErrors = useClearFormErrors(form.clearErrors);
   const optionalSections = React.useMemo(() => buildOptionalSectionSet(fields), [fields]);
   const { seededOnOpen } = taskValidation;
-  // Once counting (Apply attempted or errors seeded on open), every change re-runs whole-task validation.
+  // Once counting, every change re-runs whole-task validation.
   const isCounting: boolean = isCountingErrors(taskValidation);
 
   // Re-validation keeps the source of the errors the context already holds.
@@ -71,9 +72,13 @@ export function useFieldLevelValidation(
       }
 
       if (isCounting) {
-        // Cleared in RHF only: validateTaskForm below records the whole result, so the task
-        // validation state needs no separate clear.
-        form.clearErrors(path);
+        // A workflow-only error is kept while the field is unedited and dropped once edited.
+        const keepsWorkflowError: boolean =
+          path in taskValidation.workflowErrors.fieldErrors && !form.getFieldState(path).isDirty;
+        if (!keepsWorkflowError) {
+          form.clearErrors(path);
+          clearFieldErrors([path]);
+        }
         recordKeepingSource(validateTaskForm(nodeType, form, fields, { t }));
         return;
       }
@@ -125,9 +130,11 @@ export function useFieldLevelValidation(
       form,
       fields,
       recordKeepingSource,
+      taskValidation.workflowErrors.fieldErrors,
       optionalSections,
       t,
       recordFieldError,
+      clearFieldErrors,
       clearFormErrors,
     ],
   );

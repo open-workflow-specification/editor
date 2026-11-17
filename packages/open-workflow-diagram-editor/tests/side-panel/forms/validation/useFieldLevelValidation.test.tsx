@@ -471,5 +471,83 @@ describe("useFieldLevelValidation", () => {
 
       expect(result.current.validation.errorCount).toBe(0);
     });
+
+    describe("with a workflow-only error", () => {
+      const WORKFLOW_PATH = "transition";
+      const WORKFLOW_MESSAGE = "Target task does not exist";
+
+      function setupWorkflowError(isDirty: boolean) {
+        const clearErrors = vi.fn();
+        const form = {
+          getValues: vi.fn().mockReturnValue({ wait: "PT5S", [WORKFLOW_PATH]: "unresolvedTask" }),
+          getFieldState: vi.fn().mockReturnValue({ isDirty }),
+          formState: { errors: {} },
+          setError: vi.fn(),
+          clearErrors,
+        } as unknown as UseFormReturn<Record<string, unknown>>;
+
+        const { result } = renderValidation(form);
+        act(() => {
+          result.current.validation.recordValidationResult(
+            {
+              ...EMPTY_RESULT,
+              fieldErrors: { wait: "Seeded schema err", [WORKFLOW_PATH]: WORKFLOW_MESSAGE },
+            },
+            {
+              seededOnOpen: true,
+              workflowErrors: {
+                fieldErrors: { [WORKFLOW_PATH]: WORKFLOW_MESSAGE },
+                levelErrors: {},
+                unplacedErrors: {},
+              },
+            },
+          );
+        });
+        return { result, clearErrors };
+      }
+
+      it("preserves it when a schema error is resolved on blur", () => {
+        const { result, clearErrors } = setupWorkflowError(false);
+
+        expect(result.current.validation.errorCount).toBe(2);
+
+        act(() => {
+          result.current.fieldValidation.validateField("wait");
+        });
+
+        expect(clearErrors).toHaveBeenCalledWith("wait");
+        expect(clearErrors).not.toHaveBeenCalledWith(WORKFLOW_PATH);
+        expect(result.current.validation.errorCount).toBe(1);
+        expect(result.current.validation.taskValidation.fieldErrors).toEqual({
+          [WORKFLOW_PATH]: WORKFLOW_MESSAGE,
+        });
+      });
+
+      it("keeps it when its own field is blurred without being edited", () => {
+        const { result, clearErrors } = setupWorkflowError(false);
+
+        act(() => {
+          result.current.fieldValidation.validateField(WORKFLOW_PATH);
+        });
+
+        expect(clearErrors).not.toHaveBeenCalled();
+        expect(result.current.validation.taskValidation.fieldErrors[WORKFLOW_PATH]).toBe(
+          WORKFLOW_MESSAGE,
+        );
+      });
+
+      it("drops it when its own field is edited and blurred", () => {
+        const { result, clearErrors } = setupWorkflowError(true);
+
+        act(() => {
+          result.current.fieldValidation.validateField(WORKFLOW_PATH);
+        });
+
+        expect(clearErrors).toHaveBeenCalledWith(WORKFLOW_PATH);
+        expect(result.current.validation.taskValidation.fieldErrors).toEqual({});
+        expect(result.current.validation.taskValidation.workflowErrors.fieldErrors).toEqual({});
+        expect(result.current.validation.errorCount).toBe(0);
+      });
+    });
   });
 });

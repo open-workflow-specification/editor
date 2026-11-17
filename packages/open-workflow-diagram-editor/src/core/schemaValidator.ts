@@ -16,7 +16,12 @@
 
 import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020";
 import addFormats from "ajv-formats";
-import { findNestedGroups, getMissingProperty, isGroupError } from "./ajvErrorUtils";
+import {
+  findNestedGroups,
+  getMissingProperty,
+  hasPassingSchemas,
+  isGroupError,
+} from "./ajvErrorUtils";
 import {
   countPropertySegments,
   findBranchGhosts,
@@ -180,7 +185,7 @@ export function dropResolvedGroupSummaries(errors: ErrorObject[]): ErrorObject[]
 
   const resolved: Set<ErrorObject> = new Set<ErrorObject>();
   for (const group of groups) {
-    if ((group.params as { passingSchemas?: unknown }).passingSchemas != null) continue;
+    if (hasPassingSchemas(group)) continue;
 
     const prefix: string = `${group.schemaPath}/`;
     const nested: ErrorObject[] = findNestedGroups(group, groups);

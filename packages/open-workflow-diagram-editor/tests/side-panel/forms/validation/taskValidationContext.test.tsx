@@ -239,6 +239,127 @@ describe("taskValidationContext", () => {
     expect(result.current.errorCount).toBe(0);
   });
 
+  describe("workflow-only errors", () => {
+    const workflowErrors = {
+      fieldErrors: { transition: "Target task does not exist" },
+      levelErrors: { "": "General" },
+      unplacedErrors: { mystery: "Unknown" },
+    };
+    const emptyResult = {
+      fieldErrors: {},
+      levelErrors: {},
+      unplacedErrors: {},
+      hasUnparseableValueMapPayload: false,
+    };
+
+    function renderWithWorkflowErrors() {
+      const hook = renderHook(() => useTaskValidation(), { wrapper: TaskValidationProvider });
+      act(() => {
+        hook.result.current.recordValidationResult(emptyResult, {
+          seededOnOpen: true,
+          workflowErrors,
+        });
+      });
+      return hook;
+    }
+
+    it("starts with none held", () => {
+      expect(INITIAL_TASK_VALIDATION_STATE.workflowErrors).toEqual({
+        fieldErrors: {},
+        levelErrors: {},
+        unplacedErrors: {},
+      });
+    });
+
+    it("adds the ones recorded to the errors of the result", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      expect(result.current.taskValidation.fieldErrors).toEqual(workflowErrors.fieldErrors);
+      expect(result.current.taskValidation.levelErrors).toEqual(workflowErrors.levelErrors);
+      expect(result.current.taskValidation.unplacedErrors).toEqual(workflowErrors.unplacedErrors);
+      expect(result.current.taskValidation.workflowErrors).toEqual(workflowErrors);
+      expect(result.current.errorCount).toBe(2);
+    });
+
+    it("keeps the ones held when a later result omits them", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      act(() => {
+        result.current.recordValidationResult(
+          { ...emptyResult, fieldErrors: { wait: "Schema error" } },
+          { attempted: true },
+        );
+      });
+
+      expect(result.current.taskValidation.fieldErrors).toEqual({
+        transition: "Target task does not exist",
+        wait: "Schema error",
+      });
+      expect(result.current.taskValidation.workflowErrors).toEqual(workflowErrors);
+    });
+
+    it("lets the result win over a workflow error on the same path", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      act(() => {
+        result.current.recordValidationResult({
+          ...emptyResult,
+          fieldErrors: { transition: "Schema message" },
+        });
+      });
+
+      expect(result.current.taskValidation.fieldErrors["transition"]).toBe("Schema message");
+    });
+
+    it("replaces the ones held when new ones are recorded, and drops them when recorded empty", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      act(() => {
+        result.current.recordValidationResult(emptyResult, {
+          workflowErrors: { ...workflowErrors, fieldErrors: { other: "Other" } },
+        });
+      });
+
+      expect(result.current.taskValidation.fieldErrors).toEqual({ other: "Other" });
+
+      act(() => {
+        result.current.recordValidationResult(emptyResult, {
+          workflowErrors: { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} },
+        });
+      });
+
+      expect(result.current.errorCount).toBe(0);
+      expect(result.current.taskValidation.workflowErrors.fieldErrors).toEqual({});
+    });
+
+    it("drops the field ones with clearFieldErrors so a later result does not bring them back", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      act(() => {
+        result.current.clearFieldErrors(["transition"]);
+      });
+
+      expect(result.current.taskValidation.fieldErrors).toEqual({});
+      expect(result.current.taskValidation.workflowErrors.fieldErrors).toEqual({});
+
+      act(() => {
+        result.current.recordValidationResult(emptyResult);
+      });
+
+      expect(result.current.taskValidation.fieldErrors).toEqual({});
+    });
+
+    it("are cleared by resetValidation", () => {
+      const { result } = renderWithWorkflowErrors();
+
+      act(() => {
+        result.current.resetValidation();
+      });
+
+      expect(result.current.taskValidation).toEqual(INITIAL_TASK_VALIDATION_STATE);
+    });
+  });
+
   describe("useLevelErrors", () => {
     it("returns message and error count for a container and its sub-containers", () => {
       const { result } = renderHook(

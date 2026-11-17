@@ -24,6 +24,8 @@ import {
   classifyErrorPath,
   classifyTaskErrors,
   emptyClassifiedErrors,
+  mergeClassifiedErrors,
+  omitClassifiedErrors,
   recordClassification,
   NOISE_KEYWORDS,
   type ClassifiedTaskErrors,
@@ -370,11 +372,90 @@ describe("classifyTaskErrors with a group error", () => {
     expect(result.levelErrors).toEqual({});
   });
 
+  it("keeps a group error that reports several matching branches, even with errors below it", () => {
+    const matchedSeveral: ErrorObject = {
+      ...group("/obj"),
+      params: { passingSchemas: [0, 1] },
+    };
+
+    const result = classify([matchedSeveral, error("type", "/obj/a")]);
+
+    expect(Object.keys(result.levelErrors)).toEqual(["obj"]);
+    expect(result.fieldErrors).toEqual({ "obj.a": "type message" });
+  });
+
   it("keeps a group error when nothing else is reported below it", () => {
     const result = classify([group("/obj"), error("type", "/name")]);
 
     expect(Object.keys(result.levelErrors)).toEqual(["obj"]);
     expect(Object.keys(result.fieldErrors)).toEqual(["name"]);
+  });
+});
+
+describe("mergeClassifiedErrors", () => {
+  const first: ClassifiedTaskErrors = {
+    fieldErrors: { a: "first a", b: "first b" },
+    levelErrors: { obj: "first obj" },
+    unplacedErrors: { x: "first x" },
+  };
+  const second: ClassifiedTaskErrors = {
+    fieldErrors: { a: "second a" },
+    levelErrors: { other: "second other" },
+    unplacedErrors: {},
+  };
+
+  it("returns an empty set when given nothing", () => {
+    expect(mergeClassifiedErrors()).toEqual(emptyClassifiedErrors());
+  });
+
+  it("combines every kind and lets the later set win on a shared path", () => {
+    expect(mergeClassifiedErrors(first, second)).toEqual({
+      fieldErrors: { a: "second a", b: "first b" },
+      levelErrors: { obj: "first obj", other: "second other" },
+      unplacedErrors: { x: "first x" },
+    });
+  });
+
+  it("does not modify the sets it merges", () => {
+    mergeClassifiedErrors(first, second);
+
+    expect(first.fieldErrors).toEqual({ a: "first a", b: "first b" });
+    expect(second.fieldErrors).toEqual({ a: "second a" });
+  });
+});
+
+describe("omitClassifiedErrors", () => {
+  const errors: ClassifiedTaskErrors = {
+    fieldErrors: { a: "a", b: "b" },
+    levelErrors: { obj: "obj", other: "other" },
+    unplacedErrors: { x: "x", y: "y" },
+  };
+
+  it("keeps everything when nothing is excluded", () => {
+    expect(omitClassifiedErrors(errors, emptyClassifiedErrors())).toEqual(errors);
+  });
+
+  it("removes the paths of every kind that the excluded set also holds", () => {
+    const excluded: ClassifiedTaskErrors = {
+      fieldErrors: { a: "other message" },
+      levelErrors: { obj: "other message" },
+      unplacedErrors: { y: "other message" },
+    };
+
+    expect(omitClassifiedErrors(errors, excluded)).toEqual({
+      fieldErrors: { b: "b" },
+      levelErrors: { other: "other" },
+      unplacedErrors: { x: "x" },
+    });
+  });
+
+  it("matches a path in its own kind only", () => {
+    const excluded: ClassifiedTaskErrors = {
+      ...emptyClassifiedErrors(),
+      levelErrors: { a: "level a" },
+    };
+
+    expect(omitClassifiedErrors(errors, excluded).fieldErrors).toEqual({ a: "a", b: "b" });
   });
 });
 

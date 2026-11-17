@@ -18,14 +18,18 @@ import * as React from "react";
 import { isAtOrBelow } from "@/core/paths";
 import type { TaskValidationResult } from "./taskLevelValidation";
 import { countErrors } from "./footerValidationState";
-import { emptyClassifiedErrors } from "./taskErrorClassifier";
+import {
+  emptyClassifiedErrors,
+  mergeClassifiedErrors,
+  type ClassifiedTaskErrors,
+} from "./taskErrorClassifier";
 
 export interface TaskValidationState {
   /** True after the first Apply click attempted validation (the "latch"). */
   attempted: boolean;
   /** True while the errors were seeded when the task was opened rather than found by an Apply run. */
   seededOnOpen: boolean;
-  /** Form-field paths with schema errors. */
+  /** Form-field paths with errors. */
   fieldErrors: Record<string, string>;
   /** Container paths with level errors ("" = task root). */
   levelErrors: Record<string, string>;
@@ -33,6 +37,8 @@ export interface TaskValidationState {
   unplacedErrors: Record<string, string>;
   /** True when an unparseable valueMap enum payload is present (non-bypassable). */
   hasUnparseableValueMapPayload: boolean;
+  /** Workflow-only errors preserved across schema-only validation passes. */
+  workflowErrors: ClassifiedTaskErrors;
 }
 
 export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
@@ -40,6 +46,7 @@ export const INITIAL_TASK_VALIDATION_STATE: TaskValidationState = {
   seededOnOpen: false,
   ...emptyClassifiedErrors(),
   hasUnparseableValueMapPayload: false,
+  workflowErrors: emptyClassifiedErrors(),
 };
 
 /**
@@ -57,6 +64,8 @@ export interface RecordValidationOptions {
   attempted?: boolean;
   /** Marks a result seeded when the task was opened; cleared when omitted. */
   seededOnOpen?: boolean;
+  /** Workflow-only errors to record; the ones already held are kept when omitted. */
+  workflowErrors?: ClassifiedTaskErrors;
 }
 
 export interface TaskValidationContextValue {
@@ -67,7 +76,7 @@ export interface TaskValidationContextValue {
   recordValidationResult: (result: TaskValidationResult, options?: RecordValidationOptions) => void;
   /** Sets or clears a single field error without triggering whole-task validation. */
   recordFieldError: (path: string, message: string | undefined) => void;
-  /** Clears errors for matching field paths and their subpaths. */
+  /** Clears field errors, workflow-only ones included, for matching paths and their subpaths. */
   clearFieldErrors: (paths: string[]) => void;
   /** Resets validation state to initial clean state. */
   resetValidation: () => void;
@@ -87,16 +96,18 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
   const recordValidationResult = React.useCallback(
     (
       result: TaskValidationResult,
-      { attempted, seededOnOpen = false }: RecordValidationOptions = {},
+      { attempted, seededOnOpen = false, workflowErrors }: RecordValidationOptions = {},
     ) => {
-      setState((prev) => ({
-        attempted: attempted ?? prev.attempted,
-        seededOnOpen,
-        fieldErrors: result.fieldErrors,
-        levelErrors: result.levelErrors,
-        unplacedErrors: result.unplacedErrors,
-        hasUnparseableValueMapPayload: result.hasUnparseableValueMapPayload,
-      }));
+      setState((prev) => {
+        const activeWorkflowErrors: ClassifiedTaskErrors = workflowErrors ?? prev.workflowErrors;
+        return {
+          attempted: attempted ?? prev.attempted,
+          seededOnOpen,
+          ...mergeClassifiedErrors(activeWorkflowErrors, result),
+          hasUnparseableValueMapPayload: result.hasUnparseableValueMapPayload,
+          workflowErrors: activeWorkflowErrors,
+        };
+      });
     },
     [],
   );
@@ -118,13 +129,27 @@ export function TaskValidationProvider({ children }: { children: React.ReactNode
   }, []);
 
   const clearFieldErrors = React.useCallback((paths: string[]) => {
-    setState((prev) => {
-      const entries: [string, string][] = Object.entries(prev.fieldErrors);
-      const kept: [string, string][] = entries.filter(
-        ([errPath]) => !paths.some((p) => isAtOrBelow(errPath, p)),
+    const withoutPaths = (errors: Record<string, string>): Record<string, string> =>
+      Object.fromEntries(
+        Object.entries(errors).filter(([errPath]) => !paths.some((p) => isAtOrBelow(errPath, p))),
       );
-      if (kept.length === entries.length) return prev;
-      return { ...prev, fieldErrors: Object.fromEntries(kept) };
+    setState((prev) => {
+      const fieldErrors: Record<string, string> = withoutPaths(prev.fieldErrors);
+      const workflowFieldErrors: Record<string, string> = withoutPaths(
+        prev.workflowErrors.fieldErrors,
+      );
+      if (
+        Object.keys(fieldErrors).length === Object.keys(prev.fieldErrors).length &&
+        Object.keys(workflowFieldErrors).length ===
+          Object.keys(prev.workflowErrors.fieldErrors).length
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        fieldErrors,
+        workflowErrors: { ...prev.workflowErrors, fieldErrors: workflowFieldErrors },
+      };
     });
   }, []);
 
