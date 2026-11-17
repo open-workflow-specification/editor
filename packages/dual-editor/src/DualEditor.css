@@ -26,13 +26,15 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
 }
 
 .ows-dual-editor__pane {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+.ows-dual-editor__text {
+  overflow: visible;
 }
 
 .ows-dual-editor__divider {
