@@ -32,7 +32,7 @@ export interface TaskValidationResult {
   fieldErrors: Record<string, string>;
   /** Errors shown at a container / section / root level. */
   levelErrors: Record<string, string>;
-  /** The level errors no level of the form shows; listed with their path in the footer. */
+  /** The level errors no level of the form shows; listed with their path at the top of the panel. */
   unplacedErrors: Record<string, string>;
   /** True when a valueMap-backed enum payload failed to parse (non-bypassable). */
   hasUnparseableValueMapPayload: boolean;

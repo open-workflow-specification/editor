@@ -31,7 +31,7 @@ export interface ClassifiedTaskErrors {
   levelErrors: Record<string, string>;
   /**
    * The level errors whose path no level of the form shows (a subset of `levelErrors`, so they
-   * are counted once). They are listed with their path in the footer instead.
+   * are counted once). They are listed with their path at the top of the panel instead.
    */
   unplacedErrors: Record<string, string>;
 }
@@ -185,7 +185,7 @@ export function classifyErrorPath(
   }
 
   // Errors that cannot be traced back to fields or containers still block Apply, so they are kept
-  // and listed in the footer, as no level of the form shows them.
+  // and listed at the top of the panel, as no level of the form shows them.
   return { kind: "unplaced", path };
 }
 

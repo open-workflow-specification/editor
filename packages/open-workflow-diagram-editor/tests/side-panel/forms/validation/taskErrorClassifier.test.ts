@@ -190,7 +190,7 @@ describe("classifyTaskErrors", () => {
     });
   });
 
-  describe("untraced errors (listed in the footer)", () => {
+  describe("untraced errors (listed at the top of the panel)", () => {
     it.each([
       { name: "an unknown path", errors: [error("type", "/unknown")], expectedPath: "unknown" },
       {

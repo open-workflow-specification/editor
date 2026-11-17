@@ -43,7 +43,6 @@ export {
   type FooterValidationState,
 } from "./footerValidationState";
 export { FooterValidationCounter } from "./FooterValidationCounter";
-export { UnplacedErrors } from "./UnplacedErrors";
 export { LevelErrors, type LevelErrorsProps } from "./LevelErrors";
 export {
   prepareValuesForValidation,
