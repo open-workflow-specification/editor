@@ -431,8 +431,8 @@ describe("DualEditor", () => {
     renderDualEditor();
     const divider = screen.getByRole("separator");
     fireEvent.pointerDown(divider, { pointerId: 1, clientY: 500 });
-    fireEvent.pointerMove(divider, { pointerId: 1, clientY: 500 });
+    fireEvent.pointerMove(divider, { pointerId: 1, clientY: 580 });
 
-    expect(divider).toHaveAttribute("aria-valuenow", "50");
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
   });
 });

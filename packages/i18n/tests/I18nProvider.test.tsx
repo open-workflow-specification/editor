@@ -20,6 +20,7 @@ import { I18nProvider, useI18n } from "../src/react/I18nProvider";
 
 const dictionaries = {
   en: { save: "Save" },
+  fr: { save: "Sauvegarder" },
 };
 
 const TestComponent = () => {
@@ -48,10 +49,7 @@ describe("I18nProvider", () => {
     expect(screen.getByText("Save")).toBeInTheDocument();
 
     rerender(
-      <I18nProvider
-        locale="fr"
-        dictionaries={{ en: { save: "Save" }, fr: { save: "Sauvegarder" } }}
-      >
+      <I18nProvider locale="fr" dictionaries={dictionaries}>
         <TestComponent />
       </I18nProvider>,
     );
