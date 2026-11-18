@@ -136,8 +136,22 @@ describe("classifyWorkflowErrors", () => {
     expect(result.unplacedErrors).toEqual({});
   });
 
-  it("drops what another oneOf branch says about a container's type", () => {
+  it("drops what another oneOf branch says about a container when an error below says what is wrong", () => {
     // A `wait: { seconds: "abc" }` also fails the string-duration branch: "must be string".
+    const result = classify([
+      workflowError("obj/a", "must be integer"),
+      workflowError("obj", "must be string", {
+        errorType: "#/properties/obj/oneOf/1/type",
+        object: { type: "string" },
+      }),
+    ]);
+
+    expect(result.fieldErrors).toEqual({ "obj.a": "must be integer" });
+    expect(result.levelErrors).toEqual({});
+  });
+
+  it("keeps a container error the SDK reports alone, as nothing else shows the task is invalid", () => {
+    // e.g. a raise error whose `type` the SDK rejects: only "must be string" on the error is left.
     const result = classify([
       workflowError("obj", "must be string", {
         errorType: "#/properties/obj/oneOf/1/type",
@@ -145,7 +159,8 @@ describe("classifyWorkflowErrors", () => {
       }),
     ]);
 
-    expect(result.levelErrors).toEqual({});
+    expect(result.levelErrors).toEqual({ obj: "must be string" });
+    expect(result.unplacedErrors).toEqual({});
   });
 
   it("keeps a container whose value is not an object", () => {

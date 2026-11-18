@@ -82,6 +82,15 @@ describe("EditFormFooter — error counter consistency", () => {
     expect(levelErrors()).toEqual([]);
   });
 
+  it("shows an error the SDK reports even when the form's own validation finds none", async () => {
+    // The "Raise Reusable" story after switching to an inline error with a relative type: the
+    // form accepts `test`, the SDK rejects it, and only its error on `raise.error` is left.
+    await openTask({ raise: { error: { type: "test", status: 400 } } });
+
+    expect(counter()).toBe("1 error");
+    expect(levelErrors()).toEqual(["must be string"]);
+  });
+
   it("does not count the task's oneOf summary next to the error below it", async () => {
     await openTask({
       call: "http",
