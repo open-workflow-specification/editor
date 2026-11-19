@@ -48,6 +48,39 @@ describe("WorkflowActions", () => {
     await user.click(copyButton);
 
     expect(copySpy).toHaveBeenCalledWith(MERMAID_CODE);
+    expect(screen.getByRole("status")).toHaveTextContent("Copied!");
+  });
+
+  it("announces the same result again when the action is repeated", async () => {
+    const user = userEvent.setup();
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+    vi.spyOn(clipboard, "copyToClipboard").mockResolvedValue(undefined);
+    vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
+
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
+
+    const copyButton = screen.getByRole("button", { name: /Copy Mermaid Code/i });
+    const status = screen.getByRole("status");
+
+    await user.click(copyButton);
+    expect(status).toHaveTextContent("Copied!");
+
+    const statusUpdates: string[] = [];
+    const observer = new MutationObserver(() => {
+      statusUpdates.push(status.textContent ?? "");
+    });
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+
+    try {
+      await user.click(copyButton);
+      await vi.waitFor(() => {
+        expect(statusUpdates).toContain("");
+        expect(statusUpdates.at(-1)).toBe("Copied!");
+      });
+    } finally {
+      observer.disconnect();
+    }
+    expect(clipboard.copyToClipboard).toHaveBeenCalledTimes(2);
   });
 
   it("should show error message when clipboard copy fails", async () => {
