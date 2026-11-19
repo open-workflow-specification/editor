@@ -99,6 +99,29 @@ describe("TextEditor", () => {
       );
     });
 
+    it("enables Monaco accessibility support and passes the accessible label", () => {
+      const { container } = renderEditor({ ariaLabel: "Workflow JSON source" });
+
+      expect(mockEditorCreate).toHaveBeenCalledWith(
+        container.firstElementChild,
+        expect.objectContaining({
+          accessibilitySupport: "on",
+          ariaLabel: "Workflow JSON source",
+        }),
+      );
+    });
+
+    it("updates Monaco's accessible label without recreating the editor", () => {
+      const { rerenderEditor } = renderEditor({ ariaLabel: "Workflow JSON source" });
+      mockEditorUpdateOptions.mockClear();
+
+      rerenderEditor({ ariaLabel: "Workflow YAML source" });
+
+      expect(mockEditorUpdateOptions).toHaveBeenCalledOnce();
+      expect(mockEditorUpdateOptions).toHaveBeenCalledWith({ ariaLabel: "Workflow YAML source" });
+      expect(mockEditorCreate).toHaveBeenCalledOnce();
+    });
+
     it("calls createLanguageServiceWorker once on mount", () => {
       renderEditor();
 
