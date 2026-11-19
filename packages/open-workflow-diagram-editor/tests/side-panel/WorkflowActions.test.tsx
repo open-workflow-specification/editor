@@ -65,8 +65,21 @@ describe("WorkflowActions", () => {
     await user.click(copyButton);
     expect(status).toHaveTextContent("Copied!");
 
-    await user.click(copyButton);
-    await vi.waitFor(() => expect(status).toHaveTextContent("Copied!"));
+    const statusUpdates: string[] = [];
+    const observer = new MutationObserver(() => {
+      statusUpdates.push(status.textContent ?? "");
+    });
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+
+    try {
+      await user.click(copyButton);
+      await vi.waitFor(() => {
+        expect(statusUpdates).toContain("");
+        expect(statusUpdates.at(-1)).toBe("Copied!");
+      });
+    } finally {
+      observer.disconnect();
+    }
     expect(clipboard.copyToClipboard).toHaveBeenCalledTimes(2);
   });
 
