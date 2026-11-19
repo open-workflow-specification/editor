@@ -137,4 +137,39 @@ describe("DualEditorElement", () => {
     el.setAttribute("language", "yaml");
     await vi.waitFor(() => expect(lastProps?.language).toBe("yaml"));
   });
+
+  it("uses JSON for unsupported language attributes", async () => {
+    const el = createElement();
+    el.setAttribute("language", "typescript");
+    await vi.waitFor(() => expect(lastProps?.language).toBe("json"));
+  });
+
+  it("updates locale, color mode, and read-only props when attributes change", async () => {
+    const el = createElement();
+    el.setAttribute("locale", "fr");
+    el.setAttribute("color-mode", "dark");
+    el.setAttribute("read-only", "");
+
+    await vi.waitFor(() =>
+      expect(lastProps).toEqual(
+        expect.objectContaining({ locale: "fr", colorMode: "dark", isReadOnly: true }),
+      ),
+    );
+
+    el.removeAttribute("read-only");
+    await vi.waitFor(() => expect(lastProps?.isReadOnly).toBe(false));
+  });
+
+  it("ignores a pending editor change after the host replaces content", async () => {
+    const el = createElement();
+    el.content = "host value";
+    await vi.waitFor(() => expect(lastProps?.content).toBe("host value"));
+    const staleOnContentChange = lastProps?.onContentChange as (content: string) => void;
+
+    el.content = "new host value";
+    staleOnContentChange("stale editor value");
+
+    expect(el.content).toBe("new host value");
+    await vi.waitFor(() => expect(lastProps?.content).toBe("new host value"));
+  });
 });

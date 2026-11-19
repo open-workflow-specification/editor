@@ -46,6 +46,7 @@ describe("exportDiagramAsPng", () => {
   let mockLink: HTMLAnchorElement;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     makeViewport(1);
 
     mockClick = vi.fn();
@@ -84,6 +85,52 @@ describe("exportDiagramAsPng", () => {
   it("throws when there are no nodes", async () => {
     const instance = makeInstance([]);
     await expect(exportDiagramAsPng(instance, "diagram.png")).rejects.toThrow("No nodes to export");
+  });
+
+  it("does not export when all nodes are hidden", async () => {
+    const instance = makeInstance([{ id: "hidden", hidden: true }]);
+
+    await expect(exportDiagramAsPng(instance, "diagram.png")).rejects.toThrow("No nodes to export");
+
+    expect(instance.getNodesBounds).not.toHaveBeenCalled();
+    expect(toPng).not.toHaveBeenCalled();
+  });
+
+  it("exports only visible nodes", async () => {
+    const visibleNode = { id: "visible" };
+    const hiddenNode = { id: "hidden", hidden: true };
+    const instance = makeInstance([visibleNode, hiddenNode]);
+
+    await exportDiagramAsPng(instance, "diagram.png");
+
+    expect(instance.getNodesBounds).toHaveBeenCalledWith([visibleNode]);
+  });
+
+  it("clears temporary edge styles after PNG generation succeeds", async () => {
+    const edge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    edge.classList.add("edge-line");
+    edge.style.stroke = "red";
+    document.querySelector(".react-flow__viewport")?.appendChild(edge);
+
+    await exportDiagramAsPng(makeInstance([{ id: "1" }]), "diagram.png");
+
+    expect(toPng).toHaveBeenCalledOnce();
+    expect(edge.style.stroke).toBe("");
+    expect(mockClick).toHaveBeenCalledOnce();
+  });
+
+  it("clears temporary edge styles when PNG generation fails", async () => {
+    const edge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    edge.classList.add("edge-line");
+    edge.style.stroke = "red";
+    document.querySelector(".react-flow__viewport")?.appendChild(edge);
+    vi.mocked(toPng).mockRejectedValueOnce(new Error("render failed"));
+
+    await expect(exportDiagramAsPng(makeInstance([{ id: "1" }]), "diagram.png")).rejects.toThrow(
+      "render failed",
+    );
+
+    expect(edge.style.stroke).toBe("");
   });
 
   it("throws when the viewport element is not found", async () => {

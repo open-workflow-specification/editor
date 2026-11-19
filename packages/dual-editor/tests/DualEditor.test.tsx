@@ -320,6 +320,33 @@ describe("DualEditor", () => {
     expect(onSplitChange).toHaveBeenLastCalledWith(80);
   });
 
+  it("supports larger keyboard steps and returns to the minimum with Home", () => {
+    const onSplitChange = vi.fn();
+    renderDualEditor({ onSplitChange });
+    const divider = screen.getByRole("separator");
+
+    fireEvent.keyDown(divider, { key: "ArrowRight", shiftKey: true });
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
+
+    fireEvent.keyDown(divider, { key: "Home" });
+    expect(divider).toHaveAttribute("aria-valuenow", "20");
+    expect(onSplitChange).toHaveBeenNthCalledWith(1, 60);
+    expect(onSplitChange).toHaveBeenNthCalledWith(2, 20);
+  });
+
+  it("does not report a split change when keyboard input cannot move past a boundary", () => {
+    const onSplitChange = vi.fn();
+    renderDualEditor({ onSplitChange });
+    const divider = screen.getByRole("separator");
+
+    fireEvent.keyDown(divider, { key: "End" });
+    fireEvent.keyDown(divider, { key: "ArrowRight" });
+
+    expect(divider).toHaveAttribute("aria-valuenow", "80");
+    expect(onSplitChange).toHaveBeenCalledOnce();
+    expect(onSplitChange).toHaveBeenCalledWith(80);
+  });
+
   it("resizes the panes when the divider is dragged", () => {
     Object.defineProperties(HTMLElement.prototype, {
       setPointerCapture: { configurable: true, value: vi.fn() },
@@ -368,5 +395,44 @@ describe("DualEditor", () => {
     expect(divider).toHaveAttribute("aria-orientation", "horizontal");
     fireEvent.keyDown(divider, { key: "ArrowDown" });
     expect(divider).toHaveAttribute("aria-valuenow", "52");
+  });
+
+  it("uses the vertical container bounds to resize stacked panes", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+    Object.defineProperties(HTMLElement.prototype, {
+      setPointerCapture: { configurable: true, value: vi.fn() },
+      hasPointerCapture: { configurable: true, value: vi.fn(() => true) },
+      releasePointerCapture: { configurable: true, value: vi.fn() },
+    });
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 100,
+      right: 1000,
+      bottom: 900,
+      width: 1000,
+      height: 800,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    renderDualEditor();
+    const divider = screen.getByRole("separator");
+    fireEvent.pointerDown(divider, { pointerId: 1, clientY: 500 });
+    fireEvent.pointerMove(divider, { pointerId: 1, clientY: 580 });
+
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
   });
 });

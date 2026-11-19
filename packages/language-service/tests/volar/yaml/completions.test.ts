@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { createYamlCompletionsPlugin } from "../../../src/index";
 import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
 
@@ -28,6 +29,14 @@ describe("createYamlCompletionsPlugin", () => {
   describe("provideCompletionItems", () => {
     it("proposes Hello World completion on an empty YAML document", async () => {
       const { doc, cursorPosition } = treat("🎯", "yaml", "file:///completions-empty.yaml");
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
+      expect(labels).toContain("Insert Hello World workflow");
+    });
+
+    it("proposes Hello World completion when the YAML document contains only whitespace", async () => {
+      const text = "  \n  \t";
+      const doc = TextDocument.create("file:///whitespace.yaml", "yaml", 1, text);
+      const cursorPosition = doc.positionAt(text.length);
       const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).toContain("Insert Hello World workflow");
     });
