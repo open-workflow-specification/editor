@@ -20,7 +20,7 @@ import { DrillRow } from "../../../../src/side-panel/forms/drill/DrillRow";
 import type { SectionField } from "../../../../src/core/schemaToFormFields";
 import { renderWithProviders, FormSpy, type FormRef } from "../../../test-utils/render-helpers";
 
-// Synthetic: Common fields' children are all single-segment today, but a drilled object's are not.
+// Synthetic: Advanced's children are all single-segment today, but a drilled object's are not.
 const section: SectionField = {
   kind: "section",
   path: "__common__",
@@ -50,8 +50,8 @@ describe("DrillRow", () => {
 
     act(() => formRef.current!.setError("with.endpoint", { type: "manual", message: "bad" }));
 
-    expect(screen.getByRole("button", { name: /^Open Common fields/ })).toHaveAccessibleName(
-      "Open Common fields, 0 of 1 set, 1 error",
+    expect(screen.getByRole("button", { name: /^Open Advanced/ })).toHaveAccessibleName(
+      "Open Advanced, 0 of 1 set, 1 error",
     );
   });
 });

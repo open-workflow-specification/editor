@@ -37,6 +37,8 @@ import { SENTINEL_SELF_KEY, isReservedPath, sentinelPath } from "./sentinels";
 export type TaskFormContextType = {
   isReadOnly: boolean;
   siblingTaskNames: string[];
+  /** The canvas node the panel shows (for a try/catch inner frame, the frame's). */
+  nodeId?: string | undefined;
   /**
    * Raw task data — always present (both read-only and edit modes).
    * Used for variant auto-selection (discrimination) in both modes, and

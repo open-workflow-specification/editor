@@ -58,6 +58,21 @@ const back = () => screen.queryByRole("button", { name: "Up one level" });
 const trail = () => screen.getByRole("navigation", { name: "Field path" });
 
 describe("TaskForm one-of levels", () => {
+  it("names a single-value option once in read-only, by its value's label", async () => {
+    const user = await renderTask(CALL_URI, true);
+    await openLevel(user, "Endpoint");
+
+    expect(screen.getAllByText("URI")).toHaveLength(1);
+    expect(screen.getByText("https://example.com/pets")).toBeInTheDocument();
+  });
+
+  it("still names an option of several fields in read-only", async () => {
+    const user = await renderTask(CALL_BEARER, true);
+    await openLevel(user, "Endpoint");
+
+    expect(screen.getByText("Endpoint Configuration")).toBeInTheDocument();
+  });
+
   it("edits a one-of whose every option is a single value as one field, under its own label", async () => {
     const user = await renderTask(CALL_BEARER);
     await openLevel(user, "Endpoint");

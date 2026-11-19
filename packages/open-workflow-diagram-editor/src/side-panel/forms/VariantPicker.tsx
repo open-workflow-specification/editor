@@ -44,9 +44,15 @@ import { cn } from "@/lib/utils";
 export function VariantPicker({
   field,
   compact = false,
+  label = field.label,
+  description = label === field.label ? field.description : undefined,
 }: {
   field: OneOfField;
   compact?: boolean;
+  /** Replaces the one-of's own label, dropping its help (it describes the one-of's key) */
+  label?: string | undefined;
+  /** The help beside a replaced label (by default, none). */
+  description?: string | undefined;
 }) {
   const { t } = useI18n();
   const { isReadOnly, revalidateIfAttempted } = useTaskFormContext();
@@ -87,11 +93,22 @@ export function VariantPicker({
 
   const variantLabels = React.useMemo(() => field.variants.map((v) => v.label), [field.variants]);
 
-  // Read-only names the chosen option as text: there is nothing to pick.
+  const selectedLabel = variantLabels[selectedVariantIdx] ?? "";
+  // Read-only names the chosen option as text: there is nothing to pick. Under a label that already
+  // says it (emit's Data › "Data") the option name is only an echo, so it is left out.
+  const echoes = (text: string | undefined) =>
+    text !== undefined &&
+    selectedLabel.localeCompare(text, undefined, { sensitivity: "base" }) === 0;
+  const echoesLabel = compact && echoes(label);
+  // Likewise at a level (Endpoint › "URI"), when the option is one value under that same label
+  const [onlyField, ...otherFields] = field.variants[selectedVariantIdx]?.fields ?? [];
+  if (isReadOnly && !compact && otherFields.length === 0 && echoes(onlyField?.label)) return null;
   const picker = isReadOnly ? (
-    <p className={cn("dec-form-readonly-value", compact && "dec-form-readonly-variant")}>
-      {variantLabels[selectedVariantIdx] ?? ""}
-    </p>
+    echoesLabel ? null : (
+      <p className={cn("dec-form-readonly-value", compact && "dec-form-readonly-variant")}>
+        {selectedLabel}
+      </p>
+    )
   ) : (
     <Combobox
       value={variantLabels[selectedVariantIdx] ?? ""}
@@ -104,9 +121,9 @@ export function VariantPicker({
       <ComboboxInput
         readOnly
         value={variantLabels[selectedVariantIdx] ?? ""}
-        aria-label={compact ? `${field.label} ${t("sidebar.field.variant")}` : field.label}
+        aria-label={compact ? `${label} ${t("sidebar.field.variant")}` : label}
         showClear={false}
-        className="dec:h-7 dec:text-xs"
+        className="dec:h-7 dec:text-body"
       />
       <ComboboxContent>
         <ComboboxList>
@@ -131,11 +148,11 @@ export function VariantPicker({
       ) : (
         <div className="dec-form-field">
           <FieldLabel
-            label={field.label}
-            required={field.required}
+            label={label}
+            required={label === field.label && field.required}
             changed={switched}
             fieldPath={field.path}
-            {...(field.description !== undefined ? { description: field.description } : {})}
+            {...(description !== undefined ? { description } : {})}
           />
           <div className="dec-form-field-control">{picker}</div>
         </div>

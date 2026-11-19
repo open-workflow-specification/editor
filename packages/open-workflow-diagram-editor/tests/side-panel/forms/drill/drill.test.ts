@@ -199,7 +199,7 @@ describe("drillLabel", () => {
   };
 
   it.each([
-    ["Common fields, translated", section("__common__", []), "t(sidebar.drill.commonFields)"],
+    ["Advanced, translated", section("__common__", []), "t(sidebar.drill.advanced)"],
     ["any other section, by its own label", { ...section("other", []), label: "Other" }, "Other"],
     ["an object, by its label", object("output", []), "output"],
     ["a one-of, by its label rather than its variant's", endpoint, "Endpoint"],

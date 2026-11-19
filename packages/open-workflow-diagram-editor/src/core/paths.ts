@@ -71,3 +71,8 @@ export function isPointerAtOrBelow(pointer: string, base: string): boolean {
 export function pointerToDotPath(pointer: string): string {
   return pointer.replace(/^\//, "").split("/").join(".");
 }
+
+/** Converts a dot-notation path (`a.b`) to a JSON Pointer (`/a/b`); `""` is the root. Segments are not escaped. */
+export function dotPathToPointer(path: string): string {
+  return path === "" ? "" : `/${path.split(".").join("/")}`;
+}

@@ -18,10 +18,12 @@ import * as React from "react";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useEditSession } from "@/side-panel/EditSession";
+import { useSelectNode } from "@/side-panel/useSelectNode";
 import { getGeneralErrors } from "@/core";
 
 export function SidePanelTrigger() {
-  const { errors, taskReferences, setSelectedNodeId } = useDiagramEditorContext();
+  const { errors, taskReferences } = useDiagramEditorContext();
+  const selectNode = useSelectNode();
   const { open, setOpen } = useSidebar();
   const { requestNavigation } = useEditSession();
 
@@ -37,11 +39,9 @@ export function SidePanelTrigger() {
     requestNavigation(() => setOpen(false));
   };
 
+  // A held navigation leaves the panel open (the guard's dialog is in it)
   const showWorkflowErrors = () => {
-    requestNavigation(() => {
-      setSelectedNodeId(null);
-      setOpen(true);
-    });
+    if (selectNode(null)) setOpen(true);
   };
 
   return (

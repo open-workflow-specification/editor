@@ -17,13 +17,19 @@
 import * as React from "react";
 import { ChevronLeft, House } from "lucide-react";
 import { useI18n } from "@openworkflowspec/i18n";
+import { Popover, PopoverContent, PopoverTrigger, useEditorPopover } from "@/components/ui/popover";
 
 /**
- *  Breadcrumb navigation showing the current drill path and allowing quick jumps.
+ * Breadcrumb navigation showing the current drill path and allowing quick jumps.
  */
 
 /** Past this many levels the middle of the trail collapses to "…". */
 const MAX_FULL_LEVELS = 3;
+
+/**
+ * A crumb with a label this short never truncates.
+ */
+const SHORT_LABEL = 6;
 
 export type DrillBreadcrumbProps = {
   taskName: string;
@@ -37,7 +43,6 @@ export function DrillBreadcrumb({ taskName, levels, onNavigate }: DrillBreadcrum
   const { t } = useI18n();
   const last = levels.length - 1;
   const collapsed = levels.length > MAX_FULL_LEVELS;
-  const hidden = collapsed ? levels.slice(1, -2) : [];
   const shown = levels
     .map((label, index) => ({ label, index }))
     .filter(({ index }) => !collapsed || index === 0 || index >= levels.length - 2);
@@ -54,7 +59,7 @@ export function DrillBreadcrumb({ taskName, levels, onNavigate }: DrillBreadcrum
         <ChevronLeft className="dec-form-breadcrumb-icon" aria-hidden="true" />
       </button>
       <ol className="dec-form-breadcrumb-trail">
-        <li className="dec-form-breadcrumb-item">
+        <li className="dec-form-breadcrumb-item dec-form-breadcrumb-item--fixed">
           <button
             type="button"
             className="dec-form-breadcrumb-crumb"
@@ -67,28 +72,39 @@ export function DrillBreadcrumb({ taskName, levels, onNavigate }: DrillBreadcrum
         {shown.map(({ label, index }) => (
           <React.Fragment key={index}>
             {collapsed && index === levels.length - 2 && (
-              <li className="dec-form-breadcrumb-item" title={hidden.join(" › ")}>
+              <li className="dec-form-breadcrumb-item dec-form-breadcrumb-item--fixed">
                 <span className="dec-form-breadcrumb-sep" aria-hidden="true">
                   ›
                 </span>
-                <span aria-hidden="true">…</span>
-                <span className="dec:sr-only">
-                  {t("sidebar.drill.hiddenLevels")}: {hidden.join(", ")}
-                </span>
+                <HiddenLevels
+                  levels={levels
+                    .slice(1, -2)
+                    .map((label, offset) => ({ label, depth: offset + 2 }))}
+                  onNavigate={onNavigate}
+                />
               </li>
             )}
-            <li className="dec-form-breadcrumb-item">
+            <li
+              className={
+                index === last
+                  ? "dec-form-breadcrumb-item dec-form-breadcrumb-item--current"
+                  : label.length > SHORT_LABEL
+                    ? "dec-form-breadcrumb-item dec-form-breadcrumb-item--shrinks"
+                    : "dec-form-breadcrumb-item dec-form-breadcrumb-item--fixed"
+              }
+            >
               <span className="dec-form-breadcrumb-sep" aria-hidden="true">
                 ›
               </span>
               {index === last ? (
-                <span className="dec-form-breadcrumb-current" aria-current="location">
+                <span className="dec-form-breadcrumb-current" aria-current="location" title={label}>
                   {label}
                 </span>
               ) : (
                 <button
                   type="button"
                   className="dec-form-breadcrumb-crumb"
+                  title={label}
                   onClick={() => onNavigate(index + 1)}
                 >
                   {label}
@@ -99,5 +115,55 @@ export function DrillBreadcrumb({ taskName, levels, onNavigate }: DrillBreadcrum
         ))}
       </ol>
     </nav>
+  );
+}
+
+/**
+ * The collapsed middle of the trail: a "…" button listing the hidden levels
+ */
+function HiddenLevels({
+  levels,
+  onNavigate,
+}: {
+  levels: { label: string; depth: number }[];
+  onNavigate: (depth: number) => void;
+}) {
+  const { t } = useI18n();
+  const { triggerRef, open, onOpenChange, contentProps } = useEditorPopover<HTMLButtonElement>();
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          ref={triggerRef}
+          type="button"
+          className="dec-form-breadcrumb-crumb"
+          aria-label={t("sidebar.drill.hiddenLevels")}
+        >
+          …
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        {...contentProps}
+        className="dec-popover dec-breadcrumb-menu"
+        aria-label={t("sidebar.drill.hiddenLevels")}
+      >
+        <ul className="dec-breadcrumb-menu-list">
+          {levels.map(({ label, depth }) => (
+            <li key={depth}>
+              <button
+                type="button"
+                className="dec-breadcrumb-menu-item"
+                onClick={() => {
+                  onOpenChange(false);
+                  onNavigate(depth);
+                }}
+              >
+                {label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }

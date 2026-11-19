@@ -82,6 +82,28 @@ describe("SidePanelTrigger", () => {
 
     expect(setSelectedNodeId).toHaveBeenCalledWith(null);
   });
+
+  it("clears the canvas highlight too", async () => {
+    const user = userEvent.setup();
+    const setNodes = vi.fn();
+    const nodes = [
+      { id: "/do/0/call", position: { x: 0, y: 0 }, data: {}, selected: true },
+      { id: "/do/1/set", position: { x: 0, y: 0 }, data: {} },
+    ];
+
+    renderWithProviders(<SidePanelTrigger />, {
+      errors: [{ path: "/document", message: "missing version" }],
+      taskReferences,
+      selectedNodeId: "/do/0/call",
+      nodes,
+      setNodes,
+    });
+
+    await user.click(screen.getByTestId("sidebar-errors-badge"));
+
+    const update = setNodes.mock.lastCall![0] as (current: typeof nodes) => typeof nodes;
+    expect(update(nodes).some((n) => n.selected)).toBe(false);
+  });
 });
 
 const { model, node } = editableTaskNode();

@@ -19,7 +19,7 @@
 @layer side-panel {
   /* Header title group */
   .dec-root .dec-sidebar-header-title {
-    @apply dec:flex dec:items-center dec:gap-2;
+    @apply dec:flex dec:items-center dec:gap-3;
   }
 
   .dec-root .dec-sidebar-header-icon-wrap {
@@ -48,7 +48,7 @@
   }
 
   .dec-root .dec-sidebar-header-labels {
-    @apply dec:flex dec:flex-col dec:min-w-0;
+    @apply dec:flex dec:flex-col dec:gap-1 dec:min-w-0;
   }
 
   .dec-root .dec-sidebar-header-name {
@@ -59,8 +59,12 @@
     @apply dec:text-gray-100;
   }
 
+  .dec-root .dec-sidebar-header-subtitle-row {
+    @apply dec:flex dec:items-center dec:gap-1;
+  }
+
   .dec-root .dec-sidebar-header-subtitle {
-    @apply dec:text-[10px] dec:uppercase dec:text-gray-500 dec:tracking-wider;
+    @apply dec:text-meta dec:uppercase dec:text-gray-500 dec:tracking-wider;
   }
 
   .dec-root.dark .dec-sidebar-header-subtitle {
@@ -86,7 +90,7 @@
   }
 
   .dec-root .dec-sidebar-hint-text {
-    @apply dec:text-xs dec:text-gray-400;
+    @apply dec:text-meta dec:text-gray-400;
   }
 
   .dec-root.dark .dec-sidebar-hint-text {
@@ -99,12 +103,8 @@
   }
 
   .dec-root .dec-sidebar-section-title {
-    @apply dec:text-[11px] dec:font-semibold dec:uppercase dec:tracking-wider
-      dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-sidebar-section-title {
-    @apply dec:text-gray-400;
+    @apply dec:text-heading dec:font-semibold;
+    color: var(--dec-text);
   }
 
   .dec-root .dec-sidebar-section-divider {
@@ -136,7 +136,7 @@
   }
 
   .dec-root .dec-sidebar-field-label {
-    @apply dec:text-sm dec:text-gray-500;
+    @apply dec:text-body dec:text-gray-500;
   }
 
   .dec-root.dark .dec-sidebar-field-label {
@@ -144,7 +144,7 @@
   }
 
   .dec-root .dec-sidebar-field-value {
-    @apply dec:text-sm dec:font-semibold dec:text-gray-900;
+    @apply dec:text-body dec:font-semibold dec:text-gray-900;
   }
 
   .dec-root.dark .dec-sidebar-field-value {
@@ -161,7 +161,7 @@
   }
 
   .dec-root .dec-sidebar-form-footer-status {
-    @apply dec:flex dec:min-w-0 dec:items-center dec:gap-1 dec:overflow-hidden dec:whitespace-nowrap dec:text-xs dec:font-medium;
+    @apply dec:flex dec:min-w-0 dec:items-center dec:gap-1 dec:overflow-hidden dec:whitespace-nowrap dec:text-meta dec:font-medium;
   }
 
   .dec-root .dec-sidebar-form-footer-status.changed {
@@ -207,7 +207,7 @@
   }
 
   .dec-root .dec-sidebar-stacked-label {
-    @apply dec:text-[11px] dec:uppercase dec:tracking-wider dec:text-gray-500 dec:mb-0.5;
+    @apply dec:text-meta dec:uppercase dec:tracking-wider dec:text-gray-500 dec:mb-0.5;
   }
 
   .dec-root.dark .dec-sidebar-stacked-label {
@@ -215,7 +215,7 @@
   }
 
   .dec-root .dec-sidebar-stacked-value {
-    @apply dec:text-sm dec:font-semibold dec:text-gray-900 dec:break-words;
+    @apply dec:text-body dec:font-semibold dec:text-gray-900 dec:break-words;
   }
 
   .dec-root.dark .dec-sidebar-stacked-value {
@@ -228,7 +228,7 @@
   }
 
   .dec-root .dec-sidebar-tags-label {
-    @apply dec:text-[11px] dec:uppercase dec:tracking-wider dec:text-gray-500 dec:mb-1;
+    @apply dec:text-meta dec:uppercase dec:tracking-wider dec:text-gray-500 dec:mb-1;
   }
 
   .dec-root.dark .dec-sidebar-tags-label {
@@ -242,7 +242,7 @@
   .dec-root .dec-sidebar-tag {
     @apply dec:inline-flex dec:items-center dec:rounded-full
       dec:bg-gray-100 dec:px-2 dec:py-0.5
-      dec:text-xs dec:text-gray-700;
+      dec:text-meta dec:text-gray-700;
   }
 
   .dec-root.dark .dec-sidebar-tag {
@@ -268,7 +268,7 @@
   }
 
   .dec-root .dec-sidebar-yaml-summary {
-    @apply dec:cursor-pointer dec:text-sm dec:font-semibold dec:text-gray-900 dec:select-none dec:rounded-sm;
+    @apply dec:cursor-pointer dec:text-heading dec:font-semibold dec:text-gray-900 dec:select-none dec:rounded-sm;
   }
 
   .dec-root.dark .dec-sidebar-yaml-summary {
@@ -276,7 +276,7 @@
   }
 
   .dec-root .dec-sidebar-yaml-pre {
-    @apply dec:mt-1 dec:max-h-64 dec:overflow-auto dec:rounded-md dec:bg-gray-100 dec:p-2 dec:text-xs dec:text-gray-800 dec:whitespace-pre-wrap dec:break-words;
+    @apply dec:mt-1 dec:max-h-64 dec:overflow-auto dec:rounded-md dec:bg-gray-100 dec:p-2 dec:text-meta dec:text-gray-800 dec:whitespace-pre-wrap dec:break-words;
   }
 
   .dec-root.dark .dec-sidebar-yaml-pre {
@@ -310,7 +310,7 @@
   }
 
   .dec-root .dec-sidebar-errors-title {
-    @apply dec:text-[11px] dec:font-semibold dec:uppercase dec:tracking-wider dec:text-red-700;
+    @apply dec:text-meta dec:font-semibold dec:uppercase dec:tracking-wider dec:text-red-700;
   }
 
   .dec-root.dark .dec-sidebar-errors-title {
@@ -320,7 +320,7 @@
   .dec-root .dec-sidebar-errors-count {
     @apply dec:ml-auto dec:inline-flex dec:items-center dec:justify-center
       dec:min-w-5 dec:rounded-full dec:px-1.5 dec:py-0.5
-      dec:text-[10px] dec:font-semibold dec:bg-red-100 dec:text-red-700;
+      dec:text-meta dec:font-semibold dec:bg-red-100 dec:text-red-700;
   }
 
   .dec-root.dark .dec-sidebar-errors-count {
@@ -340,7 +340,7 @@
   }
 
   .dec-root .dec-sidebar-error-message {
-    @apply dec:text-sm dec:text-gray-700;
+    @apply dec:text-body dec:text-gray-700;
     overflow-wrap: anywhere;
   }
 
@@ -349,7 +349,7 @@
   }
 
   .dec-root .dec-sidebar-error-field {
-    @apply dec:text-sm dec:font-semibold dec:text-red-800;
+    @apply dec:text-body dec:font-semibold dec:text-red-800;
     font-family: var(--dec-font-mono);
   }
 
@@ -410,11 +410,12 @@
 
   /* One focus ring for every control in the form */
   .dec-root .dec-form-field-help:focus-visible,
+  .dec-root .dec-popover:focus-visible,
   .dec-root .dec-map-delete-btn:focus-visible,
-  .dec-root .dec-filter-with-disclosure:focus-visible,
   .dec-root .dec-form-breadcrumb-back:focus-visible,
   .dec-root .dec-form-breadcrumb-crumb:focus-visible,
   .dec-root .dec-form-drill-row:focus-visible,
+  .dec-root .dec-task-list-chip.is-selectable:focus-visible,
   .dec-root .dec-form-add-chip:focus-visible,
   .dec-root .dec-form-remove-btn:focus-visible {
     outline: 2px solid rgb(var(--dec-selected-rgb));
@@ -423,7 +424,7 @@
 
   .dec-root .dec-form-object-toggle:focus-visible,
   .dec-root .dec-map-add-btn:focus-visible,
-  .dec-root .dec-correlate-header:focus-visible {
+  .dec-root .dec-breadcrumb-menu-item:focus-visible {
     outline: 2px solid rgb(var(--dec-selected-rgb));
     outline-offset: -2px;
   }
@@ -443,7 +444,7 @@
   }
 
   .dec-root .dec-form-field-label {
-    @apply dec:text-[11px] dec:font-normal dec:text-gray-500;
+    @apply dec:text-body dec:font-normal dec:text-gray-500;
     overflow-wrap: anywhere;
   }
 
@@ -464,28 +465,72 @@
     @apply dec:absolute dec:-left-3 dec:top-1/2 dec:flex dec:-translate-y-1/2;
   }
 
-  /* Description tooltip trigger button */
+  /* Help "?" button - click opens the help popover. */
   .dec-root .dec-form-field-help {
-    @apply dec:inline-flex dec:items-center dec:justify-center
-      dec:h-4 dec:w-4 dec:rounded-sm dec:text-gray-400
-      dec:bg-transparent dec:border-0 dec:cursor-pointer dec:shrink-0
-      dec:transition-colors;
+    @apply dec:inline-flex dec:items-center dec:justify-center dec:shrink-0
+      dec:h-5 dec:w-5 dec:-my-0.5 dec:p-0 dec:rounded
+      dec:bg-transparent dec:border-0 dec:cursor-pointer dec:transition-colors;
+    color: var(--dec-text-subtle);
   }
 
-  .dec-root .dec-form-field-help:hover {
-    @apply dec:text-gray-600;
-  }
-
-  .dec-root.dark .dec-form-field-help {
-    @apply dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-form-field-help:hover {
-    @apply dec:text-gray-300;
+  .dec-root .dec-form-field-help:hover,
+  .dec-root .dec-form-field-help[data-state="open"] {
+    color: var(--dec-text);
+    background-color: color-mix(in srgb, var(--dec-text-subtle) 16%, transparent);
   }
 
   .dec-root .dec-form-field-help-icon {
     @apply dec:h-3 dec:w-3;
+  }
+
+  /* Popover surface (help, breadcrumb hidden levels): portalled into this editor's .dec-root,
+     never document.body */
+  .dec-root .dec-popover {
+    @apply dec:z-50 dec:rounded-lg;
+    background-color: var(--dec-popover-bg);
+    border: 1px solid var(--dec-popover-border);
+    color: var(--dec-text);
+    box-shadow:
+      0 12px 32px -6px rgb(15 23 42 / 0.45),
+      0 2px 6px rgb(15 23 42 / 0.12);
+  }
+
+  .dec-root .dec-popover-arrow {
+    @apply dec:block dec:h-[9px] dec:w-[9px];
+    margin-left: 1.5px;
+    background-color: var(--dec-popover-bg);
+    border-right: 1px solid var(--dec-popover-border);
+    border-bottom: 1px solid var(--dec-popover-border);
+    transform: translateY(-50%) rotate(45deg);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .dec-root .dec-popover[data-state="open"] {
+      animation: dec-popover-in 120ms ease-out;
+    }
+  }
+
+  @keyframes dec-popover-in {
+    from {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+  }
+
+  .dec-root .dec-help-popover {
+    @apply dec:px-3 dec:py-2.5;
+    width: min(260px, var(--radix-popover-content-available-width));
+    user-select: text;
+  }
+
+  .dec-root .dec-help-popover-title {
+    @apply dec:m-0 dec:mb-0.5 dec:text-meta dec:font-semibold;
+    color: var(--dec-text-muted);
+  }
+
+  .dec-root .dec-help-popover-text {
+    @apply dec:m-0 dec:text-body dec:leading-[1.45] dec:font-normal dec:normal-case dec:tracking-normal;
+    overflow-wrap: anywhere;
   }
 
   .dec-root .dec-form-field-control {
@@ -498,7 +543,7 @@
   }
 
   .dec-root .dec-form-field-error {
-    @apply dec:text-xs dec:text-red-600;
+    @apply dec:text-body dec:text-red-600;
   }
 
   .dec-root.dark .dec-form-field-error {
@@ -514,7 +559,7 @@
      The label stays as in edit mode; the value takes the weight, as text where edit mode has an
      input. */
   .dec-root .dec-form-readonly-value {
-    @apply dec:m-0 dec:text-xs dec:text-gray-900;
+    @apply dec:m-0 dec:text-body dec:text-gray-900;
     overflow-wrap: anywhere;
   }
 
@@ -522,13 +567,17 @@
     @apply dec:text-gray-100;
   }
 
-  .dec-root .dec-form-readonly-value--expression {
+  .dec-root .dec-form-readonly-value.dec-form-readonly-value--expression {
+    @apply dec:rounded dec:px-1.5 dec:py-px;
+    width: fit-content;
+    max-width: 100%;
     font-family: var(--dec-font-mono);
-    color: var(--dec-teal-text);
+    color: var(--dec-code-text);
+    background-color: var(--dec-code-bg);
   }
 
   .dec-root .dec-form-readonly-variant {
-    @apply dec:text-[11px] dec:text-gray-500;
+    @apply dec:text-meta dec:text-gray-500;
   }
 
   .dec-root.dark .dec-form-readonly-variant {
@@ -536,7 +585,7 @@
   }
 
   .dec-root .dec-form-readonly-code {
-    @apply dec:m-0 dec:rounded-md dec:bg-gray-100 dec:px-2 dec:py-1.5 dec:text-[11px] dec:text-gray-900;
+    @apply dec:m-0 dec:rounded-md dec:bg-gray-100 dec:px-2 dec:py-1.5 dec:text-meta dec:text-gray-900;
     font-family: var(--dec-font-mono);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -594,7 +643,7 @@
   }
 
   .dec-root .dec-form-object-label {
-    @apply dec:text-xs dec:font-medium dec:text-gray-600;
+    @apply dec:text-body dec:font-medium dec:text-gray-600;
   }
 
   .dec-root.dark .dec-form-object-label {
@@ -618,15 +667,15 @@
     @apply dec:flex dec:flex-col dec:gap-2;
   }
 
-  /* ── Group heading (an inline object, Flow, Task settings) ──────────── */
+  /* ── Group heading (an inline object, Flow) and divider (Advanced) ─ */
 
   .dec-root .dec-form-group {
     @apply dec:flex dec:flex-col dec:gap-2;
   }
 
   .dec-root .dec-form-group-heading {
-    @apply dec:m-0 dec:mt-1 dec:flex dec:items-center dec:gap-1 dec:text-[11px] dec:font-semibold
-      dec:uppercase dec:tracking-wider dec:text-gray-500;
+    @apply dec:m-0 dec:mt-2 dec:flex dec:items-center dec:gap-2 dec:text-heading dec:font-semibold;
+    color: var(--dec-text);
   }
 
   .dec-root .dec-form-group-heading::after {
@@ -634,11 +683,15 @@
     content: "";
   }
 
-  .dec-root.dark .dec-form-group-heading {
-    @apply dec:text-gray-400;
+  .dec-root.dark .dec-form-group-heading::after {
+    @apply dec:bg-gray-700;
   }
 
-  .dec-root.dark .dec-form-group-heading::after {
+  .dec-root .dec-form-group-divider {
+    @apply dec:m-0 dec:mt-2 dec:h-px dec:border-0 dec:bg-gray-200;
+  }
+
+  .dec-root.dark .dec-form-group-divider {
     @apply dec:bg-gray-700;
   }
 
@@ -675,7 +728,7 @@
   }
 
   .dec-root .dec-task-list-empty-text {
-    @apply dec:text-xs dec:text-gray-400 dec:italic;
+    @apply dec:text-meta dec:text-gray-400 dec:italic;
   }
 
   .dec-root.dark .dec-task-list-empty-text {
@@ -688,23 +741,44 @@
   }
 
   .dec-root .dec-task-list-chip {
-    @apply dec:flex dec:items-center dec:gap-1.5
+    @apply dec:flex dec:w-full dec:items-center dec:gap-1.5
       dec:rounded-sm
       dec:border dec:border-gray-200
       dec:bg-white
-      dec:px-2 dec:py-1;
+      dec:px-2 dec:py-1 dec:text-left;
   }
 
   .dec-root.dark .dec-task-list-chip {
     @apply dec:border-gray-700 dec:bg-gray-800;
   }
 
+  /* A chip whose task has a canvas node selects it, like a drill row opens a level */
+  .dec-root .dec-task-list-chip.is-selectable {
+    @apply dec:cursor-pointer dec:transition-colors;
+  }
+
+  .dec-root .dec-task-list-chip.is-selectable:hover {
+    @apply dec:border-gray-300 dec:bg-gray-100;
+  }
+
+  .dec-root.dark .dec-task-list-chip.is-selectable:hover {
+    @apply dec:border-gray-600 dec:bg-gray-700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dec-root .dec-task-list-chip.is-selectable {
+      @apply dec:transition-none;
+    }
+  }
+
+  /* The task type's canvas colour (--task-node-color, set inline), else neutral */
   .dec-root .dec-task-list-chip-dot {
-    @apply dec:size-1.5 dec:shrink-0 dec:rounded-full dec:bg-blue-500;
+    @apply dec:size-1.5 dec:shrink-0 dec:rounded-full;
+    background-color: var(--task-node-color, var(--dec-text-subtle));
   }
 
   .dec-root .dec-task-list-chip-name {
-    @apply dec:text-xs dec:font-medium dec:text-gray-800 dec:truncate;
+    @apply dec:text-body dec:font-medium dec:text-gray-800 dec:truncate;
     font-family: var(--dec-font-mono);
   }
 
@@ -713,7 +787,7 @@
   }
 
   .dec-root .dec-task-list-chip-type {
-    @apply dec:ml-auto dec:shrink-0 dec:text-xs dec:text-gray-400;
+    @apply dec:ml-auto dec:shrink-0 dec:text-meta dec:text-gray-400;
   }
 
   .dec-root.dark .dec-task-list-chip-type {
@@ -725,7 +799,7 @@
     @apply dec:flex dec:items-center dec:gap-1
       dec:pt-1.5 dec:mt-0.5
       dec:border-t dec:border-gray-200
-      dec:text-xs dec:text-gray-400 dec:italic;
+      dec:text-meta dec:text-gray-400 dec:italic;
   }
 
   .dec-root.dark .dec-task-list-hint {
@@ -752,7 +826,7 @@
   }
 
   .dec-root .dec-form-ordered-map-count {
-    @apply dec:ml-auto dec:text-[10px] dec:text-gray-500;
+    @apply dec:ml-auto dec:text-meta dec:text-gray-500;
     font-variant-numeric: tabular-nums;
   }
 
@@ -775,7 +849,7 @@
   }
 
   .dec-root .dec-form-ordered-map-index {
-    @apply dec:text-[10px] dec:text-gray-400;
+    @apply dec:text-meta dec:text-gray-400;
     font-variant-numeric: tabular-nums;
   }
 
@@ -784,7 +858,7 @@
   }
 
   .dec-root .dec-form-ordered-map-name {
-    @apply dec:text-xs dec:font-medium dec:text-gray-700 dec:min-w-0;
+    @apply dec:text-body dec:font-medium dec:text-gray-700 dec:min-w-0;
     font-family: var(--dec-font-mono);
     overflow-wrap: anywhere;
   }
@@ -819,7 +893,7 @@
   }
 
   .dec-root .dec-map-label {
-    @apply dec:text-xs dec:font-medium dec:text-gray-600;
+    @apply dec:text-body dec:font-medium dec:text-gray-600;
   }
 
   .dec-root.dark .dec-map-label {
@@ -827,7 +901,7 @@
   }
 
   .dec-root .dec-map-count {
-    @apply dec:text-xs dec:text-gray-400 dec:tabular-nums;
+    @apply dec:text-meta dec:text-gray-400 dec:tabular-nums;
   }
 
   .dec-root.dark .dec-map-count {
@@ -867,19 +941,27 @@
     @apply dec:relative dec:pl-5;
   }
 
+  .dec-root .dec-map-group .dec-form-field-error {
+    @apply dec:m-0 dec:px-2 dec:pt-1.5;
+  }
+
+  .dec-root .dec-map-group-gutter .dec-form-field-error {
+    @apply dec:pl-5;
+  }
+
   .dec-root .dec-map-gutter-dot {
     @apply dec:absolute dec:left-2 dec:top-1/2 dec:flex dec:-translate-y-1/2;
   }
 
   /* Key input — fixed 40% width; !w-2/5 overrides the Input base's w-full */
   .dec-root .dec-map-key-input {
-    @apply dec:h-6 dec:!w-2/5 dec:shrink-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+    @apply dec:h-7 dec:!w-2/5 dec:shrink-0 dec:min-w-0 dec:text-body dec:px-1.5;
     font-family: var(--dec-font-mono);
   }
 
   /* Value input — fill remaining space; !w-0 + flex-1 overrides Input's w-full */
   .dec-root .dec-map-value-input {
-    @apply dec:h-6 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+    @apply dec:h-7 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-body dec:px-1.5;
   }
 
   /* Delete row button */
@@ -908,7 +990,7 @@
 
   /* Read-only rows */
   .dec-root .dec-map-key-readonly {
-    @apply dec:text-xs dec:text-gray-500 dec:w-2/5 dec:shrink-0 dec:break-all;
+    @apply dec:text-body dec:text-gray-500 dec:w-2/5 dec:shrink-0 dec:break-all;
     font-family: var(--dec-font-mono);
   }
 
@@ -917,7 +999,7 @@
   }
 
   .dec-root .dec-map-value-readonly {
-    @apply dec:text-xs dec:text-gray-900 dec:flex-1 dec:break-all;
+    @apply dec:text-body dec:text-gray-900 dec:flex-1 dec:break-all;
   }
 
   .dec-root.dark .dec-map-value-readonly {
@@ -934,7 +1016,7 @@
   .dec-root .dec-map-add-btn {
     @apply dec:inline-flex dec:items-center dec:justify-center dec:gap-1
       dec:w-full dec:px-2 dec:py-1.5
-      dec:text-[11px] dec:font-medium
+      dec:text-body dec:font-medium
       dec:rounded-sm dec:border dec:border-dashed
       dec:bg-transparent dec:cursor-pointer dec:transition-colors;
     color: var(--dec-teal-text);
@@ -953,14 +1035,14 @@
 
   /* Value input fills the full row width */
   .dec-root .dec-list-value-input {
-    @apply dec:h-6 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-[11px] dec:px-1.5;
+    @apply dec:h-7 dec:flex-1 dec:!w-0 dec:min-w-0 dec:text-body dec:px-1.5;
     font-family: var(--dec-font-mono);
   }
 
   /* Read-only row */
   .dec-root .dec-list-row-readonly {
     @apply dec:px-2 dec:py-1
-      dec:text-xs dec:text-gray-600 dec:break-all
+      dec:text-body dec:text-gray-600 dec:break-all
       dec:border-b dec:border-gray-100;
     font-family: var(--dec-font-mono);
   }
@@ -972,237 +1054,6 @@
   .dec-root.dark .dec-list-row-readonly {
     @apply dec:text-gray-300 dec:border-gray-700/50;
   }
-
-  /* ── Event filter list (.dec-filter-*) ──────────────────────────────── */
-
-  /* Single filter item wrapper */
-  .dec-root .dec-filter-item {
-    @apply dec:flex dec:flex-col
-      dec:border-b dec:border-gray-100;
-  }
-
-  .dec-root.dark .dec-filter-item {
-    @apply dec:border-gray-700/50;
-  }
-
-  .dec-root .dec-filter-item:last-child {
-    @apply dec:border-b-0;
-  }
-
-  /* Item header: index badge + spacer + delete button */
-  .dec-root .dec-filter-item-header {
-    @apply dec:flex dec:items-center dec:gap-1.5 dec:px-2 dec:pt-1.5 dec:pb-1;
-  }
-
-  .dec-root .dec-filter-item-index {
-    @apply dec:inline-flex dec:items-center dec:justify-center
-      dec:h-4 dec:w-4 dec:shrink-0
-      dec:rounded dec:border dec:border-gray-200
-      dec:bg-gray-50
-      dec:text-[10px] dec:font-semibold dec:tabular-nums dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-filter-item-index {
-    @apply dec:border-gray-700 dec:bg-gray-800 dec:text-gray-400;
-  }
-
-  .dec-root .dec-filter-item-spacer {
-    @apply dec:flex-1;
-  }
-
-  /* "with *" trigger row */
-  .dec-root .dec-filter-with-row {
-    @apply dec:flex dec:items-center dec:justify-between dec:gap-2
-      dec:px-2 dec:pb-1.5;
-  }
-
-  .dec-root .dec-filter-with-label {
-    @apply dec:text-[11px] dec:font-medium dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-filter-with-label {
-    @apply dec:text-gray-400;
-  }
-
-  /* Disclosure trigger: "Event properties ›" */
-  .dec-root .dec-filter-with-disclosure {
-    @apply dec:inline-flex dec:items-center dec:gap-0.5
-      dec:text-[10px] dec:font-medium
-      dec:bg-transparent dec:border-0 dec:cursor-pointer dec:transition-colors;
-    color: var(--dec-teal-text);
-  }
-
-  .dec-root .dec-filter-with-disclosure:hover {
-    color: var(--dec-teal-text-hover);
-  }
-
-  .dec-root .dec-filter-disclosure-icon {
-    @apply dec:h-3 dec:w-3 dec:shrink-0;
-  }
-
-  /* Error of a part of a filter item, shown under its row */
-  .dec-root .dec-filter-item-error {
-    @apply dec:px-2 dec:pb-1.5;
-  }
-
-  /* Event properties sub-panel (expanded inline beneath "with" row) */
-  .dec-root .dec-event-props-panel {
-    @apply dec:flex dec:flex-col dec:gap-2
-      dec:border-t dec:border-b dec:border-gray-100
-      dec:bg-gray-50/60
-      dec:px-3 dec:py-2;
-  }
-
-  .dec-root.dark .dec-event-props-panel {
-    @apply dec:border-gray-700/50 dec:bg-gray-900/40;
-  }
-
-  .dec-root .dec-event-props-row {
-    @apply dec:flex dec:flex-col dec:gap-0.5;
-  }
-
-  .dec-root .dec-event-props-label {
-    @apply dec:text-[10px] dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-event-props-label {
-    @apply dec:text-gray-400;
-  }
-
-  .dec-root .dec-event-props-input {
-    @apply dec:h-6 dec:text-[11px] dec:px-1.5;
-  }
-
-  /* Correlate collapsible group */
-  .dec-root .dec-correlate-group {
-    @apply dec:mx-2 dec:mb-1.5
-      dec:rounded dec:border dec:border-gray-200 dec:overflow-hidden;
-  }
-
-  .dec-root.dark .dec-correlate-group {
-    @apply dec:border-gray-700;
-  }
-
-  .dec-root .dec-correlate-header {
-    @apply dec:flex dec:items-center dec:gap-1.5
-      dec:w-full dec:text-left
-      dec:px-2 dec:py-1
-      dec:bg-gray-50 dec:border-0 dec:cursor-pointer dec:transition-colors;
-  }
-
-  .dec-root .dec-correlate-header:hover {
-    @apply dec:bg-gray-100;
-  }
-
-  .dec-root.dark .dec-correlate-header {
-    @apply dec:bg-gray-800/60;
-  }
-
-  .dec-root.dark .dec-correlate-header:hover {
-    @apply dec:bg-gray-800;
-  }
-
-  .dec-root .dec-correlate-chevron {
-    @apply dec:h-3 dec:w-3 dec:shrink-0 dec:text-gray-400;
-  }
-
-  .dec-root.dark .dec-correlate-chevron {
-    @apply dec:text-gray-500;
-  }
-
-  .dec-root .dec-correlate-label {
-    @apply dec:flex-1 dec:text-[11px] dec:font-medium dec:text-gray-500;
-  }
-
-  .dec-root.dark .dec-correlate-label {
-    @apply dec:text-gray-400;
-  }
-
-  /* Correlate editor rows container — shares dec-map-rows border/background */
-  .dec-root .dec-correlate-editor {
-    @apply dec:flex dec:flex-col
-      dec:border-t dec:border-gray-100;
-  }
-
-  .dec-root.dark .dec-correlate-editor {
-    @apply dec:border-gray-700;
-  }
-
-  /* Read-only filter item */
-  .dec-root .dec-filter-item-readonly {
-    @apply dec:flex dec:flex-col dec:gap-1
-      dec:px-2 dec:py-2
-      dec:border-b dec:border-gray-100;
-  }
-
-  .dec-root .dec-filter-item-readonly:last-child {
-    @apply dec:border-b-0;
-  }
-
-  .dec-root.dark .dec-filter-item-readonly {
-    @apply dec:border-gray-700/50;
-  }
-
-  .dec-root .dec-filter-readonly-header {
-    @apply dec:flex dec:items-center dec:gap-1.5;
-  }
-
-  .dec-root .dec-filter-readonly-props {
-    @apply dec:flex dec:flex-col dec:gap-0.5 dec:pl-5;
-  }
-
-  .dec-root .dec-filter-readonly-prop {
-    @apply dec:flex dec:items-baseline dec:gap-2;
-  }
-
-  .dec-root .dec-filter-readonly-key {
-    @apply dec:text-[10px] dec:text-gray-400 dec:w-16 dec:shrink-0;
-  }
-
-  .dec-root.dark .dec-filter-readonly-key {
-    @apply dec:text-gray-500;
-  }
-
-  .dec-root .dec-filter-readonly-value {
-    @apply dec:text-[11px] dec:text-gray-600 dec:break-all;
-    font-family: var(--dec-font-mono);
-  }
-
-  .dec-root.dark .dec-filter-readonly-value {
-    @apply dec:text-gray-300;
-  }
-
-  /* Highlight runtime expression values in teal */
-  .dec-root .dec-filter-readonly-value--expression {
-    color: var(--dec-teal-text);
-  }
-
-  /* Correlate read-only block */
-  .dec-root .dec-correlate-readonly {
-    @apply dec:ml-5 dec:mt-1
-      dec:rounded dec:border dec:border-gray-200 dec:overflow-hidden;
-  }
-
-  .dec-root.dark .dec-correlate-readonly {
-    @apply dec:border-gray-700;
-  }
-
-  .dec-root .dec-correlate-readonly-header {
-    @apply dec:flex dec:items-center dec:justify-between
-      dec:px-2 dec:py-0.5
-      dec:bg-gray-50;
-  }
-
-  .dec-root.dark .dec-correlate-readonly-header {
-    @apply dec:bg-gray-800/60;
-  }
-
-  /* Count-only header variant: right-align the badge when there is no label */
-  .dec-root .dec-filter-list-count-header {
-    @apply dec:justify-end;
-  }
-
-  /* ── End event filter list ───────────────────────────────────────────── */
 
   /* ── End task form ───────────────────────────────────────────────────── */
 
@@ -1227,7 +1078,7 @@
   }
 
   .dec-root .dec-sidebar-guard-title {
-    @apply dec:flex dec:items-center dec:gap-2 dec:text-sm dec:font-semibold dec:text-gray-900;
+    @apply dec:flex dec:items-center dec:gap-2 dec:text-heading dec:font-semibold dec:text-gray-900;
   }
 
   .dec-root.dark .dec-sidebar-guard-title {
@@ -1240,7 +1091,7 @@
   }
 
   .dec-root .dec-sidebar-guard-description {
-    @apply dec:mt-1.5 dec:text-xs dec:leading-relaxed dec:text-gray-600;
+    @apply dec:mt-1.5 dec:text-body dec:leading-relaxed dec:text-gray-600;
   }
 
   .dec-root.dark .dec-sidebar-guard-description {
@@ -1281,8 +1132,9 @@
 
   /* ── Drill-in breadcrumb ───────────────────────────────────────────── */
 
+  /* One line, never wrapping, so the form doesn't jump as you drill. */
   .dec-root .dec-form-breadcrumb {
-    @apply dec:mb-2 dec:flex dec:items-start dec:gap-1.5;
+    @apply dec:mb-2 dec:flex dec:items-center dec:gap-1.5;
   }
 
   .dec-root .dec-form-breadcrumb-back {
@@ -1295,17 +1147,42 @@
   }
 
   .dec-root .dec-form-breadcrumb-trail {
-    @apply dec:m-0 dec:flex dec:min-w-0 dec:list-none dec:flex-wrap dec:items-center
-     dec:gap-0.5 dec:p-0 dec:pt-1 dec:text-xs;
+    @apply dec:m-0 dec:flex dec:min-w-0 dec:flex-1 dec:list-none dec:flex-nowrap dec:items-center
+     dec:gap-0.5 dec:overflow-hidden dec:p-0 dec:text-body;
   }
 
   .dec-root .dec-form-breadcrumb-item {
-    @apply dec:flex dec:items-center dec:gap-0.5;
+    @apply dec:flex dec:min-w-0 dec:items-center dec:gap-0.5;
+  }
+
+  /* Long crumbs above the current level shrink (and truncate)  */
+  .dec-root .dec-form-breadcrumb-item--shrinks {
+    flex: 0 100 auto;
+    min-width: 3.5em;
+  }
+
+  .dec-root .dec-form-breadcrumb-item--current {
+    flex: 0 1 auto;
+  }
+
+  /* Home, "…" and short labels: never shrink */
+  .dec-root .dec-form-breadcrumb-item.dec-form-breadcrumb-item--fixed {
+    @apply dec:min-w-min;
+    flex: none;
+  }
+
+  .dec-root .dec-form-breadcrumb-sep {
+    @apply dec:flex-none dec:text-gray-400;
   }
 
   .dec-root .dec-form-breadcrumb-crumb {
-    @apply dec:inline-flex dec:cursor-pointer dec:items-center dec:rounded dec:border-0
-     dec:bg-transparent dec:px-1 dec:text-blue-700;
+    @apply dec:block dec:min-w-0 dec:max-w-[9em] dec:cursor-pointer dec:truncate dec:rounded
+      dec:border-0 dec:bg-transparent dec:px-1 dec:text-blue-700;
+  }
+
+  /* The home crumb is icon, not text */
+  .dec-root .dec-form-breadcrumb-item--fixed .dec-form-breadcrumb-crumb {
+    @apply dec:inline-flex dec:items-center;
   }
 
   .dec-root .dec-form-breadcrumb-crumb:hover {
@@ -1313,11 +1190,28 @@
   }
 
   .dec-root .dec-form-breadcrumb-current {
-    @apply dec:px-1 dec:font-semibold dec:text-gray-900;
+    @apply dec:block dec:min-w-0 dec:truncate dec:px-1 dec:font-semibold dec:text-gray-900;
   }
 
-  .dec-root .dec-form-breadcrumb-sep {
-    @apply dec:text-gray-400;
+  /* Hidden-levels menu ("…") */
+  .dec-root .dec-breadcrumb-menu {
+    @apply dec:p-1;
+    min-width: 10rem;
+    max-width: min(260px, var(--radix-popover-content-available-width));
+  }
+
+  .dec-root .dec-breadcrumb-menu-list {
+    @apply dec:m-0 dec:flex dec:list-none dec:flex-col dec:p-0;
+  }
+
+  .dec-root .dec-breadcrumb-menu-item {
+    @apply dec:block dec:w-full dec:cursor-pointer dec:truncate dec:rounded dec:border-0
+      dec:bg-transparent dec:px-2 dec:py-1.5 dec:text-left dec:text-body;
+    color: var(--dec-text);
+  }
+
+  .dec-root .dec-breadcrumb-menu-item:hover {
+    background-color: color-mix(in srgb, var(--dec-text-subtle) 16%, transparent);
   }
 
   .dec-root .dec-form-breadcrumb-icon {
@@ -1365,7 +1259,7 @@
   }
 
   .dec-root .dec-form-drill-row-label {
-    @apply dec:text-xs dec:font-medium dec:text-gray-900;
+    @apply dec:text-body dec:font-medium dec:text-gray-900;
   }
 
   /* A list entry titled by one of its values (an event's type): a value, so mono and truncated. */
@@ -1392,7 +1286,8 @@
   }
 
   .dec-root .dec-form-keyed-key-readonly {
-    @apply dec:text-xs dec:font-medium dec:text-gray-900;
+    @apply dec:text-body dec:font-medium;
+    color: var(--dec-text);
     font-family: var(--dec-font-mono);
   }
 
@@ -1400,12 +1295,8 @@
     @apply dec:border-gray-700;
   }
 
-  .dec-root.dark .dec-form-keyed-key-readonly {
-    @apply dec:text-gray-100;
-  }
-
   .dec-root .dec-form-drill-row-summary {
-    @apply dec:truncate dec:text-xs dec:text-gray-600;
+    @apply dec:truncate dec:text-meta dec:text-gray-600;
   }
 
   .dec-root .dec-form-drill-row-pills {
@@ -1413,7 +1304,7 @@
   }
 
   .dec-root .dec-form-drill-pill {
-    @apply dec:whitespace-nowrap dec:rounded-full dec:px-1.5 dec:text-[11px] dec:font-medium
+    @apply dec:whitespace-nowrap dec:rounded-full dec:px-1.5 dec:text-meta dec:font-medium
      dec:tabular-nums;
   }
 
@@ -1470,7 +1361,7 @@
   }
 
   .dec-root .dec-form-add-fields-label {
-    @apply dec:text-[11.5px] dec:text-gray-500;
+    @apply dec:text-meta dec:text-gray-500;
   }
 
   .dec-root .dec-form-add-fields-list {
@@ -1479,7 +1370,7 @@
 
   .dec-root .dec-form-add-chip {
     @apply dec:inline-flex dec:items-center dec:gap-1 dec:rounded-sm dec:border dec:border-dashed
-      dec:border-gray-300 dec:bg-transparent dec:px-2 dec:py-0.5 dec:font-mono dec:text-xs
+      dec:border-gray-300 dec:bg-transparent dec:px-2 dec:py-0.5 dec:font-mono dec:text-meta
       dec:text-gray-700 dec:cursor-pointer dec:transition-colors;
   }
 
@@ -1541,7 +1432,7 @@
   }
 
   .dec-root .dec-form-drill-row-wrap :is(.dec-form-remove-btn, .dec-form-field-help) {
-    @apply dec:h-7 dec:w-7;
+    @apply dec:h-7 dec:w-7 dec:my-0;
   }
 
   .dec-root.dark .dec-form-remove-btn {

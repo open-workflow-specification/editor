@@ -58,12 +58,12 @@ describe("fields you can add", () => {
     expect(panel.chip("Endpoint")).toBeNull();
   });
 
-  it("never offers then or Common fields as chips", async () => {
+  it("never offers then or Advanced as chips", async () => {
     await renderCreatePet();
 
     expect(screen.queryByRole("button", { name: /^Add then/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Add Common fields" })).toBeNull();
-    expect(panel.row("Common fields")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Add Advanced" })).toBeNull();
+    expect(panel.row("Advanced")).toBeDefined();
   });
 
   it("an empty object in the task counts as present", async () => {

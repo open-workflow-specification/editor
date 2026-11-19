@@ -29,7 +29,7 @@ import { formatEntryCount } from "../customFields/fieldHelpers";
 import { countLevelErrorsUnder, useTaskValidation } from "../validation";
 import { COMMON_FIELDS_PATH } from "@/core/schemaToFormFields";
 import { RemoveFieldButton, useRemoveField } from "../removeField";
-import { HelpTooltip } from "../FieldLabel";
+import { HelpPopover, RequiredMark } from "../FieldLabel";
 
 /**
  * Displays a clickable row for a section, object, map or one-of, showing:
@@ -86,7 +86,7 @@ export function DrillRow({
   const { paths: changed } = useDraftChanges();
   const changedCount = childPaths.reduce((sum, path) => sum + countChangedUnder(changed, path), 0);
   const { levelErrors } = useTaskValidation().taskValidation;
-  // The virtual "Common fields" section has no real path: its children keep their task paths.
+  // The virtual Advanced (common fields) section has no real path: its children keep their task paths.
   const levelErrorPaths = field.path === COMMON_FIELDS_PATH ? childPaths : [field.path];
   const levelErrorsCount = levelErrorPaths.reduce(
     (sum, path) => sum + countLevelErrorsUnder(levelErrors, path),
@@ -139,10 +139,11 @@ export function DrillRow({
       onOpen={() => open(field.path, label)}
     />
   );
-  // A "Custom fields" map's help: from editor not the schema as it has none
+  // Beside the row, never inside its button (a button can't hold another). A "Custom fields" map's
+  // help comes from the editor: the schema gives its extra keys none.
   const help =
-    isCustomFieldsMap(field) && field.description !== undefined ? (
-      <HelpTooltip label={label} description={field.description} />
+    field.description !== undefined ? (
+      <HelpPopover label={label} description={field.description} />
     ) : null;
   return removable || help !== null ? (
     <div className="dec-form-drill-row-wrap">
@@ -199,12 +200,7 @@ export function DrillRowButton({
       <span className="dec-form-drill-row-text">
         <span className={`dec-form-drill-row-label${labelIsValue ? " is-value" : ""}`}>
           {label}
-          {required && (
-            <span className="dec-form-field-required" aria-hidden="true">
-              {" "}
-              *
-            </span>
-          )}
+          <RequiredMark required={required} spaced />
         </span>
         <span className="dec-form-drill-row-summary">{summary}</span>
       </span>

@@ -143,7 +143,7 @@ describe("raise task error variant switch", () => {
     expect(fieldValue("Status")).toBe("400");
   });
 
-  it("keeps the inline fields when a drill into Common fields comes between the switches", async () => {
+  it("keeps the inline fields when a drill into Advanced comes between the switches", async () => {
     // Drilling unmounts the selector's row, so the switched-away values must not live in it.
     const { user } = renderRaiseFooter(INLINE_NODE_ID);
     await act(async () => {});

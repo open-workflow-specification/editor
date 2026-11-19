@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DrillBreadcrumb } from "../../../../src/side-panel/forms/drill/DrillBreadcrumb";
 import { renderWithProviders } from "../../../test-utils/render-helpers";
@@ -30,10 +30,10 @@ function renderCrumbs(levels: string[]) {
 
 describe("DrillBreadcrumb", () => {
   it("names the trail and marks the current level", () => {
-    renderCrumbs(["Common fields"]);
+    renderCrumbs(["Advanced"]);
     expect(screen.getByRole("navigation", { name: "Field path" })).toBeInTheDocument();
-    expect(screen.getByText("Common fields")).toHaveAttribute("aria-current", "location");
-    expect(screen.queryByRole("button", { name: "Common fields" })).not.toBeInTheDocument();
+    expect(screen.getByText("Advanced")).toHaveAttribute("aria-current", "location");
+    expect(screen.queryByRole("button", { name: "Advanced" })).not.toBeInTheDocument();
   });
 
   it("goes up one level, to the top, or to a crumb", async () => {
@@ -57,6 +57,44 @@ describe("DrillBreadcrumb", () => {
     expect(screen.queryByRole("button", { name: "b" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "c" })).toBeInTheDocument();
     expect(screen.getByText("d")).toHaveAttribute("aria-current", "location");
-    expect(screen.getByTitle("b")).toHaveTextContent("…");
+    expect(screen.getByRole("button", { name: "Hidden levels" })).toHaveTextContent("…");
+  });
+
+  it("lists the hidden levels from the … button, each jumping to its level", async () => {
+    const { onNavigate, user } = renderCrumbs(["a", "b", "c", "d", "e"]);
+
+    await user.click(screen.getByRole("button", { name: "Hidden levels" }));
+    const menu = screen.getByRole("dialog", { name: "Hidden levels" });
+    expect(
+      within(menu)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["b", "c"]);
+
+    await user.click(within(menu).getByRole("button", { name: "c" }));
+    // "c" is the third level: three levels stay open.
+    expect(onNavigate).toHaveBeenCalledWith(3);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes the hidden levels on Escape, back on the … button", async () => {
+    const { onNavigate, user } = renderCrumbs(["a", "b", "c", "d"]);
+    await user.click(screen.getByRole("button", { name: "Hidden levels" }));
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hidden levels" })).toHaveFocus();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  // Labels truncate (CSS); the full text stays reachable by pointer.
+  it("titles every label with its full text", () => {
+    renderCrumbs(["a", "com.example.orders.created.v1"]);
+    expect(screen.getByRole("button", { name: "a" })).toHaveAttribute("title", "a");
+    expect(screen.getByText("com.example.orders.created.v1")).toHaveAttribute(
+      "title",
+      "com.example.orders.created.v1",
+    );
   });
 });

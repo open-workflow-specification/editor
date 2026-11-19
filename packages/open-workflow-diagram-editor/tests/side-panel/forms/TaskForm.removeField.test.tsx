@@ -45,7 +45,7 @@ describe("remove field", () => {
     await renderTaskPanel(parseFixture(ADD_FIELDS_WORKFLOW), CREATE_PET);
 
     expect(removeButton("Headers")).toBeInTheDocument();
-    for (const label of ["Method", "Endpoint", "then", "Common fields"]) {
+    for (const label of ["Method", "Endpoint", "then", "Advanced"]) {
       expect(removeButton(label)).toBeNull();
     }
   });

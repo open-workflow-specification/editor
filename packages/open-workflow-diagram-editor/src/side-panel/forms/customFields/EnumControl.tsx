@@ -213,7 +213,7 @@ export function EnumControl({ field, id }: EnumControlProps) {
                   aria-label={field.label}
                   aria-invalid={errorMessage !== undefined || undefined}
                   showClear={false}
-                  className="dec:h-7 dec:text-xs"
+                  className="dec:h-7 dec:text-body"
                 />
                 <ComboboxContent>
                   <ComboboxList>

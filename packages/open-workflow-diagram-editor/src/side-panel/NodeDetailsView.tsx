@@ -19,7 +19,7 @@ import type * as RF from "@xyflow/react";
 import { dump } from "js-yaml";
 import { useI18n } from "@openworkflowspec/i18n";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
-import { YamlField, SectionHeader } from "./Fields";
+import { YamlField } from "./Fields";
 import { TaskForm } from "./forms/TaskForm";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { getNodeErrors, type ValidationError } from "@/core";
@@ -72,7 +72,6 @@ export function NodeDetailsView({ node }: NodeDetailsViewProps) {
   const source = isReadOnly && task !== undefined && (
     <>
       <div className="dec-sidebar-section-spacer" />
-      <SectionHeader label={t("sidebar.sectionSource")} />
       <YamlField
         yaml={dump(task, { indent: 2, lineWidth: -1 })}
         summary={t("sidebar.viewSource")}

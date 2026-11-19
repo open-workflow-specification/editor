@@ -44,20 +44,20 @@ const headings = () => screen.queryAllByRole("heading", { level: 4 }).map((h) =>
 
 describe("TaskForm group headings", () => {
   it.each([false, true])(
-    "groups the top level as the payload, Flow and Task settings (read-only %s)",
+    "groups the top level as the payload and Flow, with no heading over Advanced (read-only %s)",
     async (isReadOnly) => {
       await renderTask("/do/callBearer", isReadOnly);
 
-      expect(headings()).toEqual(isReadOnly ? ["with*"] : ["with*", "Flow", "Task settings"]);
+      // Read-only shows no required `*`.
+      expect(headings()).toEqual(isReadOnly ? ["with"] : ["with*", "Flow"]);
       expect(screen.getByRole("region", { name: /with/ })).toBeInTheDocument();
     },
   );
 
-  it("leaves Flow and Task settings to the top level", async () => {
+  it("leaves Flow to the top level", async () => {
     const user = await renderTask("/do/callBearer");
     await openLevel(user, "Endpoint");
 
     expect(headings()).not.toContain("Flow");
-    expect(headings()).not.toContain("Task settings");
   });
 });

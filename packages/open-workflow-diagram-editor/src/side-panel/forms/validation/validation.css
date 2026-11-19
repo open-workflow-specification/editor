@@ -18,7 +18,7 @@
 
 @layer side-panel {
   .dec-root .dec-footer-validation-counter {
-    @apply dec:text-xs dec:font-medium dec:whitespace-nowrap dec:overflow-hidden dec:text-ellipsis;
+    @apply dec:text-meta dec:font-medium dec:whitespace-nowrap dec:overflow-hidden dec:text-ellipsis;
     color: var(--dec-error-accent, #dc2626);
   }
 
@@ -28,7 +28,7 @@
 
   /* Level errors in the form */
   .dec-root .dec-level-errors {
-    @apply dec:flex dec:flex-col dec:gap-1 dec:mb-3 dec:p-2.5 dec:rounded-md dec:text-xs dec:font-medium dec:border;
+    @apply dec:flex dec:flex-col dec:gap-1 dec:mb-3 dec:p-2.5 dec:rounded-md dec:text-meta dec:font-medium dec:border;
     background-color: var(--dec-error-bg);
     color: var(--dec-error-text);
     border-color: color-mix(in srgb, var(--dec-error-accent) 25%, transparent);

@@ -30,6 +30,8 @@ import { WorkflowInfoView } from "@/side-panel/WorkflowInfoView";
 import { NodeDetailsView } from "@/side-panel/NodeDetailsView";
 import { WorkflowActions } from "@/side-panel/WorkflowActions";
 import { getNodeVisualConfig } from "@/react-flow/nodes/taskNodeConfig";
+import { getTaskDescriptionForNodeType } from "@/core";
+import { HelpPopover } from "./forms/FieldLabel";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import "./SidePanel.css";
 import { EditFormFooter } from "./EditFormFooter";
@@ -51,6 +53,9 @@ export function SidePanel() {
 
   const nodeConfig = getNodeVisualConfig(selectedNode?.type);
 
+  const taskDescription =
+    selectedNode?.type !== undefined ? getTaskDescriptionForNodeType(selectedNode.type) : undefined;
+
   const HeaderIcon = selectedNode ? (nodeConfig?.icon ?? Box) : Workflow;
 
   const prevSelectedNodeId = React.useRef(selectedNodeId);
@@ -70,7 +75,7 @@ export function SidePanel() {
       aria-label={selectedNode ? t("aria.panel.nodeDetails") : t("aria.panel.workflowInfo")}
       role="complementary"
     >
-      <SidebarHeader>
+      <SidebarHeader className="dec:pt-4 dec:pb-4 dec:pl-5 dec:pr-5">
         <div className="dec-sidebar-header-title">
           <span
             className={`dec-sidebar-header-icon-wrap${nodeConfig ? " colored" : ""}`}
@@ -87,8 +92,15 @@ export function SidePanel() {
             <span className="dec-sidebar-header-name">
               {selectedNode ? selectedNode.data.label || t("sidebar.node") : t("sidebar.workflow")}
             </span>
-            <span className="dec-sidebar-header-subtitle">
-              {selectedNode ? (nodeConfig?.typeLabel ?? t("sidebar.node")) : t("sidebar.document")}
+            <span className="dec-sidebar-header-subtitle-row">
+              <span className="dec-sidebar-header-subtitle">
+                {selectedNode
+                  ? (nodeConfig?.typeLabel ?? t("sidebar.node"))
+                  : t("sidebar.document")}
+              </span>
+              {taskDescription !== undefined && nodeConfig !== undefined && (
+                <HelpPopover label={nodeConfig.typeLabel} description={taskDescription} />
+              )}
             </span>
           </div>
         </div>

@@ -26,9 +26,9 @@ export async function openLevel(user: UserEvent, label: string): Promise<void> {
   );
 }
 
-/** Opens the task's Common fields level, where the taskBase fields live. */
+/** Opens the task's Advanced level, where the taskBase fields live. */
 export async function openCommonFields(user: UserEvent): Promise<void> {
-  await openLevel(user, "Common fields");
+  await openLevel(user, "Advanced");
 }
 
 /** Leaves the open level with the breadcrumb's back button. */

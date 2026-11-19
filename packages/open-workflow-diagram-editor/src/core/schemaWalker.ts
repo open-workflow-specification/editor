@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GraphNodeType } from "@openworkflowspec/sdk";
+import { GraphNodeType, workflowSchema } from "@openworkflowspec/sdk";
 import { getSchemaForDefinition, getTaskBaseKeys } from "./schemaFilter";
 import {
   schemaToFormFields,
@@ -24,6 +24,7 @@ import {
   type OneOfField,
 } from "./schemaToFormFields";
 import type { ContentFormat } from "./workflowSdk";
+import { isObjectNotArray } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Node-type → schema definition-name mapping
@@ -124,7 +125,7 @@ export function partitionTaskBaseFields(
     {
       kind: "section",
       path: COMMON_FIELDS_PATH,
-      label: "Common fields",
+      label: "Advanced",
       required: false,
       children: common,
     },
@@ -163,6 +164,18 @@ export function getFormFieldsForNodeType(
   } catch {
     return [];
   }
+}
+
+/**
+ * Task type description from schema, or `undefined` if none exists.
+ * Read from raw `$defs` (not `getSchemaForDefinition`) to avoid performance overhead.
+ */
+export function getTaskDescriptionForNodeType(nodeType: string): string | undefined {
+  const defName = NODE_TYPE_TO_DEF[nodeType];
+  if (!defName) return undefined;
+  const defs = (workflowSchema as Record<string, unknown>).$defs;
+  const def = isObjectNotArray(defs) ? defs[defName] : undefined;
+  return isObjectNotArray(def) && typeof def.description === "string" ? def.description : undefined;
 }
 
 export type { FormFieldDescriptor };

@@ -27,6 +27,7 @@ import { buildDiagramElements } from "./diagramBuilder";
 import { applyAutoLayout } from "./autoLayout";
 import { SidePanelTrigger } from "@/side-panel/SidePanelTrigger";
 import { useEditSession } from "@/side-panel/EditSession";
+import { selectOnly } from "@/side-panel/useSelectNode";
 import { ZINDEX } from "../zIndexConstants";
 import { ErrorPage } from "../../diagram-editor/error-pages/ErrorPage";
 
@@ -129,11 +130,7 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
   /* Keep the node highlighted on canvas and in sidepanel the same until user confirms navigation guard action */
   const applySelectionToNodes = React.useCallback(
     (id: string | null) => {
-      setNodes((current) =>
-        current.map((node) =>
-          node.selected === (node.id === id) ? node : { ...node, selected: node.id === id },
-        ),
-      );
+      setNodes((current) => selectOnly(current, id));
     },
     [setNodes],
   );
@@ -288,6 +285,8 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
           elevateEdgesOnSelect={false}
           nodesDraggable={false}
           nodesConnectable={false}
+          // TEMPORARY until allowing deleting nodes
+          deleteKeyCode={null}
         >
           {minimapVisible && (
             <RF.MiniMap pannable zoomable position={"bottom-left"} maskStrokeWidth={2} />

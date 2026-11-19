@@ -26,7 +26,6 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { I18nProvider } from "@openworkflowspec/i18n";
-import { TooltipProvider } from "../../../src/components/ui/tooltip";
 import { en } from "../../../src/i18n/locales/en";
 import { FormField, RHF_ENTRY_KEY } from "../../../src/side-panel/forms/FormField";
 import { TaskFormContext } from "../../../src/side-panel/forms/taskFormContext";
@@ -94,24 +93,22 @@ function renderCases({
     });
     return (
       <I18nProvider locale="en" dictionaries={{ en }}>
-        <TooltipProvider>
-          {/* The session the field lists need; the harness's own form still owns the fields. */}
-          <EditSessionProvider>
-            <TaskFormContext.Provider
-              value={{
-                isReadOnly,
-                siblingTaskNames: [],
-                taskData: task,
-              }}
-            >
-              <FormProvider {...form}>
-                <InlineLevelsContext.Provider value={inline}>
-                  <FormField field={field} />
-                </InlineLevelsContext.Provider>
-              </FormProvider>
-            </TaskFormContext.Provider>
-          </EditSessionProvider>
-        </TooltipProvider>
+        {/* The session the field lists need; the harness's own form still owns the fields. */}
+        <EditSessionProvider>
+          <TaskFormContext.Provider
+            value={{
+              isReadOnly,
+              siblingTaskNames: [],
+              taskData: task,
+            }}
+          >
+            <FormProvider {...form}>
+              <InlineLevelsContext.Provider value={inline}>
+                <FormField field={field} />
+              </InlineLevelsContext.Provider>
+            </FormProvider>
+          </TaskFormContext.Provider>
+        </EditSessionProvider>
       </I18nProvider>
     );
   }

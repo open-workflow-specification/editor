@@ -82,7 +82,7 @@ describe("switching a presence-keyed selector and applying with nothing filled i
     [
       "an input schema",
       "/do/validateInput",
-      ["Common fields", "input", "Schema"],
+      ["Advanced", "input", "Schema"],
       "Schema External",
       "input.schema",
       { resource: {} },

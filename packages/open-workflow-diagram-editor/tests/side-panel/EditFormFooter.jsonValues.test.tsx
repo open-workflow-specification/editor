@@ -92,7 +92,7 @@ describe("editing a JSON/YAML value and applying", () => {
     {
       name: "a renamed key replaces the old one (output.as)",
       nodeId: SHAPE,
-      levels: ["Common fields", "output"],
+      levels: ["Advanced", "output"],
       path: "output.as",
       next: { name: "${ .name }" },
     },

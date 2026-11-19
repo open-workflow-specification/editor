@@ -187,7 +187,7 @@ describe("EditFormFooter — task-level validation", () => {
 
     expect(errorCounter()).not.toBeInTheDocument();
 
-    const durationInput = screen.getByLabelText("wait");
+    const durationInput = screen.getByLabelText("Type");
     await user.clear(durationInput);
     await user.type(durationInput, "invalid-duration");
     await user.tab();

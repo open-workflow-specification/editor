@@ -59,21 +59,21 @@ function renderPanel(id = PREPARE, isReadOnly = false) {
   return { ...utils, commitWorkflow, formRef, user: userEvent.setup() };
 }
 
-const row = () => screen.queryByRole("button", { name: /^Open Common fields/ });
+const row = () => screen.queryByRole("button", { name: /^Open Advanced/ });
 const back = () => screen.queryByRole("button", { name: "Up one level" });
 const outputRow = () => screen.queryByRole("button", { name: /^Open output,/ });
 const outputAs = () => screen.getByDisplayValue("${ .greeting }");
 
-/** Common fields › output, where `output.as` is edited. */
+/** Advanced › output, where `output.as` is edited. */
 async function openOutput(user: UserEvent) {
   await openCommonFields(user);
   await openLevel(user, "output");
 }
 
 describe("TaskForm drill-in", () => {
-  it("shows Common fields as one row with how many are set", () => {
+  it("shows Advanced as one row with how many are set", () => {
     renderPanel();
-    expect(row()).toHaveAccessibleName("Open Common fields, 3 of 6 set");
+    expect(row()).toHaveAccessibleName("Open Advanced, 3 of 6 set");
     expect(screen.queryByDisplayValue("${ .greeting }")).not.toBeInTheDocument();
   });
 
@@ -92,7 +92,7 @@ describe("TaskForm drill-in", () => {
 
     expect(outputAs()).toBeInTheDocument();
     expect(outputRow()).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Common fields" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Advanced" })).toBeInTheDocument();
     expect(back()).toHaveFocus();
 
     await leaveLevel(user);
@@ -122,7 +122,7 @@ describe("TaskForm drill-in", () => {
 
     expect(outputRow()).toHaveAccessibleName("Open output, 1 of 2 set, 1 changed");
     await leaveLevel(user);
-    expect(row()).toHaveAccessibleName("Open Common fields, 3 of 6 set, 1 changed");
+    expect(row()).toHaveAccessibleName("Open Advanced, 3 of 6 set, 1 changed");
     expect(screen.getByRole("status")).toHaveTextContent("1 changed");
   });
 
@@ -143,7 +143,7 @@ describe("TaskForm drill-in", () => {
   it("shows an error under the section on the row", () => {
     const { formRef } = renderPanel();
     act(() => formRef.current!.setError("output.as", { type: "manual", message: "bad" }));
-    expect(row()).toHaveAccessibleName("Open Common fields, 3 of 6 set, 1 error");
+    expect(row()).toHaveAccessibleName("Open Advanced, 3 of 6 set, 1 error");
   });
 
   it("returns to the root and clears the announcement when another node is selected", async () => {
@@ -152,8 +152,8 @@ describe("TaskForm drill-in", () => {
     rerender(form(FETCH));
 
     expect(back()).not.toBeInTheDocument();
-    expect(row()).toHaveAccessibleName("Open Common fields, 1 of 6 set");
-    // Left as "Common fields", opening the same level on the new node would announce nothing.
+    expect(row()).toHaveAccessibleName("Open Advanced, 1 of 6 set");
+    // Left as "Advanced", opening the same level on the new node would announce nothing.
     expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent(/^$/);
   });
 
@@ -168,7 +168,7 @@ describe("TaskForm drill-in", () => {
   // Read-only counts only the set fields: the unset ones are neither shown nor addable.
   it("shows the same row in read-only, and opens a level holding only the set fields", async () => {
     const { user } = renderPanel(PREPARE, true);
-    expect(row()).toHaveAccessibleName("Open Common fields, 3 fields");
+    expect(row()).toHaveAccessibleName("Open Advanced, 3 fields");
     expect(screen.queryByText("${ .greeting }")).not.toBeInTheDocument();
 
     await openCommonFields(user);

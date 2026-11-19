@@ -26,12 +26,13 @@ import {
   type SectionField,
 } from "../../../core/schemaToFormFields";
 import { entryIndexBelow, isAtOrBelow, joinPath } from "../../../core/paths";
+import { TASK_TYPE_KEYS } from "../../../core/taskTypes";
 import { prefixFields, variantFieldsOf } from "../taskFormContext";
 
 /**
  * Core types and utilities for drill-in navigation.
  *
- * Drill-in navigation allows users to "drill into" a section ("Common fields"), an object, a
+ * Drill-in navigation allows users to "drill into" a section ("Advanced"), an object, a
  * map or a one-of to edit it as its own level.
  */
 
@@ -120,6 +121,16 @@ const FIXED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<FormFieldD
 /** Whether a field is part of the task's shape, so it is never added or removed. */
 export function isFixedField(field: FormFieldDescriptor): boolean {
   return field.required || field.path === ROOT_ONE_OF_PATH || FIXED_KINDS.has(field.kind);
+}
+
+/**
+ * The field holding the task's type key (`listen`, `run`…) or call's root one-of.
+ */
+export function isTaskTypeField(field: FormFieldDescriptor): boolean {
+  return (
+    (field.kind === "object" || field.kind === "one-of") &&
+    (TASK_TYPE_KEYS.has(field.path) || field.path === ROOT_ONE_OF_PATH)
+  );
 }
 
 /**
@@ -251,9 +262,9 @@ export function resolveDrillStack(
 }
 
 /**
- * Returns display label for a drill level. Common fields is recognised by its path, not by being
+ * Returns display label for a drill level. Advanced (the common fields) is recognised by its path, not by being
  * a section, so any other section shows its own label.
  */
 export function drillLabel(field: DrillTarget, t: (key: string) => string): string {
-  return field.path === COMMON_FIELDS_PATH ? t("sidebar.drill.commonFields") : field.label;
+  return field.path === COMMON_FIELDS_PATH ? t("sidebar.drill.advanced") : field.label;
 }

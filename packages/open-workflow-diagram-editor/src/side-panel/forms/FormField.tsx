@@ -24,6 +24,7 @@ import {
   type ObjectField,
   type OneOfField,
   type OrderedMapField,
+  ROOT_ONE_OF_PATH,
 } from "../../core/schemaToFormFields";
 import { FieldControl, type FieldControlProps } from "./FieldControl";
 import {
@@ -35,14 +36,14 @@ import {
 } from "./taskFormContext";
 import { LevelErrors } from "./validation";
 import { useFieldChanged } from "../EditSession";
-import { FieldLabel, HelpTooltip } from "./FieldLabel";
+import { FieldLabel, HelpPopover, RequiredMark } from "./FieldLabel";
 import { VariantPicker } from "./VariantPicker";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
 import { DrillRow } from "./drill/DrillRow";
 import { FieldList } from "./FieldList";
 import { RemoveFieldButton } from "./removeField";
 import { InlineLevelsContext, useDrill } from "./drill/DrillContext";
-import { isInlineLevel, rendersAsDrillRow, STRUCTURED_KINDS } from "./drill/drill";
+import { isInlineLevel, isTaskTypeField, rendersAsDrillRow, STRUCTURED_KINDS } from "./drill/drill";
 import { EventFilterListField } from "./eventFilters/EventFilterListField";
 import { KeyedObjectsField } from "./customFields/KeyedObjectsField";
 
@@ -181,19 +182,14 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
             <ChevronRight className="dec-form-object-chevron" aria-hidden="true" />
           )}
           <span className="dec-form-object-label">{field.label}</span>
-          {field.required && (
-            <span className="dec-form-field-required" aria-hidden="true">
-              {" "}
-              *
-            </span>
-          )}
+          <RequiredMark required={field.required} spaced />
           <span className="dec-form-ordered-map-count">
             {" "}
             {rows.length} {t(rows.length === 1 ? "sidebar.field.item" : "sidebar.field.items")}
           </span>
         </button>
         {field.description !== undefined && (
-          <HelpTooltip label={field.label} description={field.description} />
+          <HelpPopover label={field.label} description={field.description} />
         )}
       </div>
 
@@ -239,17 +235,31 @@ function MapFieldRow({ field }: { field: MapField }) {
 }
 
 // An object shown in place: a plain group heading naming it, then its fields.
+// The task's own type object (`listen`, `emit`…) has no heading: the panel header names the type.
 function InlineObjectGroup({ field }: { field: ObjectField }) {
   const { isReadOnly, taskData } = useTaskFormContext();
   const headingId = React.useId();
+  const headless = isTaskTypeField(field);
 
-  const visibleChildren = isReadOnly
-    ? filterReadOnlyFields(field.children, taskData)
-    : field.children;
+  const children = React.useMemo(
+    () => (headless ? withTaskTypeHelp(field) : field.children),
+    [headless, field],
+  );
+  const visibleChildren = isReadOnly ? filterReadOnlyFields(children, taskData) : children;
 
   // In read-only mode drop the whole group if nothing inside has a value
   if (isReadOnly && visibleChildren.length === 0) return null;
 
+  const body = (
+    <>
+      <LevelErrors path={field.path} />
+      {/* Below an inline object, objects drill, unless one is its only child. */}
+      <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
+        <FieldList fields={visibleChildren} atLeastOne={field.atLeastOne} />
+      </InlineLevelsContext.Provider>
+    </>
+  );
+  if (headless) return <div className="dec-form-group">{body}</div>;
   return (
     <section className="dec-form-group" aria-labelledby={headingId}>
       <GroupHeading
@@ -259,16 +269,24 @@ function InlineObjectGroup({ field }: { field: ObjectField }) {
         fieldPath={field.path}
         {...(field.description !== undefined ? { description: field.description } : {})}
       />
-      <LevelErrors path={field.path} />
-      {/* Below an inline object, objects drill, unless one is its only child. */}
-      <InlineLevelsContext.Provider value={isInlineLevel(visibleChildren)}>
-        <FieldList fields={visibleChildren} atLeastOne={field.atLeastOne} />
-      </InlineLevelsContext.Provider>
+      {body}
     </section>
   );
 }
 
-/** A plain heading over a group of fields: an inline object's, or the top level's Flow and Task settings. */
+/**
+ * A headless task-type object's help would be lost with its heading. When the object holds one
+ * field that has no help of its own, that help describes the field (raise › error: "The definition
+ * of the error to raise."), so the field takes it.
+ */
+function withTaskTypeHelp(field: ObjectField): FormFieldDescriptor[] {
+  const [only, ...rest] = field.children;
+  if (only === undefined || rest.length > 0) return field.children;
+  if (only.description !== undefined || field.description === undefined) return field.children;
+  return [{ ...only, description: field.description }];
+}
+
+/** A plain heading over a group of fields: an inline object's, or the top level's Flow. */
 export function GroupHeading({
   id,
   label,
@@ -286,12 +304,8 @@ export function GroupHeading({
   return (
     <h4 id={id} className="dec-form-group-heading">
       {label}
-      {required && (
-        <span className="dec-form-field-required" aria-hidden="true">
-          *
-        </span>
-      )}
-      {description !== undefined && <HelpTooltip label={label} description={description} />}
+      <RequiredMark required={required} />
+      {description !== undefined && <HelpPopover label={label} description={description} />}
       <RemoveFieldButton path={fieldPath} />
     </h4>
   );
@@ -311,7 +325,17 @@ function isPlainField(field: FormFieldDescriptor): field is PlainField {
  * A one-of whose chosen variant is one value, shown in place: a single field under the one-of's
  * label, its type picker above the value.
  */
-function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainField | undefined }) {
+function SingleValueOneOf({
+  field,
+  value,
+  label,
+  description = label === undefined ? field.description : undefined,
+}: {
+  field: OneOfField;
+  value: PlainField | undefined;
+  label?: string | undefined;
+  description?: string | undefined;
+}) {
   const controlId =
     value === undefined || value.kind === "boolean"
       ? undefined
@@ -323,14 +347,14 @@ function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainFie
     <div className="dec-form-field">
       <FieldLabel
         {...(controlId !== undefined ? { htmlFor: controlId } : {})}
-        label={field.label}
-        required={field.required}
+        label={label ?? field.label}
+        required={label === undefined && field.required}
         changed={changed}
         fieldPath={field.path}
-        {...(field.description !== undefined ? { description: field.description } : {})}
+        {...(description !== undefined ? { description } : {})}
       />
       <div className="dec-form-field-control dec-form-single-value-oneof">
-        <VariantPicker field={field} compact />
+        <VariantPicker field={field} compact label={label} />
         {value !== undefined && (
           <FieldControl field={value} {...(controlId !== undefined ? { id: controlId } : {})} />
         )}
@@ -341,7 +365,11 @@ function SingleValueOneOf({ field, value }: { field: OneOfField; value: PlainFie
 }
 
 function OneOfFieldRow({ field }: { field: OneOfField }) {
+  const { t } = useI18n();
   const inline = React.useContext(InlineLevelsContext);
+  const label = isTaskTypeField(field) ? t("sidebar.field.taskOption") : undefined;
+  const help =
+    label !== undefined && field.path !== ROOT_ONE_OF_PATH ? field.description : undefined;
   const { isReadOnly, taskData } = useTaskFormContext();
   const variant = field.variants[useSelectedVariant(field)];
   // The chosen variant's fields as shown: read-only keeps only those with a value.
@@ -351,13 +379,23 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
     return isReadOnly ? filterReadOnlyFields(fields, taskData) : fields;
   }, [field, variant, isReadOnly, taskData]);
 
+  // One-ofs are transparent for position, except key combinations: they stand for one object,
+  // so their fields are laid out like an inline object's children.
+  const fieldsInline = field.keyCombinations ? isInlineLevel(shownFields) : inline;
+
   // A single-variant one-of has nothing to pick, so its fields stand in for it.
   if (field.variants.length <= 1) {
     return (
       <>
         <LevelErrors path={field.path} />
         <div className="dec-form-oneof-children">
-          <FieldList fields={shownFields} ownerPath={field.path} atLeastOne={variant?.atLeastOne} />
+          <InlineLevelsContext.Provider value={fieldsInline}>
+            <FieldList
+              fields={shownFields}
+              ownerPath={field.path}
+              atLeastOne={variant?.atLeastOne}
+            />
+          </InlineLevelsContext.Provider>
         </div>
       </>
     );
@@ -380,17 +418,23 @@ function OneOfFieldRow({ field }: { field: OneOfField }) {
   }
   // A single value is edited in place, under the one-of's own label.
   if (only === undefined || (rest.length === 0 && isPlainField(only))) {
-    return <SingleValueOneOf field={field} value={only} />;
+    return <SingleValueOneOf field={field} value={only} label={label} description={help} />;
   }
 
   // Inline: variant fields replace one-of position
   return (
     <div className="dec-form-oneof-group">
-      <VariantPicker field={field} />
+      <VariantPicker field={field} label={label} description={help} />
       <LevelErrors path={field.path} />
       {shownFields.length > 0 && (
         <div className="dec-form-oneof-children">
-          <FieldList fields={shownFields} ownerPath={field.path} atLeastOne={variant?.atLeastOne} />
+          <InlineLevelsContext.Provider value={fieldsInline}>
+            <FieldList
+              fields={shownFields}
+              ownerPath={field.path}
+              atLeastOne={variant?.atLeastOne}
+            />
+          </InlineLevelsContext.Provider>
         </div>
       )}
     </div>

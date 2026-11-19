@@ -20,27 +20,31 @@ import { GraphNodeType } from "@openworkflowspec/sdk";
 import { getTaskTypeKey } from "../../../core/taskTypes";
 import { isObjectNotArray } from "../../../core/utils";
 import { readTaskEntry } from "../../../core/workflowEditing";
+import { getNodeVisualConfig } from "@/react-flow/nodes/taskNodeConfig";
 
 // ---------------------------------------------------------------------------
 // TaskListDisplay
 // ---------------------------------------------------------------------------
 
-function deriveTaskType(body: unknown): string | undefined {
-  if (!isObjectNotArray(body)) return undefined;
+/** The task's type key (`call`, `set`…) and its label, which names a call's kind (`call: http`). */
+function readTaskType(body: unknown): { key?: string; label?: string } {
+  if (!isObjectNotArray(body)) return {};
   const key = getTaskTypeKey(body);
   if (key === GraphNodeType.Call && typeof body[key] === "string") {
-    return `${GraphNodeType.Call}: ${body[key] as string}`;
+    return { key, label: `${GraphNodeType.Call}: ${body[key] as string}` };
   }
-  return key;
+  return key === undefined ? {} : { key, label: key };
 }
 
 export type TaskListDisplayProps = {
   tasks: unknown;
-  /** Hides the hint to edit the tasks from the diagram, which nothing can do in read-only. */
-  isReadOnly?: boolean;
+  /** The canvas node id of the child task named `name`, or `undefined` when it has none. */
+  findNodeId?: (name: string) => string | undefined;
+  /** Selects a child's node, as a click on the canvas would. */
+  onSelect?: (id: string) => void;
 };
 
-export function TaskListDisplay({ tasks, isReadOnly = false }: TaskListDisplayProps) {
+export function TaskListDisplay({ tasks, findNodeId, onSelect }: TaskListDisplayProps) {
   const { t } = useI18n();
 
   const isEmpty = !Array.isArray(tasks) || tasks.length === 0;
@@ -56,30 +60,61 @@ export function TaskListDisplay({ tasks, isReadOnly = false }: TaskListDisplayPr
 
   const entries = (tasks as unknown[]).map((item, idx) => {
     const entry = readTaskEntry(item);
+    const type = readTaskType(entry?.task);
     return {
       key: entry !== undefined ? `${entry.name}-${idx}` : String(idx),
       name: entry?.name,
-      type: deriveTaskType(entry?.task),
+      type: type.label,
+      // From the task's own type, so a child the canvas doesn't draw (listen's foreach) has it too.
+      color: getNodeVisualConfig(type.key)?.color,
+      nodeId: entry !== undefined && onSelect !== undefined ? findNodeId?.(entry.name) : undefined,
     };
   });
+  const selectable = entries.some(({ nodeId }) => nodeId !== undefined);
 
   return (
     <div className="dec-task-list">
       <ul className="dec-task-list-chips" aria-label={t("taskList.label")}>
-        {entries.map(({ key, name, type }) =>
-          name !== undefined ? (
-            <li key={key} className="dec-task-list-chip">
-              <span className="dec-task-list-chip-dot" aria-hidden="true" />
+        {entries.map(({ key, name, type, color, nodeId }) => {
+          if (name === undefined) return null;
+          // The dot takes the task type's canvas colour; the type text beside it says the same.
+          const content = (
+            <>
+              <span
+                className="dec-task-list-chip-dot"
+                aria-hidden="true"
+                style={
+                  color !== undefined
+                    ? ({ "--task-node-color": color } as React.CSSProperties)
+                    : undefined
+                }
+              />
               <span className="dec-task-list-chip-name">{name}</span>
               {type !== undefined && <span className="dec-task-list-chip-type">{type}</span>}
+            </>
+          );
+          return (
+            <li key={key}>
+              {nodeId !== undefined && onSelect !== undefined ? (
+                <button
+                  type="button"
+                  className="dec-task-list-chip is-selectable"
+                  aria-label={`${t("taskList.select")} ${name}`}
+                  onClick={() => onSelect(nodeId)}
+                >
+                  {content}
+                </button>
+              ) : (
+                <span className="dec-task-list-chip">{content}</span>
+              )}
             </li>
-          ) : null,
-        )}
+          );
+        })}
       </ul>
-      {!isReadOnly && (
+      {selectable && (
         <p className="dec-task-list-hint">
           <DiagramIcon className="dec-task-list-hint-icon" aria-hidden="true" />
-          {t("taskList.editHint")}
+          {t("taskList.selectHint")}
         </p>
       )}
     </div>

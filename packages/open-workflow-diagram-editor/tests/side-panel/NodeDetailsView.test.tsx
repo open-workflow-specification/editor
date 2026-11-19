@@ -55,7 +55,7 @@ describe("NodeDetailsView", () => {
     expect(screen.getByRole("form", { name: /task properties/i })).toBeInTheDocument();
   });
 
-  it("renders a collapsed Source section with full yaml task in read-only mode", () => {
+  it("renders a collapsed View source disclosure with full yaml task in read-only mode, no Source heading", () => {
     const task = {
       call: "http",
       with: { endpoint: "https://api.example.com" },
@@ -64,7 +64,7 @@ describe("NodeDetailsView", () => {
 
     const { container } = renderWithProviders(<NodeDetailsView node={node} />);
 
-    expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
     expect(container.querySelector(".dec-sidebar-yaml-summary")?.textContent).toBe("View source");
     expect(container.querySelector(".dec-sidebar-yaml-pre")?.textContent).toBe(
       "call: http\nwith:\n  endpoint: https://api.example.com\n",
@@ -418,14 +418,14 @@ describe("NodeDetailsView", () => {
         isReadOnly: false,
       });
 
-      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
+      expect(screen.queryByText("View source")).not.toBeInTheDocument();
       expect(container.querySelector(".dec-sidebar-yaml-summary")).toBeNull();
     });
 
     it("renders the Source section in read-only mode", () => {
       renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
 
-      expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
+      expect(screen.getByText("View source")).toBeInTheDocument();
     });
 
     it("shows the Source section on the top level only, not inside a drilled-in level", async () => {
@@ -433,10 +433,10 @@ describe("NodeDetailsView", () => {
       renderWithProviders(<NodeDetailsView node={node} />, { isReadOnly: true });
 
       await user.click(screen.getByRole("button", { name: /^Open Endpoint,/ }));
-      expect(screen.queryByRole("heading", { name: "Source" })).not.toBeInTheDocument();
+      expect(screen.queryByText("View source")).not.toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Up one level" }));
-      expect(screen.getByRole("heading", { name: "Source" })).toBeInTheDocument();
+      expect(screen.getByText("View source")).toBeInTheDocument();
     });
 
     it("renders form controls in editable mode", () => {
