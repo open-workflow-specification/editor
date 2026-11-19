@@ -31,7 +31,6 @@ import {
   deriveFooterValidationState,
   shouldBlockCommit,
   FooterValidationCounter,
-  UnplacedErrors,
 } from "./forms/validation";
 import { Check } from "lucide-react";
 import type { Specification } from "@openworkflowspec/sdk";
@@ -174,12 +173,7 @@ export function EditFormFooter({ node }: { node: RF.Node<BaseNodeData> }) {
             hasChanges={hasChanges}
             showApplied={showApplied}
           />
-          {footerValidationState.showErrorUI && (
-            <>
-              <FooterValidationCounter count={errorCount} />
-              <UnplacedErrors />
-            </>
-          )}
+          {footerValidationState.showErrorUI && <FooterValidationCounter count={errorCount} />}
         </div>
         <div className="dec-sidebar-form-footer-actions">
           <Button type="button" variant="outline" onClick={handleCancel}>

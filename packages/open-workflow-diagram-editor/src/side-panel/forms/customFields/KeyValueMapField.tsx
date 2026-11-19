@@ -30,6 +30,7 @@ import { isObjectNotArray } from "../../../core/utils";
 import { structuralEqual } from "../../../core/structuralEqual";
 import { isFixedKey, isUnwritableKey, mapEntriesOf, mapEntryPath } from "../mapEntries";
 import { AddedFieldsContext } from "../addedFields";
+import { useClearFormErrors } from "../validation/useClearFormErrors";
 import {
   VariantSnapshotsContext,
   selectedVariantIndex,
@@ -194,6 +195,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
   // overly-narrow types for runtime-composed key strings.
   const form = useFormContext() as UseFormReturn<Record<string, unknown>>;
   const { setValue, getValues, clearErrors } = form;
+  const clearFormErrors = useClearFormErrors(clearErrors);
   // TaskForm's variant snapshots (absent where the map is rendered on its own)
   const variantSnapshots = React.useContext(VariantSnapshotsContext);
 
@@ -342,7 +344,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
             field: target,
             from,
             to,
-            form: { getValues, setValue, clearErrors },
+            form: { getValues, setValue, clearErrors: clearFormErrors },
             snapshots: variantSnapshots,
           });
         }
@@ -360,7 +362,7 @@ export function KeyValueMapField({ field, showLabel = true }: KeyValueMapFieldPr
       taskData,
       getValues,
       setValue,
-      clearErrors,
+      clearFormErrors,
       variantSnapshots,
       validateField,
       commitRows,

@@ -19,6 +19,7 @@ import { Controller, useFormContext } from "react-hook-form";
 import { Input } from "../ui/input";
 import type { NumberField } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
+import { useClearFormErrors } from "../validation";
 import { useFieldError, FieldWithError } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export type NumberControlProps = {
 
 export function NumberControl({ field, id }: NumberControlProps) {
   const { control, clearErrors } = useFormContext<Record<string, unknown>>();
+  const clearFormErrors: (paths: string[]) => void = useClearFormErrors(clearErrors);
   const { validateField } = useTaskFormContext();
   const errorMessage = useFieldError(field.path);
 
@@ -58,7 +60,7 @@ export function NumberControl({ field, id }: NumberControlProps) {
               const raw = e.target.value;
               // Clear any stale SDK error the moment the user starts editing,
               // so the "must be integer" message doesn't flash while typing.
-              clearErrors(field.path);
+              clearFormErrors([field.path]);
               if (raw === "") {
                 // Empty input → store "" so RHF marks the field dirty.
                 // applyDirtyValues deletes the path when the value is "" or null.

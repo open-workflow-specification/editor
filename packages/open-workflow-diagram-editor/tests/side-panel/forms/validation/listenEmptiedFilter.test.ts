@@ -25,10 +25,7 @@ import { parseWorkflow, validateWorkflow } from "../../../../src/core/workflowSd
 import { flattenSentinels } from "../../../../src/side-panel/forms/sentinels";
 import { countErrors } from "../../../../src/side-panel/forms/validation/footerValidationState";
 import { collectTaskErrors } from "../../../../src/side-panel/forms/validation/collectSchemaFieldErrors";
-import {
-  mergeClassifiedErrors,
-  type ClassifiedTaskErrors,
-} from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
+import type { ClassifiedTaskErrors } from "../../../../src/side-panel/forms/validation/taskErrorClassifier";
 import { classifyWorkflowErrors } from "../../../../src/side-panel/forms/validation/workflowErrorClassifier";
 import { buildTaskFormState } from "../../../test-utils/validation-helpers";
 
@@ -92,14 +89,17 @@ describe("listen with an emptied event filter", () => {
       values,
       flattenSentinels(values),
     );
-    const merged = mergeClassifiedErrors(seeded, collectTaskErrors("listen", values, fields));
+    const taskLevel = collectTaskErrors("listen", values, fields);
 
-    expect(merged.fieldErrors).toEqual({
-      "listen.to.any.0.with": "must NOT have fewer than 1 properties",
-    });
-    expect(merged.levelErrors).toEqual({});
-    expect(merged.unplacedErrors).toEqual({});
-    expect(count(merged)).toBe(1);
+    // Seeding uses task-level validation, falling back to the workflow errors: both agree.
+    for (const errors of [seeded, taskLevel]) {
+      expect(errors.fieldErrors).toEqual({
+        "listen.to.any.0.with": "must NOT have fewer than 1 properties",
+      });
+      expect(errors.levelErrors).toEqual({});
+      expect(errors.unplacedErrors).toEqual({});
+      expect(count(errors)).toBe(1);
+    }
   });
 
   it("reports no error for a complete event filter", () => {

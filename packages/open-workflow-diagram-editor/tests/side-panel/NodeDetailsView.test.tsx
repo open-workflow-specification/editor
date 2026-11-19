@@ -189,6 +189,50 @@ describe("NodeDetailsView", () => {
       expect(document.querySelector(".dec-sidebar-error-field")).toBeNull();
     });
 
+    describe("a node without a task reference of its own", () => {
+      const parentReference = "/do/0/tryTask";
+      const parent: RF.Node<BaseNodeData> = {
+        ...makeNode({ label: "tryTask", taskReference: parentReference }),
+        id: "parent",
+      };
+      const errors = [{ path: parentReference, message: "the try/catch task is wrong" }];
+
+      it.each([
+        {
+          name: "takes the errors of its parent node",
+          node: { ...makeNode({ label: "try", task: { try: [] } }), parentId: "parent" },
+          nodes: [parent],
+          shown: true,
+        },
+        {
+          name: "has none when its parent is not among the nodes",
+          node: { ...makeNode({ label: "try", task: { try: [] } }), parentId: "missing" },
+          nodes: [parent],
+          shown: false,
+        },
+        {
+          name: "has none when it has no parent",
+          node: makeNode({ label: "try", task: { try: [] } }),
+          nodes: [parent],
+          shown: false,
+        },
+        {
+          name: "has none when it has no task, even with a parent",
+          node: { ...makeNode({ label: "start" }, "start"), parentId: "parent" },
+          nodes: [parent],
+          shown: false,
+        },
+      ])("$name", ({ node, nodes, shown }) => {
+        renderWithProviders(<NodeDetailsView node={node} />, {
+          taskReferences: new Set([parentReference]),
+          errors,
+          nodes,
+        });
+
+        expect(screen.queryByText("the try/catch task is wrong") !== null).toBe(shown);
+      });
+    });
+
     it("always shows workflow errors regardless of whether validation was attempted", () => {
       const node = makeNode({
         label: "callService",
@@ -223,10 +267,11 @@ describe("NodeDetailsView", () => {
     });
 
     it("drops the errors edit mode rendered inside the form when switching to read-only", async () => {
+      // A task the schema accepts, so edit mode seeds the workflow error (the fallback).
       const node = makeNode({
         label: "callService",
         taskReference,
-        task: { call: "http", with: {} },
+        task: { call: "http", with: { method: "get", endpoint: "https://example.com" } },
       });
       const errors = [{ path: taskReference, message: "must NOT have unevaluated properties" }];
       const ui = (isReadOnly: boolean) => (

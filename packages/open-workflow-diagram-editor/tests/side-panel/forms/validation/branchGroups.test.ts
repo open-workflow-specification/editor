@@ -196,4 +196,16 @@ describe("collapseBranchGroups", () => {
 
     expect(result.map((e) => e.keyword)).toEqual([GROUP_KEYWORD]);
   });
+
+  it("keeps the message of the schema on the group error", () => {
+    const errors = [
+      error("type", "/w", "#/properties/w/oneOf/0/type", { type: "string" }),
+      error("type", "/w", "#/properties/w/oneOf/1/type", { type: "object" }),
+      group("/w", "#/properties/w/oneOf"),
+    ];
+
+    const [result] = collapseBranchGroups(errors, new Map());
+
+    expect(result).toMatchObject({ keyword: GROUP_KEYWORD, message: "oneOf failed" });
+  });
 });

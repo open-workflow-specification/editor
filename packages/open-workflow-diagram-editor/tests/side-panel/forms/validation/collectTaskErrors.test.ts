@@ -165,6 +165,46 @@ describe("collectTaskErrors", () => {
     });
   });
 
+  describe("one error per mistake", () => {
+    it("drops the oneOf summary of the task when an error below it says what is wrong", () => {
+      const { fieldErrors, levelErrors } = errorsOf("call", {
+        call: "http",
+        with: { method: "get", endpoint: "https://example.com" },
+        timeout: { after: { days: "x" } },
+      });
+
+      expect(fieldErrors).toEqual({ "timeout.after.days": "must be integer" });
+      expect(levelErrors).toEqual({});
+    });
+
+    it("reports a value no branch accepts once, with the message of the schema", () => {
+      const { fieldErrors, levelErrors } = errorsOf("set", {
+        set: { a: "b" },
+        output: { as: 5 },
+      });
+
+      expect(fieldErrors).toEqual({ "output.as": "must match exactly one schema in oneOf" });
+      expect(levelErrors).toEqual({});
+    });
+
+    it("reports what is wrong inside an emptied task container, not the container missing", () => {
+      expect(errorsOf("wait", { wait: {} }).levelErrors).toEqual({
+        wait: "must NOT have fewer than 1 properties",
+      });
+      expect(errorsOf("listen", { listen: {} }).levelErrors).toEqual({
+        "listen.to": "must have required property 'to'",
+      });
+    });
+
+    it("places an error on a path the form shows only through its fields at the level above", () => {
+      const { fieldErrors, levelErrors, unplacedErrors } = errorsOf("emit", { emit: {} });
+
+      expect(fieldErrors).toEqual({});
+      expect(levelErrors).toEqual({ emit: "must have required property 'event'" });
+      expect(unplacedErrors).toEqual({});
+    });
+  });
+
   describe("variant selection", () => {
     it("reports only the selected variant of a run", () => {
       const { fields, values } = buildTaskFormState("run", { run: { container: { image: "x" } } });
@@ -176,7 +216,7 @@ describe("collectTaskErrors", () => {
       const { fieldErrors, levelErrors } = collectTaskErrors("run", values, fields);
 
       expect(fieldErrors).toEqual({});
-      expect(Object.keys(levelErrors)).toEqual(["run"]);
+      expect(Object.keys(levelErrors)).toEqual(["run.shell"]);
     });
 
     it("reports nothing for the variant that was left", () => {
@@ -193,7 +233,7 @@ describe("collectTaskErrors", () => {
     });
 
     it("moves a level error to its field once one branch remains", () => {
-      expect(errorsOf("run", { run: {} }).levelErrors).toHaveProperty("run");
+      expect(Object.keys(errorsOf("run", { run: {} }).levelErrors)).toEqual(["run.container"]);
 
       const { fieldErrors, levelErrors } = errorsOf("run", {
         run: { shell: { arguments: ["a"] } },

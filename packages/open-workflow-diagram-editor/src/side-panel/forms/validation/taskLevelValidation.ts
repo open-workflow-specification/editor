@@ -32,7 +32,7 @@ export interface TaskValidationResult {
   fieldErrors: Record<string, string>;
   /** Errors shown at a container / section / root level. */
   levelErrors: Record<string, string>;
-  /** The level errors no level of the form shows; listed with their path in the footer. */
+  /** The level errors no level of the form shows; listed with their path at the top of the panel. */
   unplacedErrors: Record<string, string>;
   /** True when a valueMap-backed enum payload failed to parse (non-bypassable). */
   hasUnparseableValueMapPayload: boolean;
@@ -75,7 +75,8 @@ export function collectSchemaErrorPaths(
  * clears previously set schema errors that are now resolved, and returns the categorized
  * validation result.
  *
- * Workflow-seeded errors (`type === "workflow"`) are never cleared by this function.
+ * Errors seeded when the task is opened are schema errors too, so they are cleared once resolved,
+ * except the workflow-only ones, which are of type "workflow" and left in place.
  * Level errors are returned but not written into RHF.
  */
 export function validateTaskForm(

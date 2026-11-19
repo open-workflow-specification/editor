@@ -67,12 +67,18 @@ function setup() {
   };
 }
 
+interface HookOptions {
+  isReadOnly?: boolean;
+  nodeType?: string;
+  formFields?: FormFieldDescriptor[];
+}
+
 function useHook(
   mocks: ReturnType<typeof setup>,
   errors: SdkError[],
   reference: string | undefined,
   key: string,
-  isReadOnly = false,
+  { isReadOnly = false, nodeType = "test-node-type", formFields = fields }: HookOptions = {},
 ) {
   vi.mocked(useDiagramEditorContext).mockReturnValue(
     createMockContextValue({ errors, taskReferences, isReadOnly }),
@@ -81,6 +87,8 @@ function useHook(
     taskValidation: INITIAL_TASK_VALIDATION_STATE,
     errorCount: 0,
     recordValidationResult: mocks.recordValidationResult,
+    recordFieldError: vi.fn(),
+    clearFieldErrors: vi.fn(),
     resetValidation: mocks.resetValidation,
   });
   const form = {
@@ -90,9 +98,9 @@ function useHook(
   } as unknown as UseFormReturn<Record<string, unknown>>;
   useWorkflowErrorsForForm({
     form,
-    nodeType: "test-node-type",
+    nodeType,
     taskReference: reference,
-    allFields: fields,
+    allFields: formFields,
     resetKey: key,
   });
 }
@@ -117,7 +125,9 @@ describe("useWorkflowErrorsForForm", () => {
     expect(mocks.setError).not.toHaveBeenCalled();
   });
 
-  it("sets a workflow field error and seeds the context with hasWorkflowErrors", () => {
+  // The node type has no schema, so task-level validation finds nothing and these tests seed the
+  // workflow errors, the fallback. Seeding task-level errors is covered by the panel tests.
+  it("sets a field error and seeds the context with seededOnOpen", () => {
     const mocks = setup();
     const errors: SdkError[] = [
       { path: `${taskRef}/call/endpoint`, errorType: "#/x/type", message: "Bad endpoint" },
@@ -136,7 +146,14 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: {},
         hasUnparseableValueMapPayload: false,
       },
-      { hasWorkflowErrors: true },
+      {
+        seededOnOpen: true,
+        workflowErrors: {
+          fieldErrors: { "call.endpoint": "Bad endpoint" },
+          levelErrors: {},
+          unplacedErrors: {},
+        },
+      },
     );
   });
 
@@ -154,20 +171,31 @@ describe("useWorkflowErrorsForForm", () => {
         unplacedErrors: { mystery: "Unknown" },
         levelErrors: { mystery: "Unknown" },
       }),
-      { hasWorkflowErrors: true },
+      expect.objectContaining({
+        seededOnOpen: true,
+        workflowErrors: expect.objectContaining({
+          unplacedErrors: { mystery: "Unknown" },
+          levelErrors: { mystery: "Unknown" },
+        }),
+      }),
     );
   });
 
   it("seeds a task-root error as a level error", () => {
     const mocks = setup();
-    const errors: SdkError[] = [{ path: taskRef, errorType: "#/x/type", message: "General" }];
+    const errors: SdkError[] = [
+      { path: taskRef, errorType: "#/minProperties", message: "General" },
+    ];
 
     renderHook(() => useHook(mocks, errors, taskRef, "node-1"));
 
     expect(mocks.setError).not.toHaveBeenCalled();
     expect(mocks.recordValidationResult).toHaveBeenCalledWith(
       expect.objectContaining({ levelErrors: { "": "General" }, unplacedErrors: {} }),
-      { hasWorkflowErrors: true },
+      expect.objectContaining({
+        seededOnOpen: true,
+        workflowErrors: expect.objectContaining({ levelErrors: { "": "General" } }),
+      }),
     );
   });
 
@@ -189,12 +217,15 @@ describe("useWorkflowErrorsForForm", () => {
     rerender({ errs: [], key: "node-1" });
 
     expect(mocks.clearErrors).toHaveBeenCalledWith(["then"]);
-    expect(mocks.recordValidationResult).toHaveBeenLastCalledWith({
-      fieldErrors: {},
-      levelErrors: {},
-      unplacedErrors: {},
-      hasUnparseableValueMapPayload: false,
-    });
+    expect(mocks.recordValidationResult).toHaveBeenLastCalledWith(
+      {
+        fieldErrors: {},
+        levelErrors: {},
+        unplacedErrors: {},
+        hasUnparseableValueMapPayload: false,
+      },
+      { workflowErrors: { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} } },
+    );
   });
 
   it("does not clear the context after a reset-key change when there are no errors", () => {
@@ -231,6 +262,74 @@ describe("useWorkflowErrorsForForm", () => {
     expect(mocks.setError).toHaveBeenCalledTimes(2);
   });
 
+  describe("with a schema error on the same task", () => {
+    const waitFields: FormFieldDescriptor[] = [leaf("call.endpoint"), leaf("wait.seconds")];
+    const waitOptions: HookOptions = { nodeType: "wait", formFields: waitFields };
+    const endpointError: SdkError = {
+      path: `${taskRef}/call/endpoint`,
+      errorType: "#/x/type",
+      message: "Bad endpoint",
+    };
+
+    it("keeps the workflow-only error alongside it and assigns each its own type", () => {
+      const mocks = setup();
+      // wait: { seconds: "abc" } causes an Ajv schema error on wait.seconds
+      mocks.getValues = vi.fn(() => ({ wait: { seconds: "abc" } }));
+      const errors: SdkError[] = [
+        endpointError,
+        { path: `${taskRef}/wait/seconds`, errorType: "#/type", message: "must be integer" },
+      ];
+
+      renderHook(() => useHook(mocks, errors, taskRef, "node-1", waitOptions));
+
+      expect(mocks.setError).toHaveBeenCalledWith("call.endpoint", {
+        type: "workflow",
+        message: "Bad endpoint",
+      });
+      expect(mocks.setError).toHaveBeenCalledWith("wait.seconds", {
+        type: "schema",
+        message: "must be integer",
+      });
+      expect(mocks.recordValidationResult).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fieldErrors: {
+            "call.endpoint": "Bad endpoint",
+            "wait.seconds": "must be integer",
+          },
+        }),
+        expect.objectContaining({
+          seededOnOpen: true,
+          workflowErrors: expect.objectContaining({
+            fieldErrors: { "call.endpoint": "Bad endpoint" },
+          }),
+        }),
+      );
+    });
+
+    it("leaves a workflow error on the same path to the schema error", () => {
+      const mocks = setup();
+      mocks.getValues = vi.fn(() => ({ wait: { seconds: "abc" } }));
+      const errors: SdkError[] = [
+        { path: `${taskRef}/wait/seconds`, errorType: "#/x/type", message: "workflow message" },
+        { path: `${taskRef}/wait/seconds`, errorType: "#/type", message: "must be integer" },
+      ];
+
+      renderHook(() => useHook(mocks, errors, taskRef, "node-1", waitOptions));
+
+      expect(mocks.setError).toHaveBeenCalledTimes(1);
+      expect(mocks.setError).toHaveBeenCalledWith("wait.seconds", {
+        type: "schema",
+        message: "must be integer",
+      });
+      expect(mocks.recordValidationResult).toHaveBeenCalledWith(
+        expect.objectContaining({ fieldErrors: { "wait.seconds": "must be integer" } }),
+        expect.objectContaining({
+          workflowErrors: { fieldErrors: {}, levelErrors: {}, unplacedErrors: {} },
+        }),
+      );
+    });
+  });
+
   describe("read-only mode", () => {
     it("seeds nothing and clears the form errors and the context", () => {
       const mocks = setup();
@@ -238,7 +337,7 @@ describe("useWorkflowErrorsForForm", () => {
         { path: `${taskRef}/call/endpoint`, errorType: "#/x/type", message: "Bad endpoint" },
       ];
 
-      renderHook(() => useHook(mocks, errors, taskRef, "node-1", true));
+      renderHook(() => useHook(mocks, errors, taskRef, "node-1", { isReadOnly: true }));
 
       expect(mocks.setError).not.toHaveBeenCalled();
       expect(mocks.recordValidationResult).not.toHaveBeenCalled();
@@ -253,7 +352,7 @@ describe("useWorkflowErrorsForForm", () => {
       ];
 
       const { rerender } = renderHook(
-        ({ readOnly }) => useHook(mocks, errors, taskRef, "node-1", readOnly),
+        ({ readOnly }) => useHook(mocks, errors, taskRef, "node-1", { isReadOnly: readOnly }),
         { initialProps: { readOnly: false } },
       );
       expect(mocks.resetValidation).not.toHaveBeenCalled();

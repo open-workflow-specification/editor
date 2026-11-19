@@ -17,11 +17,13 @@
 import {
   getErrorKeyword,
   getParentPath,
+  isAtOrBelow,
   isPointerAtOrBelow,
   joinPath,
   pointerToDotPath,
   type ValidationError,
 } from "@/core";
+import type { ErrorObject } from "ajv/dist/2020";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { buildActiveFormView, type ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD } from "./branchGroups";
@@ -68,6 +70,13 @@ function isInactiveBranchEcho(error: ValidationError, path: string, view: Active
   );
 }
 
+/** Whether an error is already recorded at or below the path (`""` is the whole task). */
+function hasErrorAtOrBelow(classified: ClassifiedTaskErrors, path: string): boolean {
+  return [...Object.keys(classified.fieldErrors), ...Object.keys(classified.levelErrors)].some(
+    (errorPath) => isAtOrBelow(errorPath, path),
+  );
+}
+
 /**
  * Turns the workflow-level SDK errors of one task into the shape the form layer consumes,
  * placing each error by its path against what the form shows now: a field error on a value
@@ -88,6 +97,8 @@ export function classifyWorkflowErrors(
 ): TaskValidationResult {
   const classified: ClassifiedTaskErrors = emptyClassifiedErrors();
   const view: ActiveFormView = buildActiveFormView(fields, sentinels, formValues);
+  /** Container errors the classifier drops as another branch's echo, kept until checked. */
+  const droppedOnContainers: Array<{ path: string; message: string }> = [];
 
   for (const error of nodeErrors) {
     const keyword = getErrorKeyword(error);
@@ -98,8 +109,27 @@ export function classifyWorkflowErrors(
 
     if (isInactiveBranchEcho(error, path, view)) continue;
 
-    const placed: Classification = classifyErrorPath(path, GROUP_KEYWORD, {}, view);
+    // The real keyword lets a container drop what another `oneOf` branch reports about it, as
+    // task-level validation does.
+    const params: ErrorObject["params"] = error.object ?? {};
+    const placed: Classification = classifyErrorPath(
+      path,
+      keyword === undefined || keyword === "anyOf" ? GROUP_KEYWORD : keyword,
+      params,
+      view,
+    );
+    if (placed.kind === "drop" && view.containers.has(path)) {
+      droppedOnContainers.push({ path, message: error.message });
+      continue;
+    }
     recordClassification(classified, placed, error.message);
+  }
+
+  // An error the SDK still reports is real, so the form must show it.
+  for (const { path, message } of droppedOnContainers) {
+    if (!hasErrorAtOrBelow(classified, path)) {
+      recordClassification(classified, { kind: "level", path }, message);
+    }
   }
 
   return {

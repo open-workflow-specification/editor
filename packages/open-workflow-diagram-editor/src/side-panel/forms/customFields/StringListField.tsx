@@ -21,7 +21,7 @@ import { useI18n } from "@openworkflowspec/i18n";
 import { Input } from "../ui/input";
 import type { StringListField as StringListFieldDescriptor } from "../../../core/schemaToFormFields";
 import { useTaskFormContext } from "../taskFormContext";
-import { newId } from "./fieldHelpers";
+import { FieldWithError, newId, useFieldError } from "./fieldHelpers";
 import { getNestedValue } from "../../../core/taskDraft";
 
 // ---------------------------------------------------------------------------
@@ -63,6 +63,7 @@ export function StringListField({ field }: StringListFieldProps) {
   const { isReadOnly, taskData, validateField } = useTaskFormContext();
   const form = useFormContext() as UseFormReturn<Record<string, unknown>>;
   const { setValue, getValues } = form;
+  const errorMessage = useFieldError(field.path);
 
   // ── Initialise rows ────────────────────────────────────────────────────────
   const [rows, setRows] = React.useState<ListItem[]>(() => {
@@ -155,29 +156,31 @@ export function StringListField({ field }: StringListFieldProps) {
         {filledCount > 0 && <span className="dec-map-count">{countLabel}</span>}
       </div>
 
-      {rows.length > 0 && (
-        <div className="dec-list-rows">
-          {rows.map((row) => (
-            <div key={row.id} className="dec-list-row">
-              <Input
-                className="dec-list-value-input"
-                value={row.value}
-                placeholder={t("sidebar.stringList.itemPlaceholder")}
-                onChange={(e) => updateRow(row.id, e.target.value)}
-                aria-label={t("sidebar.stringList.itemLabel")}
-              />
-              <button
-                type="button"
-                className="dec-map-delete-btn"
-                onClick={() => deleteRow(row.id)}
-                aria-label={t("sidebar.stringList.deleteItem")}
-              >
-                <X className="dec-map-delete-icon" aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <FieldWithError errorMessage={errorMessage}>
+        {rows.length > 0 ? (
+          <div className="dec-list-rows">
+            {rows.map((row) => (
+              <div key={row.id} className="dec-list-row">
+                <Input
+                  className="dec-list-value-input"
+                  value={row.value}
+                  placeholder={t("sidebar.stringList.itemPlaceholder")}
+                  onChange={(e) => updateRow(row.id, e.target.value)}
+                  aria-label={t("sidebar.stringList.itemLabel")}
+                />
+                <button
+                  type="button"
+                  className="dec-map-delete-btn"
+                  onClick={() => deleteRow(row.id)}
+                  aria-label={t("sidebar.stringList.deleteItem")}
+                >
+                  <X className="dec-map-delete-icon" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </FieldWithError>
 
       <div className="dec-map-add-btn-wrap">
         <button

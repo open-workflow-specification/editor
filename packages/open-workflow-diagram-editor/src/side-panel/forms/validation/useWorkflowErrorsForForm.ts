@@ -16,42 +16,36 @@
 
 import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { getNodeErrors } from "@/core";
-import type { ValidationError } from "@/core";
+import { getNodeErrors, type ValidationError } from "@/core";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
 import { collectTaskErrors } from "./collectSchemaFieldErrors";
 import { countErrors } from "./footerValidationState";
-import { mergeClassifiedErrors, type ClassifiedTaskErrors } from "./taskErrorClassifier";
+import {
+  emptyClassifiedErrors,
+  mergeClassifiedErrors,
+  omitClassifiedErrors,
+  type ClassifiedTaskErrors,
+} from "./taskErrorClassifier";
 import { emptyValidationResult, type TaskValidationResult } from "./taskLevelValidation";
 import { useTaskValidation } from "./taskValidationContext";
 import { classifyWorkflowErrors } from "./workflowErrorClassifier";
 import { flattenSentinels } from "../sentinels";
 
-/**
- * Merges two validation results, taking the union of all error maps.
- * For paths present in both, `primary` (workflow-level) wins so that SDK error
- * messages are preserved; `secondary` (task-level Ajv) fills in any gaps.
- * Seeded results are never the non-bypassable valueMap case, which only an Apply run detects.
- */
-function mergeResults(
-  primary: TaskValidationResult,
-  secondary: ClassifiedTaskErrors,
-): TaskValidationResult {
-  return {
-    ...mergeClassifiedErrors(primary, secondary),
-    hasUnparseableValueMapPayload: false,
-  };
+/** A seeded result: seeding never detects the non-bypassable valueMap case, which only Apply does. */
+function toSeededResult(classified: ClassifiedTaskErrors): TaskValidationResult {
+  return { ...classified, hasUnparseableValueMapPayload: false };
 }
 
 /**
- * On first render (and whenever the selected task or workflow errors change),
- * classifies the workflow-level SDK validation errors of the selected task against
- * what the form shows, and seeds the result into the task validation context so the
- * footer counter, level errors and unplaced errors reflect it immediately.
+ * On first render (and whenever the selected task or workflow errors change), seeds the errors
+ * of the selected task into the task validation context so the footer counter, level errors and
+ * unplaced errors reflect them immediately.
  *
- * Task-level Ajv validation is also run and the results merged (union) so that
- * errors suppressed by temporary SDK workarounds or cascade noise filtering are preserved.
+ * The seed merges task-level schema validation (which later changes re-run on blur/Apply) with
+ * the workflow-only SDK errors of the task, which JSON Schema cannot validate locally.
+ * Workflow-only errors are registered with type "workflow" so they are preserved across
+ * schema-only validation passes until refreshed by workflow validation.
  *
  * Errors that land on a field are also set as react-hook-form field errors so the
  * fields are highlighted without the user having to touch them. Stale field errors
@@ -70,7 +64,7 @@ export function useWorkflowErrorsForForm({
   resetKey,
 }: {
   form: UseFormReturn<Record<string, unknown>>;
-  /** Graph node type, used to run supplementary task-level Ajv validation. */
+  /** Graph node type, used to run task-level Ajv validation. */
   nodeType: string;
   /** Indexed task path; `undefined` for layout-only nodes that have no task. */
   taskReference: string | undefined;
@@ -85,11 +79,11 @@ export function useWorkflowErrorsForForm({
   const { errors, taskReferences, isReadOnly } = useDiagramEditorContext();
   const { recordValidationResult, resetValidation } = useTaskValidation();
   const { setError, clearErrors, getValues } = form;
-  /** Field paths seeded by the previous run of the effect. */
+  // Field paths seeded by the previous run of the effect.
   const previousFieldsRef = React.useRef<string[]>([]);
-  /** Whether the previous run seeded the validation context. */
+  // Whether the previous run seeded the validation context.
   const wasSeededRef = React.useRef<boolean>(false);
-  /** Tracks the last resetKey seen by the effect to detect task changes. */
+  // Tracks the last resetKey seen by the effect to detect task changes.
   const prevResetKeyRef = React.useRef<string | undefined>(resetKey);
 
   React.useEffect(() => {
@@ -112,7 +106,8 @@ export function useWorkflowErrorsForForm({
     const nodeErrors: ValidationError[] = getNodeErrors(errors, taskReference, taskReferences);
     const formValues: Record<string, unknown> = getValues();
 
-    const workflowResult: TaskValidationResult =
+    const taskClassified: ClassifiedTaskErrors = collectTaskErrors(nodeType, formValues, allFields);
+    const workflowClassified: ClassifiedTaskErrors =
       nodeErrors.length > 0
         ? classifyWorkflowErrors(
             nodeErrors,
@@ -121,33 +116,40 @@ export function useWorkflowErrorsForForm({
             formValues,
             flattenSentinels(formValues),
           )
-        : emptyValidationResult();
+        : emptyClassifiedErrors();
 
-    // Always run task-level Ajv so errors suppressed by temporary SDK workarounds
-    // or lost to oneOf cascade noise filtering are preserved.
-    const taskClassified: ClassifiedTaskErrors = collectTaskErrors(nodeType, formValues, allFields);
-    const result: TaskValidationResult = mergeResults(workflowResult, taskClassified);
+    // Workflow errors on a path the task validation also reports are left to the latter.
+    const workflowOnlyErrors: ClassifiedTaskErrors = omitClassifiedErrors(
+      workflowClassified,
+      taskClassified,
+    );
+    const result: TaskValidationResult = toSeededResult(
+      mergeClassifiedErrors(workflowOnlyErrors, taskClassified),
+    );
 
     if (countErrors(result.fieldErrors, result.levelErrors) === 0) {
       if (wasSeededRef.current) {
-        recordValidationResult(emptyValidationResult());
+        recordValidationResult(emptyValidationResult(), {
+          workflowErrors: emptyClassifiedErrors(),
+        });
         wasSeededRef.current = false;
       }
       return;
     }
 
+    // Workflow-only errors use type "workflow" so schema validation runs on blur do not clear them.
+    // Task-level schema errors use type "schema" so subsequent runs clear them once resolved.
     const seededFields: string[] = [];
     for (const [path, message] of Object.entries(result.fieldErrors)) {
-      setError(path, { type: "workflow", message });
+      const isWorkflowOnly = path in workflowOnlyErrors.fieldErrors;
+      setError(path, { type: isWorkflowOnly ? "workflow" : "schema", message });
       seededFields.push(path);
     }
 
-    recordValidationResult(result, { hasWorkflowErrors: true });
+    recordValidationResult(result, { seededOnOpen: true, workflowErrors: workflowOnlyErrors });
     previousFieldsRef.current = seededFields;
     wasSeededRef.current = true;
-    // resetKey changes when the selected task changes — re-run for the new task.
-    // The form helpers are stable (from react-hook-form) and intentionally excluded.
-    // errors/taskReferences/taskReference are content-stable within a render cycle.
+    // resetKey drives re-seeding; form helpers are stable and content deps are render-cycle-stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey, errors, taskReference, allFields, isReadOnly, nodeType]);
 

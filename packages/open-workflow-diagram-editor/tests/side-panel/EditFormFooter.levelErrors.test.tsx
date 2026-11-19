@@ -17,7 +17,8 @@
 /**
  * Every error the footer counts must be explained somewhere visible:
  * - a level error on an inline one-of (`run: {}` is invalid at `run`) shows at that one-of;
- * - an error on a path no level shows (`obj.zzz.y`) is listed with its path in the footer.
+ * - an error on a path no level shows (`obj.zzz.y`) is counted in the footer, which never shows
+ *   the message itself (the top of the panel lists it).
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -85,15 +86,16 @@ describe("explaining the errors the footer counts", () => {
     expect(within(form).getByRole("alert")).toHaveTextContent("must have required property 'run'");
   });
 
-  it("lists an error on an untraced path, with its path, in the footer", async () => {
+  it("counts an error on an untraced path in the footer without showing its message", async () => {
     renderWithRecordedErrors({ "obj.zzz.y": "must be string" }, { "obj.zzz.y": "must be string" });
     await act(async () => {});
 
     const form = screen.getByRole("form", { name: /task properties/i });
     expect(within(form).queryByRole("alert")).not.toBeInTheDocument();
     expect(document.querySelector(".dec-footer-validation-counter")).toHaveTextContent("1 error");
-    expect(document.querySelector(".dec-unplaced-errors")).toHaveTextContent(
-      "obj.zzz.y: must be string",
+    expect(document.querySelector(".dec-footer-validation-counter")).not.toHaveTextContent(
+      "must be string",
     );
+    expect(screen.queryByText(/must be string/)).not.toBeInTheDocument();
   });
 });

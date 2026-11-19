@@ -15,7 +15,12 @@
  */
 
 import type { ErrorObject } from "ajv/dist/2020";
-import { findNestedGroups, getMissingProperty, isGroupError } from "@/core/ajvErrorUtils";
+import {
+  findNestedGroups,
+  getMissingProperty,
+  hasPassingSchemas,
+  isGroupError,
+} from "@/core/ajvErrorUtils";
 import { isPointerAtOrBelow, pointerToDotPath } from "@/core/paths";
 import type { PresenceKeys } from "./activeFormView";
 
@@ -101,7 +106,7 @@ function collapseGroup(
   const rest = errors.filter((e) => e !== group && !members.includes(e) && !refErrors.includes(e));
 
   // Multiple matching branches violate oneOf exclusivity.
-  if ((group.params as { passingSchemas?: unknown }).passingSchemas != null) {
+  if (hasPassingSchemas(group)) {
     return [...rest, { ...group, keyword: GROUP_KEYWORD }];
   }
 
@@ -123,7 +128,7 @@ function collapseGroup(
     if (only === "nested") return rest;
     return [...rest, ...members.filter((e) => `b${branchOf(e)}` === only)];
   }
-  const typeOnly = typeMismatched.size === candidates.size;
+  const typeOnly: boolean = typeMismatched.size === candidates.size;
   return [
     ...rest,
     { ...group, keyword: GROUP_KEYWORD, params: { ...group.params, typeMismatch: typeOnly } },

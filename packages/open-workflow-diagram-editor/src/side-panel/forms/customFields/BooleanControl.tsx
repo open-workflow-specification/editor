@@ -18,6 +18,8 @@ import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { Switch } from "@/components/ui/switch";
 import type { BooleanField } from "../../../core/schemaToFormFields";
+import { useTaskFormContext } from "../taskFormContext";
+import { FieldWithError, useFieldError } from "./fieldHelpers";
 
 // ---------------------------------------------------------------------------
 // BooleanControl — toggle switch backed by react-hook-form
@@ -32,17 +34,26 @@ export type BooleanControlProps = {
 
 export function BooleanControl({ field }: BooleanControlProps) {
   const { control } = useFormContext<Record<string, unknown>>();
+  const { validateField } = useTaskFormContext();
+  const errorMessage: string | undefined = useFieldError(field.path);
 
   return (
     <Controller
       name={field.path}
       control={control}
       render={({ field: rhfField }) => (
-        <Switch
-          checked={(rhfField.value as boolean | undefined) ?? field.defaultValue ?? false}
-          onCheckedChange={rhfField.onChange}
-          aria-label={field.label}
-        />
+        <FieldWithError errorMessage={errorMessage}>
+          <Switch
+            checked={(rhfField.value as boolean | undefined) ?? field.defaultValue ?? false}
+            onCheckedChange={(checked) => {
+              rhfField.onChange(checked);
+              // A switch has no blur of its own, so it validates on change.
+              validateField?.(field.path);
+            }}
+            aria-label={field.label}
+            aria-invalid={errorMessage !== undefined || undefined}
+          />
+        </FieldWithError>
       )}
     />
   );

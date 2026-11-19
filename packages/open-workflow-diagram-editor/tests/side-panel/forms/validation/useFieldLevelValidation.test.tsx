@@ -78,6 +78,19 @@ describe("useFieldLevelValidation", () => {
     },
   ];
 
+  function renderValidation(
+    form: UseFormReturn<Record<string, unknown>>,
+    nodeType: string = "wait",
+  ) {
+    return renderHook(
+      () => ({
+        validation: useTaskValidation(),
+        fieldValidation: useFieldLevelValidation(nodeType, form, false, fields),
+      }),
+      { wrapper: ValidationWrapper },
+    );
+  }
+
   it("does nothing in read-only mode", () => {
     const setError = vi.fn();
     const clearErrors = vi.fn();
@@ -117,11 +130,11 @@ describe("useFieldLevelValidation", () => {
       clearErrors,
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
-    const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: ValidationWrapper,
-    });
+    const { result } = renderValidation(form);
 
-    result.current.validateField("wait");
+    act(() => {
+      result.current.fieldValidation.validateField("wait");
+    });
 
     expect(setError).toHaveBeenCalledWith(
       "wait",
@@ -129,6 +142,10 @@ describe("useFieldLevelValidation", () => {
         type: "schema",
       }),
     );
+    expect(result.current.validation.taskValidation.fieldErrors["wait"]).toBe(
+      'must match pattern "^P"',
+    );
+    expect(result.current.validation.errorCount).toBe(1);
   });
 
   it("clears error when field value is valid in edit mode", () => {
@@ -142,13 +159,21 @@ describe("useFieldLevelValidation", () => {
       clearErrors,
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
-    const { result } = renderHook(() => useFieldLevelValidation("wait", form, false, fields), {
-      wrapper: ValidationWrapper,
+    const { result } = renderValidation(form);
+
+    // Pre-populate an error
+    act(() => {
+      result.current.validation.recordFieldError("wait", "old error");
+    });
+    expect(result.current.validation.errorCount).toBe(1);
+
+    act(() => {
+      result.current.fieldValidation.validateField("wait");
     });
 
-    result.current.validateField("wait");
-
-    expect(clearErrors).toHaveBeenCalledWith("wait");
+    expect(clearErrors).toHaveBeenCalledWith(["wait"]);
+    expect(result.current.validation.errorCount).toBe(0);
+    expect(result.current.validation.taskValidation.fieldErrors["wait"]).toBeUndefined();
   });
 
   it("clears section errors when an optional section is cleared", () => {
@@ -161,13 +186,19 @@ describe("useFieldLevelValidation", () => {
       clearErrors,
     } as unknown as UseFormReturn<Record<string, unknown>>;
 
-    const { result } = renderHook(() => useFieldLevelValidation("call", form, false, fields), {
-      wrapper: ValidationWrapper,
+    const { result } = renderValidation(form, "call");
+
+    act(() => {
+      result.current.validation.recordFieldError("auth.token", "Required");
+    });
+    expect(result.current.validation.errorCount).toBe(1);
+
+    act(() => {
+      result.current.fieldValidation.validateField("auth.token");
     });
 
-    result.current.validateField("auth.token");
-
     expect(clearErrors).toHaveBeenCalledWith(["auth.token"]);
+    expect(result.current.validation.errorCount).toBe(0);
     expect(validateTaskData).not.toHaveBeenCalled();
     expect(setError).not.toHaveBeenCalled();
   });
@@ -270,7 +301,7 @@ describe("useFieldLevelValidation", () => {
 
     result.current.validateField("wait");
 
-    expect(clearErrors).toHaveBeenCalledWith("wait");
+    expect(clearErrors).toHaveBeenCalledWith(["wait"]);
   });
 
   describe("after latch (attempted === true)", () => {
@@ -294,14 +325,7 @@ describe("useFieldLevelValidation", () => {
         clearErrors,
       } as unknown as UseFormReturn<Record<string, unknown>>;
 
-      const { result } = renderHook(
-        () => {
-          const validation = useTaskValidation();
-          const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
-          return { validation, fieldValidation };
-        },
-        { wrapper: ValidationWrapper },
-      );
+      const { result } = renderValidation(form);
 
       // Set attempted latch to true
       act(() => {
@@ -319,24 +343,17 @@ describe("useFieldLevelValidation", () => {
       expect(result.current.validation.errorCount).toBe(1);
     });
 
-    it("clears workflow error on blurred field before running task validation", () => {
+    it("clears the blurred field error before running task validation", () => {
       const setError = vi.fn();
       const clearErrors = vi.fn();
       const form = {
         getValues: vi.fn().mockReturnValue({ wait: "PT5S" }),
-        formState: { errors: { wait: { type: "workflow", message: "Workflow err" } } },
+        formState: { errors: { wait: { type: "schema", message: "Seeded err" } } },
         setError,
         clearErrors,
       } as unknown as UseFormReturn<Record<string, unknown>>;
 
-      const { result } = renderHook(
-        () => {
-          const validation = useTaskValidation();
-          const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
-          return { validation, fieldValidation };
-        },
-        { wrapper: ValidationWrapper },
-      );
+      const { result } = renderValidation(form);
 
       act(() => {
         result.current.validation.recordValidationResult(EMPTY_RESULT, { attempted: true });
@@ -371,14 +388,7 @@ describe("useFieldLevelValidation", () => {
         clearErrors,
       } as unknown as UseFormReturn<Record<string, unknown>>;
 
-      const { result } = renderHook(
-        () => {
-          const validation = useTaskValidation();
-          const fieldValidation = useFieldLevelValidation("wait", form, false, fields);
-          return { validation, fieldValidation };
-        },
-        { wrapper: ValidationWrapper },
-      );
+      const { result } = renderValidation(form);
 
       // When attempted is false, revalidateIfAttempted does nothing
       act(() => {
@@ -397,30 +407,24 @@ describe("useFieldLevelValidation", () => {
     });
   });
 
-  describe("with workflow-seeded errors (attempted === false)", () => {
+  describe("with errors seeded on open (attempted === false)", () => {
     const seeded = {
       ...EMPTY_RESULT,
-      fieldErrors: { wait: "Workflow err" },
+      fieldErrors: { wait: "Seeded err" },
     };
 
     function setup() {
       const clearErrors = vi.fn();
       const form = {
         getValues: vi.fn().mockReturnValue({ wait: "PT5S" }),
-        formState: { errors: { wait: { type: "workflow", message: "Workflow err" } } },
+        formState: { errors: { wait: { type: "schema", message: "Seeded err" } } },
         setError: vi.fn(),
         clearErrors,
       } as unknown as UseFormReturn<Record<string, unknown>>;
 
-      const { result } = renderHook(
-        () => ({
-          validation: useTaskValidation(),
-          fieldValidation: useFieldLevelValidation("wait", form, false, fields),
-        }),
-        { wrapper: ValidationWrapper },
-      );
+      const { result } = renderValidation(form);
       act(() => {
-        result.current.validation.recordValidationResult(seeded, { hasWorkflowErrors: true });
+        result.current.validation.recordValidationResult(seeded, { seededOnOpen: true });
       });
       return { result, clearErrors };
     }
@@ -437,7 +441,7 @@ describe("useFieldLevelValidation", () => {
       expect(result.current.validation.errorCount).toBe(0);
     });
 
-    it("keeps the workflow flag and does not latch attempted", () => {
+    it("keeps the seeded flag and does not latch attempted", () => {
       vi.mocked(validateTaskData).mockReturnValue([
         {
           keyword: "pattern",
@@ -453,7 +457,7 @@ describe("useFieldLevelValidation", () => {
         result.current.fieldValidation.validateField("wait");
       });
 
-      expect(result.current.validation.taskValidation.hasWorkflowErrors).toBe(true);
+      expect(result.current.validation.taskValidation.seededOnOpen).toBe(true);
       expect(result.current.validation.taskValidation.attempted).toBe(false);
       expect(result.current.validation.errorCount).toBe(1);
     });
@@ -466,6 +470,84 @@ describe("useFieldLevelValidation", () => {
       });
 
       expect(result.current.validation.errorCount).toBe(0);
+    });
+
+    describe("with a workflow-only error", () => {
+      const WORKFLOW_PATH = "transition";
+      const WORKFLOW_MESSAGE = "Target task does not exist";
+
+      function setupWorkflowError(isDirty: boolean) {
+        const clearErrors = vi.fn();
+        const form = {
+          getValues: vi.fn().mockReturnValue({ wait: "PT5S", [WORKFLOW_PATH]: "unresolvedTask" }),
+          getFieldState: vi.fn().mockReturnValue({ isDirty }),
+          formState: { errors: {} },
+          setError: vi.fn(),
+          clearErrors,
+        } as unknown as UseFormReturn<Record<string, unknown>>;
+
+        const { result } = renderValidation(form);
+        act(() => {
+          result.current.validation.recordValidationResult(
+            {
+              ...EMPTY_RESULT,
+              fieldErrors: { wait: "Seeded schema err", [WORKFLOW_PATH]: WORKFLOW_MESSAGE },
+            },
+            {
+              seededOnOpen: true,
+              workflowErrors: {
+                fieldErrors: { [WORKFLOW_PATH]: WORKFLOW_MESSAGE },
+                levelErrors: {},
+                unplacedErrors: {},
+              },
+            },
+          );
+        });
+        return { result, clearErrors };
+      }
+
+      it("preserves it when a schema error is resolved on blur", () => {
+        const { result, clearErrors } = setupWorkflowError(false);
+
+        expect(result.current.validation.errorCount).toBe(2);
+
+        act(() => {
+          result.current.fieldValidation.validateField("wait");
+        });
+
+        expect(clearErrors).toHaveBeenCalledWith("wait");
+        expect(clearErrors).not.toHaveBeenCalledWith(WORKFLOW_PATH);
+        expect(result.current.validation.errorCount).toBe(1);
+        expect(result.current.validation.taskValidation.fieldErrors).toEqual({
+          [WORKFLOW_PATH]: WORKFLOW_MESSAGE,
+        });
+      });
+
+      it("keeps it when its own field is blurred without being edited", () => {
+        const { result, clearErrors } = setupWorkflowError(false);
+
+        act(() => {
+          result.current.fieldValidation.validateField(WORKFLOW_PATH);
+        });
+
+        expect(clearErrors).not.toHaveBeenCalled();
+        expect(result.current.validation.taskValidation.fieldErrors[WORKFLOW_PATH]).toBe(
+          WORKFLOW_MESSAGE,
+        );
+      });
+
+      it("drops it when its own field is edited and blurred", () => {
+        const { result, clearErrors } = setupWorkflowError(true);
+
+        act(() => {
+          result.current.fieldValidation.validateField(WORKFLOW_PATH);
+        });
+
+        expect(clearErrors).toHaveBeenCalledWith(WORKFLOW_PATH);
+        expect(result.current.validation.taskValidation.fieldErrors).toEqual({});
+        expect(result.current.validation.taskValidation.workflowErrors.fieldErrors).toEqual({});
+        expect(result.current.validation.errorCount).toBe(0);
+      });
     });
   });
 });

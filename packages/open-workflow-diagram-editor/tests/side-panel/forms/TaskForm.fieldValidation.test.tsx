@@ -24,6 +24,7 @@ vi.mock("../../../src/side-panel/forms/ui/combobox", async () => {
 });
 
 const { TaskForm } = await import("../../../src/side-panel/forms/TaskForm");
+import { EditFormFooter } from "../../../src/side-panel/EditFormFooter";
 import { renderWithProviders } from "../../test-utils/render-helpers";
 import { nodeAt, parseFixture } from "../../test-utils/workflow-helpers";
 import { openLevel } from "../../test-utils/drill-helpers";
@@ -163,5 +164,32 @@ describe("TaskForm field-level validation", () => {
 
     // URI error should be cleared
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("takes the old variant's errors out of the footer count when switching variants", async () => {
+    const user = await userEvent.setup();
+    renderWithProviders(
+      <>
+        <TaskForm
+          nodeType={nodeAt(model, "/do/callStep").type!}
+          task={nodeAt(model, "/do/callStep").data.task!}
+          nodeId="/do/callStep"
+          taskReference={nodeAt(model, "/do/callStep").data.taskReference}
+        />
+        <EditFormFooter node={nodeAt(model, "/do/callStep")} />
+      </>,
+      { isReadOnly: false, contentFormat: "yaml", model },
+    );
+    await act(async () => {});
+    await openLevel(user, "Endpoint");
+
+    const uriInput = screen.getByDisplayValue("https://example.com/api");
+    await user.clear(uriInput);
+    fireEvent.blur(uriInput);
+    expect(document.querySelector(".dec-footer-validation-counter")).toHaveTextContent("1 error");
+
+    await user.click(screen.getAllByRole("button", { name: /Expression/i })[0]!);
+
+    expect(document.querySelector(".dec-footer-validation-counter")).toBeNull();
   });
 });

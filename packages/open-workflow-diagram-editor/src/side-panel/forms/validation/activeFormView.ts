@@ -15,8 +15,7 @@
  */
 
 import { ROOT_ONE_OF_PATH, type FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { collectLeafKinds, selectedVariantIndex } from "../taskFormContext";
-import { sentinelPath } from "../sentinels";
+import { collectLeafKinds, selectedVariantIndexFromSentinels } from "../taskFormContext";
 
 /**
  * Keys that identify the variants of a one-of: the selected variant's, and those of its other
@@ -79,11 +78,7 @@ export function buildActiveFormView(
       } else if (field.kind === "one-of") {
         const key = field.path === ROOT_ONE_OF_PATH ? "" : field.path;
         view.containers.add(key);
-        const selected = selectedVariantIndex(
-          field,
-          sentinels[sentinelPath(field.path)] as string | undefined,
-          formValues,
-        );
+        const selected = selectedVariantIndexFromSentinels(field, sentinels, formValues);
         const entry = view.presence.get(key) ?? { active: new Set(), other: new Set() };
         field.variants.forEach((variant, index) => {
           const identifier = variant.requiredKey ?? variant.presenceKey;

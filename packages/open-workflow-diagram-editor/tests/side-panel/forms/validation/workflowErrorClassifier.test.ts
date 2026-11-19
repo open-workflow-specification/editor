@@ -120,7 +120,9 @@ describe("classifyWorkflowErrors", () => {
   });
 
   it("places an error on a container as a level error", () => {
-    const result = classify([workflowError("obj", "container problem")]);
+    const result = classify([
+      workflowError("obj", "container problem", { errorType: "#/properties/obj/minProperties" }),
+    ]);
 
     expect(result.levelErrors).toEqual({ obj: "container problem" });
     expect(result.fieldErrors).toEqual({});
@@ -128,10 +130,48 @@ describe("classifyWorkflowErrors", () => {
   });
 
   it("places an error on the task root as a level error", () => {
-    const result = classify([workflowError("", "task problem")]);
+    const result = classify([workflowError("", "task problem", { errorType: "#/minProperties" })]);
 
     expect(result.levelErrors).toEqual({ "": "task problem" });
     expect(result.unplacedErrors).toEqual({});
+  });
+
+  it("drops what another oneOf branch says about a container when an error below says what is wrong", () => {
+    // A `wait: { seconds: "abc" }` also fails the string-duration branch: "must be string".
+    const result = classify([
+      workflowError("obj/a", "must be integer"),
+      workflowError("obj", "must be string", {
+        errorType: "#/properties/obj/oneOf/1/type",
+        object: { type: "string" },
+      }),
+    ]);
+
+    expect(result.fieldErrors).toEqual({ "obj.a": "must be integer" });
+    expect(result.levelErrors).toEqual({});
+  });
+
+  it("keeps a container error the SDK reports alone, as nothing else shows the task is invalid", () => {
+    // e.g. a raise error whose `type` the SDK rejects: only "must be string" on the error is left.
+    const result = classify([
+      workflowError("obj", "must be string", {
+        errorType: "#/properties/obj/oneOf/1/type",
+        object: { type: "string" },
+      }),
+    ]);
+
+    expect(result.levelErrors).toEqual({ obj: "must be string" });
+    expect(result.unplacedErrors).toEqual({});
+  });
+
+  it("keeps a container whose value is not an object", () => {
+    const result = classify([
+      workflowError("obj", "must be object", {
+        errorType: "#/properties/obj/type",
+        object: { type: "object" },
+      }),
+    ]);
+
+    expect(result.levelErrors).toEqual({ obj: "must be object" });
   });
 
   it("places an error on an ordered-map entry field on that entry", () => {

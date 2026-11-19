@@ -83,6 +83,15 @@ export function selectedVariantIndex(
   return matched === -1 ? 0 : matched;
 }
 
+/** `selectedVariantIndex` for a one-of whose chosen variant is read from the sentinel values. */
+export function selectedVariantIndexFromSentinels(
+  field: OneOfField,
+  sentinels: Record<string, unknown>,
+  taskData: Record<string, unknown>,
+): number {
+  return selectedVariantIndex(field, sentinels[sentinelPath(field.path)], taskData);
+}
+
 /** The data a one-of's variants match against: the whole task for the root one-of, else the value at its path. */
 function oneOfData(field: OneOfField, taskData: Record<string, unknown>): unknown {
   return field.path === ROOT_ONE_OF_PATH ? taskData : getNestedValue(taskData, field.path);
@@ -150,7 +159,10 @@ export function switchVariant({
   field: OneOfField;
   from: number;
   to: number;
-  form: Pick<UseFormReturn<Record<string, unknown>>, "getValues" | "setValue" | "clearErrors">;
+  /** `clearErrors` takes the paths left; pass one that also clears the task validation's errors. */
+  form: Pick<UseFormReturn<Record<string, unknown>>, "getValues" | "setValue"> & {
+    clearErrors: (paths: string[]) => void;
+  };
   snapshots: VariantSnapshots | null;
 }): void {
   const { getValues, setValue, clearErrors } = form;

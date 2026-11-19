@@ -33,13 +33,4 @@
     color: var(--dec-error-text);
     border-color: color-mix(in srgb, var(--dec-error-accent) 25%, transparent);
   }
-  /* Errors on paths no level of the form shows, listed in the footer */
-  .dec-root .dec-unplaced-errors {
-    @apply dec:m-0 dec:p-0 dec:list-none dec:text-xs dec:font-medium dec:break-words;
-    color: var(--dec-error-accent, #dc2626);
-  }
-
-  .dec-root.dark .dec-unplaced-errors {
-    color: var(--dec-error-accent, #f87171);
-  }
 }

@@ -15,24 +15,19 @@
  */
 
 import * as React from "react";
+import type { UseFormClearErrors } from "react-hook-form";
 import { useTaskValidation } from "./taskValidationContext";
-import "./validation.css";
 
-/**
- * Lists the errors that block Apply but that no level of the form shows (untraced paths),
- * each with its path. Rendered in the footer so it is visible at any drill depth.
- */
-export function UnplacedErrors() {
-  const { taskValidation } = useTaskValidation();
-  const entries = Object.entries(taskValidation.unplacedErrors);
-
-  if (!taskValidation.attempted || entries.length === 0) return null;
-
-  return (
-    <ul className="dec-unplaced-errors" role="alert">
-      {entries.map(([path, message]) => (
-        <li key={path}>{path === "" ? message : `${path}: ${message}`}</li>
-      ))}
-    </ul>
+/** Returns a callback that clears the given paths (and subpaths) in both RHF and the task validation. */
+export function useClearFormErrors(
+  clearErrors: UseFormClearErrors<Record<string, unknown>>,
+): (paths: string[]) => void {
+  const { clearFieldErrors } = useTaskValidation();
+  return React.useCallback(
+    (paths: string[]) => {
+      clearErrors(paths);
+      clearFieldErrors(paths);
+    },
+    [clearErrors, clearFieldErrors],
   );
 }
