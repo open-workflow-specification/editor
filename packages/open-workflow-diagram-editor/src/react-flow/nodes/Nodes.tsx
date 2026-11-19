@@ -18,6 +18,7 @@ import type React from "react";
 import { GraphNodeType, type Specification } from "@openworkflowspec/sdk";
 import * as RF from "@xyflow/react";
 import { useI18n } from "@openworkflowspec/i18n";
+import { en } from "../../i18n/locales/en";
 import {
   CATCH_CONTAINER_NODE_TYPE,
   type ContainerNodeType,
@@ -119,7 +120,12 @@ function TaskNodeBadge({ badge, testId }: BadgeProps) {
 }
 
 function NodeErrorBadge({ testId }: { testId: string }) {
-  return <CircleAlert className="dec-node-error-badge" data-testid={testId} aria-hidden="true" />;
+  return (
+    <>
+      <CircleAlert className="dec-node-error-badge" data-testid={testId} aria-hidden="true" />
+      <span className="dec:sr-only">{en["node.errorBadge"]}</span>
+    </>
+  );
 }
 
 function LeafNodeContent({ id, data, selected, type, badge }: NodeContentProps) {
