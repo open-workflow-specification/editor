@@ -119,7 +119,7 @@ function TaskNodeBadge({ badge, testId }: BadgeProps) {
 }
 
 function NodeErrorBadge({ testId }: { testId: string }) {
-  return <CircleAlert className="dec-node-error-badge" data-testid={testId} />;
+  return <CircleAlert className="dec-node-error-badge" data-testid={testId} aria-hidden="true" />;
 }
 
 function LeafNodeContent({ id, data, selected, type, badge }: NodeContentProps) {
@@ -134,7 +134,7 @@ function LeafNodeContent({ id, data, selected, type, badge }: NodeContentProps) 
       {data.hasError && <NodeErrorBadge testId={`${type}-node-${id}-error`} />}
       <RF.Handle type="target" position={RF.Position.Top} />
       <div className="dec-leaf-node-content">
-        <Icon size={20} className="dec-leaf-node-icon" />
+        <Icon size={20} className="dec-leaf-node-icon" aria-hidden="true" />
         <div className="dec-leaf-node-label">
           <span className="dec-leaf-node-name">{data.label}</span>
           <div className="dec-leaf-node-meta">
@@ -160,7 +160,7 @@ function ContainerNodeContent({ id, data, selected, type, badge }: NodeContentPr
       {data.hasError && <NodeErrorBadge testId={`${type}-node-${id}-error`} />}
       <RF.Handle type="target" position={RF.Position.Top} />
       <div className="dec-container-node-header">
-        <Icon size={20} className="dec-container-node-icon" />
+        <Icon size={20} className="dec-container-node-icon" aria-hidden="true" />
         <div className="dec-container-node-label">
           <span className="dec-container-node-name">{data.label}</span>
           <span className="dec-container-node-type">{config.typeLabel}</span>
@@ -186,7 +186,7 @@ function TerminalNodeContent({ id, type }: { id: string; type: TerminalNodeType 
       ) : (
         <RF.Handle type="target" position={RF.Position.Top} />
       )}
-      <Icon size={14} className="dec-terminal-node-icon" />
+      <Icon size={14} className="dec-terminal-node-icon" aria-hidden="true" />
       <span className="dec-terminal-node-label">{label}</span>
     </div>
   );

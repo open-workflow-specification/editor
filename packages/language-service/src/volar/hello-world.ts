@@ -58,6 +58,11 @@ export function createHelloWorldCompletionsPlugin(
                 label: "Insert Hello World workflow",
                 kind: SNIPPET_KIND,
                 detail: "Insert a Hello World Open Workflow document",
+                documentation: {
+                  kind: "plaintext",
+                  value:
+                    "Replaces the empty document with a complete Hello World Open Workflow example.",
+                },
                 textEdit: { range: EMPTY_RANGE, newText: sample },
               },
             ],

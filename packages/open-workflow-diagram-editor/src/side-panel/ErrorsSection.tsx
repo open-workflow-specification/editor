@@ -36,7 +36,7 @@ export function ErrorSection({ items }: ErrorSectionProps) {
   return (
     <section className="dec-sidebar-errors" data-testid="sidebar-errors">
       <div className="dec-sidebar-errors-header">
-        <CircleAlert className="dec-sidebar-errors-icon" />
+        <CircleAlert className="dec-sidebar-errors-icon" aria-hidden="true" />
         <h3 className="dec-sidebar-errors-title">{t("sidebar.sectionErrors")}</h3>
         <span className="dec-sidebar-errors-count">{items.length}</span>
       </div>
