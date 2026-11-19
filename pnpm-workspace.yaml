@@ -7,16 +7,16 @@ catalog:
   "@changesets/cli": ^3.0.3
   "@chromatic-com/storybook": ^5.6.0
   "@openworkflowspec/sdk": "^1.0.3-alpha8"
-  "@playwright/test": ^1.65.0
-  "@storybook/addon-a11y": ^10.6.6
-  "@storybook/addon-docs": ^10.6.6
-  "@storybook/addon-vitest": ^10.6.6
-  "@storybook/react-vite": ^10.6.6
+  "@playwright/test": ^1.65.1
+  "@storybook/addon-a11y": ^10.6.7
+  "@storybook/addon-docs": ^10.6.7
+  "@storybook/addon-vitest": ^10.6.7
+  "@storybook/react-vite": ^10.6.7
   "@tailwindcss/vite": ^4.3.5
   "@testing-library/dom": ^10.4.2
   "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.3
-  "@testing-library/user-event": ^14.6.8
+  "@testing-library/user-event": ^14.6.12
   "@types/js-yaml": ^4.0.9
   "@types/node": ^26.6.6
   "@types/react": ^19.3.0
@@ -35,23 +35,23 @@ catalog:
   html-to-image: ^1.11.13
   husky: ^9.1.7
   "js-yaml": ^5.5.0
-  jsdom: ^31.0.0
-  lint-staged: ^17.6.0
-  lucide-react: ^1.70.0
+  jsdom: ^31.0.1
+  lint-staged: ^17.6.1
+  lucide-react: ^1.73.0
   monaco-editor: ^0.57.0
-  oxfmt: ^0.77.0
-  oxlint: ^1.92.0
+  oxfmt: ^0.78.0
+  oxlint: ^1.93.0
   path-browserify: ^1.0.1
   radix-ui: ^1.8.1
   react: ^19.3.1
   react-dom: ^19.3.1
   rimraf: ^6.1.4
-  storybook: ^10.6.6
+  storybook: ^10.6.7
   syncpack: ^15.3.3
   tailwindcss: ^4.3.5
   typescript: ^6.0.0
   use-sync-external-store: ^1.7.0
-  vite: ^8.3.6
+  vite: ^8.3.8
   vitest: ^5.1.0
   volar-service-json: 0.0.71
   volar-service-yaml: 0.0.71
