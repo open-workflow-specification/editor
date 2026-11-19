@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { FormFieldDescriptor } from "../../../../src/core/schemaToFormFields";
+import type { FormFieldDescriptor, OneOfVariant } from "../../../../src/core/schemaToFormFields";
 import { sentinelPath } from "../../../../src/side-panel/forms/sentinels";
 import { buildActiveFormView } from "../../../../src/side-panel/forms/validation/activeFormView";
 import { buildTaskFormState, leaf, variantLabel } from "../../../test-utils/validation-helpers";
@@ -129,6 +129,34 @@ describe("buildActiveFormView", () => {
     expect(view.presence.get("listen.to")).toEqual({
       active: new Set(["any"]),
       other: new Set(["all", "one"]),
+    });
+  });
+
+  it("records every identifying key of a variant, and falls back to the presence key", () => {
+    const variant = (label: string, keys: Partial<OneOfVariant>): OneOfVariant => ({
+      label,
+      fields: [],
+      matchesData: matchesAny,
+      constWrites: {},
+      ...keys,
+    });
+    const combination: FormFieldDescriptor = {
+      kind: "one-of",
+      path: "with",
+      label: "with",
+      required: false,
+      variants: [
+        variant("A", { identifyingKeys: ["x", "y"] }),
+        variant("B", { identifyingKeys: ["x", "z"] }),
+        variant("C", { presenceKey: "p" }),
+      ],
+    };
+
+    const view = buildActiveFormView([combination], { [sentinelPath("with")]: "A" }, {});
+
+    expect(view.presence.get("with")).toEqual({
+      active: new Set(["x", "y"]),
+      other: new Set(["x", "z", "p"]),
     });
   });
 

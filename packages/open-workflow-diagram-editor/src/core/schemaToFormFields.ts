@@ -268,8 +268,8 @@ export interface OneOfVariant {
   constWrites: Record<string, unknown>;
   /** Key whose presence selects this variant (e.g., run.container). */
   presenceKey?: string;
-  /** The variant's only required property, validation reads it to tell which `oneOf` branch the user is editing. */
-  requiredKey?: string;
+  /** Required keys that tell this variant's branch apart from the others; read by validation. */
+  identifyingKeys?: string[];
   /**
    * None of the fields are required, but at least one must be set (`minProperties`, e.g. an
    * inline duration's days, hours, …).
@@ -369,6 +369,38 @@ function isUnconstrainedSchema(schema: Record<string, unknown>): boolean {
   return Object.entries(schema).every(
     ([key, value]) => value === undefined || SCHEMA_META_KEYS.has(key),
   );
+}
+
+/** The schema's `required` list, or an empty list when it has none. */
+function requiredList(schema: Record<string, unknown>): string[] {
+  return Array.isArray(schema.required) ? (schema.required as string[]) : [];
+}
+
+/** True when a `oneOf`/`anyOf` candidate is only `{ required: [...] }`, with no own shape. */
+function isRequiredOnlyCandidate(candidate: unknown): candidate is Record<string, unknown> {
+  return (
+    isObjectNotArray(candidate) &&
+    candidate.required !== undefined &&
+    !candidate.properties &&
+    !candidate.type &&
+    !candidate.$ref
+  );
+}
+
+/**
+ * The property names an object schema requires: its own `required` plus the keys every
+ * required-only `oneOf`/`anyOf` candidate names. Keys only some candidates name stay optional.
+ */
+function requiredKeys(schema: Record<string, unknown>): Set<string> {
+  const keys: Set<string> = new Set(requiredList(schema));
+  const candidates: unknown[] | undefined = (schema.oneOf ?? schema.anyOf) as unknown[] | undefined;
+  if (!Array.isArray(candidates) || candidates.length === 0) return keys;
+  if (!candidates.every(isRequiredOnlyCandidate)) return keys;
+  const [first, ...rest]: Set<string>[] = candidates.map((c) => new Set(requiredList(c)));
+  for (const key of first ?? []) {
+    if (rest.every((set) => set.has(key))) keys.add(key);
+  }
+  return keys;
 }
 
 /** `{ atLeastOne: true }` when an object schema needs one of its properties but requires none. */
@@ -611,6 +643,11 @@ function titleToWords(title: string): string {
   return title.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
+/** The text with its first character upper-cased. */
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Formats a schema title or camelCase identifier into a user-friendly label. */
 function formatVariantLabel(title: string): string {
   if (
@@ -664,6 +701,28 @@ function withDefault<T extends "string" | "boolean">(
   return !isRequired && typeof value === type ? { defaultValue: value as never } : {};
 }
 
+/** Separator between the key names of a combination variant's label. */
+const COMBINATION_LABEL_SEPARATOR = " + ";
+
+/** A property-level one-of field built from its variants. */
+function buildOneOfField(
+  path: string,
+  prop: Record<string, unknown>,
+  key: string,
+  description: string | undefined,
+  required: boolean,
+  variants: OneOfVariant[],
+): OneOfField {
+  return {
+    kind: "one-of",
+    path,
+    label: deriveLabel(prop, key),
+    ...withDesc(description),
+    required,
+    variants,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Core walker
 // ---------------------------------------------------------------------------
@@ -677,8 +736,67 @@ function itemFieldsOf(
   defs: Record<string, unknown> | undefined,
   format: ContentFormat,
 ): FormFieldDescriptor[] {
-  const required = Array.isArray(itemSchema.required) ? (itemSchema.required as string[]) : [];
-  return schemaToFormFields(itemSchema as DereferencedSchema, defs, new Set(required), "", format);
+  return schemaToFormFields(
+    itemSchema as DereferencedSchema,
+    defs,
+    new Set(requiredList(itemSchema)),
+    "",
+    format,
+  );
+}
+
+/**
+ * One variant per required-only candidate, each requiring its own key combination. Keys every
+ * combination names stay required in all variants. Returns none when a combination cannot be
+ * told apart or names an undefined key.
+ */
+function buildCombinationVariants(
+  resolved: Record<string, unknown>,
+  candidates: Record<string, unknown>[],
+  defs: Record<string, unknown> | undefined,
+  path: string,
+  format: ContentFormat,
+): OneOfVariant[] {
+  const properties = resolved.properties as Record<string, unknown> | undefined;
+  if (!properties) return [];
+  const combinations: string[][] = candidates.map((c) => requiredList(c).map(String));
+  if (combinations.some((keys) => keys.some((k) => !(k in properties)))) return [];
+
+  const shared: Set<string> = requiredKeys(resolved);
+  const identifying: string[][] = combinations.map((keys) => keys.filter((k) => !shared.has(k)));
+  if (identifying.some((keys) => keys.length === 0)) return [];
+  const allIdentifying: Set<string> = new Set(identifying.flat());
+
+  const baseFields: FormFieldDescriptor[] = schemaToFormFields(
+    resolved as DereferencedSchema,
+    defs,
+    shared,
+    path,
+    format,
+  );
+  /** The property a field belongs to: the first path segment below `path`. */
+  const propertyOf = (field: FormFieldDescriptor): string =>
+    field.path.slice(path.length + 1).split(".")[0] ?? "";
+
+  return identifying.map((own): OneOfVariant => {
+    const ownSet: Set<string> = new Set(own);
+    const fields: FormFieldDescriptor[] = baseFields
+      .filter((f) => !allIdentifying.has(propertyOf(f)) || ownSet.has(propertyOf(f)))
+      .map((f) => (ownSet.has(propertyOf(f)) ? { ...f, required: true } : f));
+    const label: string = own
+      .map((k) => capitalize(deriveLabel(properties[k] as Record<string, unknown>, k)))
+      .join(COMBINATION_LABEL_SEPARATOR);
+    return {
+      label,
+      fields,
+      // The data holds no key that only other combinations name.
+      matchesData: (data: unknown): boolean =>
+        isObjectNotArray(data) &&
+        Object.keys(data).every((k) => !allIdentifying.has(k) || ownSet.has(k)),
+      constWrites: {},
+      identifyingKeys: own,
+    };
+  });
 }
 
 /**
@@ -727,9 +845,7 @@ export function schemaToFormFields(
   if (!properties) return fields;
 
   const localDefs = (schema.$defs as Record<string, unknown> | undefined) ?? defs;
-  const req =
-    requiredSet ??
-    new Set<string>(Array.isArray(schema.required) ? (schema.required as string[]) : []);
+  const req = requiredSet ?? requiredKeys(schema);
 
   for (const [key, rawProp] of Object.entries(properties)) {
     if (!isObjectNotArray(rawProp)) continue;
@@ -855,17 +971,9 @@ export function schemaToFormFields(
     // ── oneOf / anyOf at property level ────────────────────────────────────
     const candidates = (resolved.oneOf ?? resolved.anyOf) as unknown[] | undefined;
     if (Array.isArray(candidates)) {
-      // Validation-only oneOf: candidates are required-combination constraints
-      // with no properties/type/$ref — a schema annotation, not a variant selector.
-      const isValidationOnly = candidates.every(
-        (c) =>
-          isObjectNotArray(c) &&
-          (c as Record<string, unknown>).required !== undefined &&
-          !(c as Record<string, unknown>).properties &&
-          !(c as Record<string, unknown>).type &&
-          !(c as Record<string, unknown>).$ref,
-      );
-      if (isValidationOnly) {
+      // Required-only candidates name key combinations and have no shape of their own.
+      const isRequiredOnly = candidates.every(isRequiredOnlyCandidate);
+      if (isRequiredOnly) {
         // Each candidate names a single key from the parent properties — a structural
         // choice between named sub-objects. Build a one-of selector from those sub-schemas
         // and append the remaining base properties to each variant.
@@ -909,9 +1017,7 @@ export function schemaToFormFields(
                 : formatVariantLabel(dk);
 
             const subPath = `${fieldPath}.${dk}`;
-            const childRequired = new Set<string>(
-              Array.isArray(subResolved.required) ? (subResolved.required as string[]) : [],
-            );
+            const childRequired = new Set<string>(requiredList(subResolved));
             const childFields = schemaToFormFields(
               subResolved as DereferencedSchema,
               localDefs,
@@ -941,9 +1047,7 @@ export function schemaToFormFields(
           const baseFields = schemaToFormFields(
             resolved as DereferencedSchema,
             localDefs,
-            new Set<string>(
-              Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
-            ),
+            new Set<string>(requiredList(resolved)),
             fieldPath,
             format,
           ).filter((f) => {
@@ -958,17 +1062,26 @@ export function schemaToFormFields(
           }
 
           if (structuralVariants.length > 1) {
-            fields.push({
-              kind: "one-of",
-              path: fieldPath,
-              label: deriveLabel(prop, key),
-              ...withDesc(description),
-              required: isRequired,
-              variants: structuralVariants,
-            });
+            fields.push(
+              buildOneOfField(fieldPath, prop, key, description, isRequired, structuralVariants),
+            );
             continue;
           }
           // Single structural variant — fall through to the plain object branch.
+        } else {
+          const combinationVariants = buildCombinationVariants(
+            resolved,
+            candidates,
+            localDefs,
+            fieldPath,
+            format,
+          );
+          if (combinationVariants.length > 1) {
+            fields.push(
+              buildOneOfField(fieldPath, prop, key, description, isRequired, combinationVariants),
+            );
+            continue;
+          }
         }
       } else {
         const variants = buildOneOfVariants(candidates, localDefs, fieldPath, format);
@@ -987,9 +1100,7 @@ export function schemaToFormFields(
           const baseFields = schemaToFormFields(
             resolved as DereferencedSchema,
             localDefs,
-            new Set<string>(
-              Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
-            ),
+            new Set<string>(requiredList(resolved)),
             fieldPath,
             format,
           ).filter((f) => {
@@ -1005,14 +1116,7 @@ export function schemaToFormFields(
         }
 
         if (variants.length > 1) {
-          fields.push({
-            kind: "one-of",
-            path: fieldPath,
-            label: deriveLabel(prop, key),
-            ...withDesc(description),
-            required: isRequired,
-            variants,
-          });
+          fields.push(buildOneOfField(fieldPath, prop, key, description, isRequired, variants));
           continue;
         } else if (variants.length === 1 && variants[0]) {
           // Single variant: unwrap its fields directly instead of a 1-option dropdown.
@@ -1092,9 +1196,7 @@ export function schemaToFormFields(
 
     // ── Object with known sub-properties ───────────────────────────────────
     if (resolved.type === "object" && resolved.properties) {
-      const childRequired = new Set<string>(
-        Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
-      );
+      const childRequired = requiredKeys(resolved);
       const children = schemaToFormFields(
         resolved as DereferencedSchema,
         localDefs,
@@ -1298,16 +1400,16 @@ function buildConstWrites(resolved: Record<string, unknown>): Record<string, unk
  */
 function singleRequiredKey(resolved: Record<string, unknown>): string | undefined {
   const properties = resolved.properties as Record<string, unknown> | undefined;
-  const required = Array.isArray(resolved.required) ? (resolved.required as string[]) : [];
+  const required = requiredList(resolved);
   const key = required.length === 1 ? required[0] : undefined;
   return properties && key !== undefined && key in properties ? key : undefined;
 }
 
-/** Returns the variant's single required property, for variants that no `const` identifies. */
-function withRequiredKey(resolved: Record<string, unknown>): { requiredKey?: string } {
+/** The variant's single required property as its identifying key, when no `const` identifies it. */
+function withRequiredKey(resolved: Record<string, unknown>): { identifyingKeys?: string[] } {
   if (Object.keys(buildConstWrites(resolved)).length > 0) return {};
   const key = singleRequiredKey(resolved);
-  return key === undefined ? {} : { requiredKey: key };
+  return key === undefined ? {} : { identifyingKeys: [key] };
 }
 
 /**
@@ -1444,7 +1546,7 @@ function buildOneOfVariants(
         const pathSegment = parentPath.split(".").pop() ?? "";
         const valueLabel = isFallbackLabel
           ? pathSegment
-            ? pathSegment.charAt(0).toUpperCase() + pathSegment.slice(1)
+            ? capitalize(pathSegment)
             : "Value"
           : rawLabel;
         const jsonField: JsonField = {
@@ -1589,9 +1691,7 @@ function buildOneOfVariants(
       }
     }
 
-    const req = new Set<string>(
-      Array.isArray(resolved.required) ? (resolved.required as string[]) : [],
-    );
+    const req = new Set<string>(requiredList(resolved));
     const children = schemaToFormFields(
       resolved as DereferencedSchema,
       defs,

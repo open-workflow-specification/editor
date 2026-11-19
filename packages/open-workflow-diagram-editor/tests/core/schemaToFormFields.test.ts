@@ -24,8 +24,10 @@ import {
 } from "../../src/core/schemaToFormFields";
 import { getFormFieldsForNodeType } from "../../src/core/schemaWalker";
 import { TASK_TYPE_KEYS } from "../../src/core/taskTypes";
+import { ASYNCAPI_DOC } from "../fixtures/taskValidation";
 import type {
   OneOfField,
+  OneOfVariant,
   StringField,
   ObjectField,
   EventFilterListField,
@@ -650,6 +652,192 @@ describe("schemaToFormFields CallMCP with.protocolVersion field", () => {
     const children = getMcpWithChildren();
     const methodField = children.find((f) => f.path === "with.method");
     expect(methodField?.kind).toBe("enum");
+  });
+});
+
+describe("schemaToFormFields required-only oneOf combinations", () => {
+  const ASYNCAPI_LABELS: string[] = [
+    "Operation + Message",
+    "Operation + Subscription",
+    "Channel + Message",
+    "Channel + Subscription",
+  ];
+
+  /** The Call AsyncAPI variant's `with` field. */
+  function getAsyncApiWith(): OneOfField | undefined {
+    const callOneOf = getFormFieldsForNodeType("call").find((f) => f.kind === "one-of") as
+      | OneOfField
+      | undefined;
+    const variant = callOneOf?.variants.find((v) => v.label === "Call AsyncAPI");
+    return variant?.fields.find((f) => f.path === "with") as OneOfField | undefined;
+  }
+
+  function getAsyncApiVariant(label: string): OneOfVariant | undefined {
+    return getAsyncApiWith()?.variants.find((v) => v.label === label);
+  }
+
+  /** `path → required` of a variant's fields. */
+  function requiredByPath(label: string): Record<string, boolean> {
+    const variant = getAsyncApiVariant(label);
+    return Object.fromEntries((variant?.fields ?? []).map((f) => [f.path, f.required]));
+  }
+
+  /** The field at `obj` of a schema whose `obj` property has the given constraints. */
+  function objField(constraints: Record<string, unknown>): FormFieldDescriptor | undefined {
+    return schemaToFormFields({ type: "object", properties: { obj: constraints } }).find(
+      (f) => f.path === "obj",
+    );
+  }
+
+  const OBJ_PROPERTIES: Record<string, unknown> = {
+    a: { type: "string" },
+    b: { type: "string" },
+    c: { type: "string" },
+  };
+
+  it("Call AsyncAPI with is a required one-of with one variant per schema combination", () => {
+    const withField = getAsyncApiWith();
+    expect(withField?.kind).toBe("one-of");
+    expect(withField?.required).toBe(true);
+    expect(withField?.variants.map((v) => v.label)).toEqual(ASYNCAPI_LABELS);
+  });
+
+  it("each variant requires document and its own combination, and hides the others' keys", () => {
+    expect(requiredByPath("Operation + Message")).toEqual({
+      "with.document": true,
+      "with.operation": true,
+      "with.server": false,
+      "with.protocol": false,
+      "with.message": true,
+      "with.authentication": false,
+    });
+    expect(requiredByPath("Channel + Subscription")).toEqual({
+      "with.document": true,
+      "with.channel": true,
+      "with.server": false,
+      "with.protocol": false,
+      "with.subscription": true,
+      "with.authentication": false,
+    });
+  });
+
+  it("variants carry their combination as identifying keys and write no constants", () => {
+    const variant = getAsyncApiVariant("Channel + Message");
+    expect(variant?.identifyingKeys).toEqual(["channel", "message"]);
+    expect(variant?.constWrites).toEqual({});
+  });
+
+  it.each<[string, Record<string, unknown>, string[]]>([
+    ["operation and message", { operation: "op", message: {} }, ["Operation + Message"]],
+    [
+      "operation and subscription",
+      { operation: "op", subscription: {} },
+      ["Operation + Subscription"],
+    ],
+    ["channel and message", { channel: "ch", message: {} }, ["Channel + Message"]],
+    ["channel and subscription", { channel: "ch", subscription: {} }, ["Channel + Subscription"]],
+    [
+      "only a subscription",
+      { subscription: {} },
+      ["Operation + Subscription", "Channel + Subscription"],
+    ],
+    ["both an operation and a channel", { operation: "op", channel: "ch", message: {} }, []],
+  ])("matchesData with %s selects %j", (_name, data, expected) => {
+    const matched: string[] = ASYNCAPI_LABELS.filter((label) =>
+      getAsyncApiVariant(label)?.matchesData({ document: ASYNCAPI_DOC, ...data }),
+    );
+    expect(matched).toEqual(expected);
+  });
+
+  it("matchesData rejects data that is not an object", () => {
+    expect(getAsyncApiVariant("Operation + Message")?.matchesData("text")).toBe(false);
+  });
+
+  it("builds one variant per combination of a generic schema", () => {
+    const field = objField({
+      type: "object",
+      properties: OBJ_PROPERTIES,
+      oneOf: [{ required: ["a", "b"] }, { required: ["a", "c"] }],
+    }) as OneOfField | undefined;
+    expect(field?.variants.map((v) => v.label)).toEqual(["B", "C"]);
+    expect(field?.variants.map((v) => v.identifyingKeys)).toEqual([["b"], ["c"]]);
+    expect(field?.variants[0]?.fields.map((f) => [f.path, f.required])).toEqual([
+      ["obj.a", true],
+      ["obj.b", true],
+    ]);
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    [
+      "names a key the object does not define",
+      {
+        properties: OBJ_PROPERTIES,
+        oneOf: [{ required: ["a", "b"] }, { required: ["a", "missing"] }],
+      },
+    ],
+    [
+      "has combinations that cannot be told apart",
+      {
+        properties: OBJ_PROPERTIES,
+        oneOf: [{ required: ["a", "b"] }, { required: ["b", "a"] }],
+      },
+    ],
+    [
+      "has a single combination",
+      {
+        properties: OBJ_PROPERTIES,
+        oneOf: [{ required: ["a", "b"] }],
+      },
+    ],
+    ["defines no properties", { oneOf: [{ required: ["a", "b"] }, { required: ["a", "c"] }] }],
+  ])("falls back to a plain field when the schema %s", (_name, constraints) => {
+    expect(objField({ type: "object", ...constraints })?.kind).not.toBe("one-of");
+  });
+
+  it.each<[string, "oneOf" | "anyOf", unknown[], Record<string, boolean>]>([
+    [
+      "anyOf",
+      "anyOf",
+      [{ required: ["a", "b"] }, { required: ["a"] }],
+      { "obj.own": true, "obj.a": true, "obj.b": false },
+    ],
+    [
+      "oneOf",
+      "oneOf",
+      [{ required: ["a", "b"] }, { required: ["a"] }],
+      { "obj.own": true, "obj.a": true, "obj.b": false },
+    ],
+    ["no candidates", "oneOf", [], { "obj.own": true, "obj.a": false, "obj.b": false }],
+  ])(
+    "merges the shared keys of %s with the object's own required list",
+    (_n, keyword, list, expected) => {
+      const field = objField({
+        type: "object",
+        required: ["own"],
+        properties: { own: { type: "string" }, a: { type: "string" }, b: { type: "string" } },
+        [keyword]: list,
+      }) as ObjectField | undefined;
+      const required: Record<string, boolean> = Object.fromEntries(
+        (field?.children ?? []).map((f) => [f.path, f.required]),
+      );
+      expect(required).toEqual(expected);
+    },
+  );
+
+  it.each<[string, unknown[], boolean | undefined]>([
+    ["required-only candidates", [{ required: ["a"] }, { required: ["a", "b"] }], true],
+    [
+      "a candidate with its own type",
+      [{ required: ["a"] }, { type: "object", required: ["a"] }],
+      false,
+    ],
+  ])("root oneOf with %s sets the shared required keys", (_name, oneOf, expected) => {
+    const fields: FormFieldDescriptor[] = schemaToFormFields({
+      type: "object",
+      properties: { a: { type: "string" }, b: { type: "string" } },
+      oneOf,
+    });
+    expect(fields.find((f) => f.path === "a")?.required).toBe(expected);
   });
 });
 
