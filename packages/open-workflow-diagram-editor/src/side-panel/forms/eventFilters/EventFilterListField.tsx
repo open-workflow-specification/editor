@@ -31,7 +31,7 @@ import { AddRowButton } from "../customFields/AddRowButton";
 import { LevelErrors, useClearFormErrors } from "../validation";
 import { GroupHeading, RHF_ENTRY_KEY } from "../FormField";
 import { EntryRow, entryLabel } from "./EntryRow";
-import { shiftEntryKey, shiftEntryTree } from "./removeListEntry";
+import { shiftEntryKeys, shiftEntryTree } from "./removeListEntry";
 
 /**
  * A list of objects in place: one drill row per entry, then "+ Add <item>". Each entry opens as
@@ -124,12 +124,7 @@ function EditableEntries({ field }: { field: EventFilterListDescriptor }) {
     if (Object.keys(mapRows).length > 0) {
       setValue(
         MAP_ROWS_KEY,
-        Object.fromEntries(
-          Object.entries(mapRows).flatMap(([path, rows]) => {
-            const next = shiftEntryKey(path, field.path, index);
-            return next === undefined ? [] : [[next, rows]];
-          }),
-        ),
+        Object.fromEntries(shiftEntryKeys(Object.entries(mapRows), field.path, index)),
       );
     }
     addedFields.shift(field.path, index);

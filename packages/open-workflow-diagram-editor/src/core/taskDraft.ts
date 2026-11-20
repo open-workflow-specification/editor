@@ -17,7 +17,7 @@
 import { getParentPath, isIndexSegment, joinPath } from "./paths";
 import { ROOT_ONE_OF_PATH } from "./schemaToFormFields";
 import { getTaskTypeKey } from "./taskTypes";
-import { isObjectNotArray, isSafeKey } from "./utils";
+import { isEmptyObject, isObjectNotArray, isSafeKey } from "./utils";
 
 /**
  * Flattens a task object into a dot-notation record (`with.endpoint.uri`), the shape the panel's
@@ -167,7 +167,6 @@ export function pruneEmptiedObjects(
 ): unknown[] {
   const before = Array.isArray(committed) ? committed : [];
   const deepestFirst = [...containers].sort((x, y) => y.split(".").length - x.split(".").length);
-  const isEmptyObject = (v: unknown) => isObjectNotArray(v) && Object.keys(v).length === 0;
   return list.map((entry, index) => {
     if (!isObjectNotArray(entry)) return entry;
     const committedEntry = isObjectNotArray(before[index]) ? before[index] : {};

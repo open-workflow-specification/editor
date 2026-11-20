@@ -25,7 +25,7 @@ import {
   type OneOfVariant,
   type SectionField,
 } from "../../../core/schemaToFormFields";
-import { isAtOrBelow, isIndexSegment, joinPath } from "../../../core/paths";
+import { entryIndexBelow, isAtOrBelow, joinPath } from "../../../core/paths";
 import { prefixFields, variantFieldsOf } from "../taskFormContext";
 
 /**
@@ -172,9 +172,9 @@ export function findShownField(
     if (field.path === path) return field;
     if (field.kind === "event-filter-list" && isAtOrBelow(path, field.path)) {
       // An entry is addressed by path alone, so a new entry resolves before it has a value.
-      const index = path.slice(field.path.length + 1).split(".")[0]!;
-      if (!isIndexSegment(index)) continue;
-      const entry = listEntryField(field, Number(index), "");
+      const index = entryIndexBelow(path, field.path);
+      if (index === undefined) continue;
+      const entry = listEntryField(field, index, "");
       if (entry.path === path) return entry;
       const found = findShownField(entry.children, path, selectVariant);
       if (found) return found;

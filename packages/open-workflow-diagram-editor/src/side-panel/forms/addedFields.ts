@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { isAtOrBelow } from "@/core/paths";
-import { shiftEntryKey } from "./eventFilters/removeListEntry";
+import { shiftEntryKeys } from "./eventFilters/removeListEntry";
 
 /**
  * The optional fields added in this draft ("Fields you can add"). Held by the edit session, above
@@ -62,15 +62,7 @@ export function useAddedFieldsState(): AddedFields & { clear(): void } {
   );
   const shift = React.useCallback(
     (listPath: string, removed: number) =>
-      setAdded(
-        (current) =>
-          new Map(
-            [...current].flatMap(([path, label]): [string, string][] => {
-              const next = shiftEntryKey(path, listPath, removed);
-              return next === undefined ? [] : [[next, label]];
-            }),
-          ),
-      ),
+      setAdded((current) => new Map(shiftEntryKeys(current, listPath, removed))),
     [],
   );
   const clear = React.useCallback(() => setAdded(NONE), []);

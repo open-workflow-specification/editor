@@ -669,6 +669,19 @@ function withDefault<T extends "string" | "boolean">(
 // ---------------------------------------------------------------------------
 
 /**
+ * The fields of one item of a repeated value (an ordered-map entry, an event filter, a keyed
+ * object's value), walked from the item's root with the item's own required keys.
+ */
+function itemFieldsOf(
+  itemSchema: Record<string, unknown>,
+  defs: Record<string, unknown> | undefined,
+  format: ContentFormat,
+): FormFieldDescriptor[] {
+  const required = Array.isArray(itemSchema.required) ? (itemSchema.required as string[]) : [];
+  return schemaToFormFields(itemSchema as DereferencedSchema, defs, new Set(required), "", format);
+}
+
+/**
  * Walks a resolved JSON Schema and produces an ordered list of
  * `FormFieldDescriptor`s that drive the task form UI.
  *
@@ -767,22 +780,13 @@ export function schemaToFormFields(
     // ── Ordered map list ────────────────────────────────────────────────────
     const orderedMapSchema = orderedMapEntrySchema(resolved, localDefs);
     if (orderedMapSchema) {
-      const itemRequired = new Set<string>(
-        Array.isArray(orderedMapSchema.required) ? (orderedMapSchema.required as string[]) : [],
-      );
       fields.push({
         kind: "ordered-map",
         path: fieldPath,
         label: deriveLabel(prop, key),
         ...withDesc(description),
         required: isRequired,
-        itemFields: schemaToFormFields(
-          orderedMapSchema as DereferencedSchema,
-          localDefs,
-          itemRequired,
-          "",
-          format,
-        ),
+        itemFields: itemFieldsOf(orderedMapSchema, localDefs, format),
       });
       continue;
     }
@@ -806,15 +810,7 @@ export function schemaToFormFields(
             label: listLabel,
             ...withDesc(description),
             required: isRequired,
-            itemFields: schemaToFormFields(
-              itemsResolved as DereferencedSchema,
-              localDefs,
-              new Set<string>(
-                Array.isArray(itemsResolved.required) ? (itemsResolved.required as string[]) : [],
-              ),
-              "",
-              format,
-            ),
+            itemFields: itemFieldsOf(itemsResolved, localDefs, format),
             itemLabel:
               typeof itemsResolved.title === "string"
                 ? titleToWords(itemsResolved.title)
@@ -1048,13 +1044,7 @@ export function schemaToFormFields(
         label: deriveLabel(prop, key),
         ...withDesc(description),
         required: isRequired,
-        itemFields: schemaToFormFields(
-          keyedValue as DereferencedSchema,
-          localDefs,
-          new Set(Array.isArray(keyedValue.required) ? (keyedValue.required as string[]) : []),
-          "",
-          format,
-        ),
+        itemFields: itemFieldsOf(keyedValue, localDefs, format),
       });
       continue;
     }

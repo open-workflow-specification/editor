@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isAtOrBelow, isIndexSegment, joinPath } from "../../../core/paths";
+import { entryIndexBelow, isIndexSegment, joinPath } from "../../../core/paths";
 import { isObjectNotArray } from "../../../core/utils";
 
 /**
@@ -22,6 +22,11 @@ import { isObjectNotArray } from "../../../core/utils";
  * removing an entry requires renumbering all subsequent entries across all stores
  * (options, texts, rows) to prevent data corruption.
  */
+
+/** An entry's index after `removed` is dropped (only later entries move). */
+function renumber(index: number, removed: number): number {
+  return index > removed ? index - 1 : index;
+}
 
 /** Renumbers one entry-keyed node: drops `removed`, moves later entries down by one. */
 function shiftEntries(node: unknown, removed: number): unknown {
@@ -35,7 +40,7 @@ function shiftEntries(node: unknown, removed: number): unknown {
     }
     const index = Number(key);
     if (index === removed) continue;
-    shifted[String(index > removed ? index - 1 : index)] = value;
+    shifted[String(renumber(index, removed))] = value;
   }
   return shifted;
 }
@@ -62,10 +67,24 @@ export function shiftEntryTree(
  * renumbered if it is under a later entry, `undefined` if it is under the removed one.
  */
 export function shiftEntryKey(key: string, listPath: string, removed: number): string | undefined {
-  if (key === listPath || !isAtOrBelow(key, listPath)) return key;
-  const [index, ...rest] = key.slice(listPath.length + 1).split(".");
-  if (index === undefined || !isIndexSegment(index)) return key;
-  const n = Number(index);
-  if (n === removed) return undefined;
-  return [joinPath(listPath, String(n > removed ? n - 1 : n)), ...rest].join(".");
+  const index = entryIndexBelow(key, listPath);
+  if (index === undefined) return key;
+  if (index === removed) return undefined;
+  const rest = key
+    .slice(listPath.length + 1)
+    .split(".")
+    .slice(1);
+  return [joinPath(listPath, String(renumber(index, removed))), ...rest].join(".");
+}
+
+/** `shiftEntryKey` over a store's entries: keys renumbered, those under the removed entry dropped. */
+export function shiftEntryKeys<V>(
+  entries: Iterable<[string, V]>,
+  listPath: string,
+  removed: number,
+): [string, V][] {
+  return [...entries].flatMap(([key, value]): [string, V][] => {
+    const next = shiftEntryKey(key, listPath, removed);
+    return next === undefined ? [] : [[next, value]];
+  });
 }

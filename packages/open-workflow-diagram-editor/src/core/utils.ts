@@ -21,6 +21,11 @@ export function isObjectNotArray(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/** True for a plain object with no own keys (`{}`); never for arrays. */
+export function isEmptyObject(v: unknown): boolean {
+  return isObjectNotArray(v) && Object.keys(v).length === 0;
+}
+
 /**
  * Returns false for keys that could reach inherited object members and
  * cause prototype pollution (__proto__, prototype, constructor).

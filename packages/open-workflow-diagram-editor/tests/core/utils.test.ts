@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { isObjectNotArray, isSafeKey } from "../../src/core/utils";
+import { isEmptyObject, isObjectNotArray, isSafeKey } from "../../src/core/utils";
 
 describe("isObjectNotArray", () => {
   it.each([
@@ -41,5 +41,17 @@ describe("isSafeKey", () => {
     ["", true],
   ])("isSafeKey(%j) is %s", (key, expected) => {
     expect(isSafeKey(key)).toBe(expected);
+  });
+});
+
+describe("isEmptyObject", () => {
+  it.each([
+    [{}, true],
+    [{ a: 1 }, false],
+    [[], false],
+    [null, false],
+    ["", false],
+  ])("isEmptyObject(%j) is %s", (value, expected) => {
+    expect(isEmptyObject(value)).toBe(expected);
   });
 });

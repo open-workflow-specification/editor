@@ -16,7 +16,13 @@
 
 import type { ErrorObject } from "ajv/dist/2020";
 import { hasPassingSchemas } from "@/core/ajvErrorUtils";
-import { getParentPath, isAtOrBelow, isPointerAtOrBelow, joinPath } from "@/core/paths";
+import {
+  getParentPath,
+  isAtOrBelow,
+  isPointerAtOrBelow,
+  joinPath,
+  nearestAncestor,
+} from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
 import type { ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD, collapseBranchGroups } from "./branchGroups";
@@ -97,12 +103,7 @@ function isMalformedContainer(params: ErrorObject["params"]): boolean {
 
 /** Nearest field at or above the path: an exact match, or the owner of a whole value. */
 function findLeaf(path: string, view: ActiveFormView): string | undefined {
-  let current = path;
-  while (current !== "") {
-    if (view.leaves.has(current)) return current;
-    current = getParentPath(current);
-  }
-  return undefined;
+  return nearestAncestor(path, view.leaves);
 }
 
 export type Classification =
@@ -125,19 +126,11 @@ function classifyInEventFilterList(path: string, view: ActiveFormView): Classifi
     if (path === listPath) return { kind: "level", path: list.parent };
     const [index = "", ...rest] = path.slice(listPath.length + 1).split(".");
     const entry = joinPath(listPath, index);
-    let itemPath = rest.join(".");
-    while (itemPath !== "") {
-      if (list.itemLeaves.has(itemPath)) return { kind: "field", path: joinPath(entry, itemPath) };
-      itemPath = getParentPath(itemPath);
-    }
-    itemPath = rest.join(".");
-    while (itemPath !== "") {
-      if (list.itemContainers.has(itemPath)) {
-        return { kind: "level", path: joinPath(entry, itemPath) };
-      }
-      itemPath = getParentPath(itemPath);
-    }
-    return { kind: "level", path: entry };
+    const itemPath = rest.join(".");
+    const leaf = nearestAncestor(itemPath, list.itemLeaves);
+    if (leaf !== undefined) return { kind: "field", path: joinPath(entry, leaf) };
+    const container = nearestAncestor(itemPath, list.itemContainers);
+    return { kind: "level", path: container === undefined ? entry : joinPath(entry, container) };
   }
   return undefined;
 }
@@ -204,9 +197,7 @@ function showsFieldsBelow(path: string, view: ActiveFormView): boolean {
 
 /** The closest container at or above the path; the task root (`""`) when none is. */
 function nearestContainer(path: string, view: ActiveFormView): string {
-  let current: string = getParentPath(path);
-  while (current !== "" && !view.containers.has(current)) current = getParentPath(current);
-  return current;
+  return nearestAncestor(getParentPath(path), view.containers) ?? "";
 }
 
 /** Records a classified error into the result; the first message of a path wins. */

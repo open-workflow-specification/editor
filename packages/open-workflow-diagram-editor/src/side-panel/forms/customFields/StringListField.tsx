@@ -76,13 +76,13 @@ export function StringListField({ field }: StringListFieldProps) {
   });
 
   // Re-sync on form.reset (node switch, undo/redo, cancel)
+  // (adjusted during render, as in `useMapRows`, not in an effect).
   const { defaultValues } = useFormState({ control: form.control });
-  const prevDefaultValuesRef = React.useRef(defaultValues);
-  React.useEffect(() => {
-    if (prevDefaultValuesRef.current === defaultValues) return;
-    prevDefaultValuesRef.current = defaultValues;
+  const [seenDefaults, setSeenDefaults] = React.useState(defaultValues);
+  if (seenDefaults !== defaultValues) {
+    setSeenDefaults(defaultValues);
     setRows(extractItems(defaultValues ? getNestedValue(defaultValues, field.path) : undefined));
-  }, [defaultValues, field.path]);
+  }
 
   // ── Mutation helpers ───────────────────────────────────────────────────────
 

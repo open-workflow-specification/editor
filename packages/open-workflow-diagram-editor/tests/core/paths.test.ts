@@ -16,6 +16,8 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  entryIndexBelow,
+  nearestAncestor,
   getParentPath,
   isAtOrBelow,
   isPointerAtOrBelow,
@@ -80,5 +82,31 @@ describe("pointerToDotPath", () => {
     ["/headers/0", "headers.0"],
   ])("pointerToDotPath(%j) is %j", (pointer, expected) => {
     expect(pointerToDotPath(pointer)).toBe(expected);
+  });
+});
+
+describe("entryIndexBelow", () => {
+  it.each([
+    ["to.all.1.with", "to.all", 1],
+    ["to.all.0", "to.all", 0],
+    ["to.all", "to.all", undefined],
+    ["to.all.x", "to.all", undefined],
+    ["to.allx.1", "to.all", undefined],
+    ["to.any.1", "to.all", undefined],
+  ])("entryIndexBelow(%j, %j) is %j", (path, listPath, expected) => {
+    expect(entryIndexBelow(path, listPath)).toBe(expected);
+  });
+});
+
+describe("nearestAncestor", () => {
+  const paths = new Set(["with", "with.data"]);
+  it.each([
+    ["with.data.a.b", "with.data"],
+    ["with.data", "with.data"],
+    ["with.other", "with"],
+    ["correlate.k", undefined],
+    ["", undefined],
+  ])("nearestAncestor(%j) is %j", (path, expected) => {
+    expect(nearestAncestor(path, paths)).toBe(expected);
   });
 });
