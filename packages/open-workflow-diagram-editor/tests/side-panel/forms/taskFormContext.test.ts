@@ -31,6 +31,7 @@ import { getNestedValue } from "../../../src/core/taskDraft";
 import {
   flattenSentinels,
   SENTINEL_KEY,
+  SENTINEL_SELF_KEY,
   sentinelPath,
 } from "../../../src/side-panel/forms/sentinels";
 import {
@@ -703,11 +704,11 @@ describe("computeSentinelDefaults", () => {
 
     expect(sentinels.raise).toEqual({
       error: {
-        __self__: "Raise Error Definition",
-        type: { __self__: "Literal Error Type" },
-        instance: { __self__: "Literal Error Instance" },
-        title: { __self__: "Literal Error Title" },
-        detail: { __self__: "Expression Error Details" },
+        [SENTINEL_SELF_KEY]: "Raise Error Definition",
+        type: { [SENTINEL_SELF_KEY]: "Literal Error Type" },
+        instance: { [SENTINEL_SELF_KEY]: "Literal Error Instance" },
+        title: { [SENTINEL_SELF_KEY]: "Literal Error Title" },
+        detail: { [SENTINEL_SELF_KEY]: "Expression Error Details" },
       },
     });
   });
@@ -719,12 +720,42 @@ describe("computeSentinelDefaults", () => {
 
     expect(sentinels.raise).toEqual({
       error: {
-        __self__: "Raise Error Reference",
-        type: { __self__: "Literal Error Type" },
-        instance: { __self__: "Literal Error Instance" },
-        title: { __self__: "Expression Error Title" },
-        detail: { __self__: "Expression Error Details" },
+        [SENTINEL_SELF_KEY]: "Raise Error Reference",
+        type: { [SENTINEL_SELF_KEY]: "Literal Error Type" },
+        instance: { [SENTINEL_SELF_KEY]: "Literal Error Instance" },
+        title: { [SENTINEL_SELF_KEY]: "Expression Error Title" },
+        detail: { [SENTINEL_SELF_KEY]: "Expression Error Details" },
       },
+    });
+  });
+
+  describe("when several variants match the data", () => {
+    const overlapping: OneOfField = {
+      kind: "one-of",
+      path: "with",
+      label: "with",
+      required: false,
+      variants: [
+        { label: "A", fields: [], matchesData: () => true, constWrites: {} },
+        { label: "B", fields: [], matchesData: () => true, constWrites: {} },
+        { label: "C", fields: [], matchesData: () => false, constWrites: {} },
+      ],
+    };
+    const labelOf = (current: Record<string, string>) =>
+      (computeSentinelDefaults([overlapping], {}, current).with as Record<string, string>)[
+        SENTINEL_SELF_KEY
+      ];
+
+    it("keeps the saved selection when it is one of the matches", () => {
+      expect(labelOf({ with: "B" })).toBe("B");
+    });
+
+    it("keeps the saved selection even when it matches no data", () => {
+      expect(labelOf({ with: "C" })).toBe("C");
+    });
+
+    it("takes the first match when nothing is saved", () => {
+      expect(labelOf({})).toBe("A");
     });
   });
 });

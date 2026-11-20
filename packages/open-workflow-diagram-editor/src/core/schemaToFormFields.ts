@@ -727,6 +727,20 @@ function buildOneOfField(
 // Core walker
 // ---------------------------------------------------------------------------
 
+/** True when every key outside a combination completes another combination, so a picker never hides valid data. */
+function areExclusiveCombinations(combinations: string[][]): boolean {
+  const allKeys: Set<string> = new Set(combinations.flat());
+  return combinations.every((own, i) =>
+    [...allKeys]
+      .filter((k) => !own.includes(k))
+      .every((k) =>
+        combinations.some(
+          (other, j) => j !== i && other.every((key) => key === k || own.includes(key)),
+        ),
+      ),
+  );
+}
+
 /**
  * The fields of one item of a repeated value (an ordered-map entry, an event filter, a keyed
  * object's value), walked from the item's root with the item's own required keys.
@@ -746,9 +760,8 @@ function itemFieldsOf(
 }
 
 /**
- * One variant per required-only candidate, each requiring its own key combination. Keys every
- * combination names stay required in all variants. Returns none when a combination cannot be
- * told apart or names an undefined key.
+ * One variant per required-only `oneOf` candidate, each requiring its own key combination.
+ * Returns none when the combinations are not distinguishable or not provably exclusive.
  */
 function buildCombinationVariants(
   resolved: Record<string, unknown>,
@@ -761,6 +774,7 @@ function buildCombinationVariants(
   if (!properties) return [];
   const combinations: string[][] = candidates.map((c) => requiredList(c).map(String));
   if (combinations.some((keys) => keys.some((k) => !(k in properties)))) return [];
+  if (!areExclusiveCombinations(combinations)) return [];
 
   const shared: Set<string> = requiredKeys(resolved);
   const identifying: string[][] = combinations.map((keys) => keys.filter((k) => !shared.has(k)));
@@ -1068,7 +1082,8 @@ export function schemaToFormFields(
             continue;
           }
           // Single structural variant — fall through to the plain object branch.
-        } else {
+        } else if (resolved.oneOf !== undefined) {
+          // `anyOf` permits several complete combinations at once, so it never gets a picker.
           const combinationVariants = buildCombinationVariants(
             resolved,
             candidates,

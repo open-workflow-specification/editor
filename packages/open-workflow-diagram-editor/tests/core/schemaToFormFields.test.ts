@@ -790,6 +790,20 @@ describe("schemaToFormFields required-only oneOf combinations", () => {
       },
     ],
     ["defines no properties", { oneOf: [{ required: ["a", "b"] }, { required: ["a", "c"] }] }],
+    [
+      "has oneOf combinations that are not provably exclusive",
+      {
+        properties: { ...OBJ_PROPERTIES, d: { type: "string" } },
+        oneOf: [{ required: ["a", "b"] }, { required: ["c", "d"] }],
+      },
+    ],
+    [
+      "uses anyOf, which permits several complete combinations",
+      {
+        properties: OBJ_PROPERTIES,
+        anyOf: [{ required: ["a", "b"] }, { required: ["a", "c"] }],
+      },
+    ],
   ])("falls back to a plain field when the schema %s", (_name, constraints) => {
     expect(objField({ type: "object", ...constraints })?.kind).not.toBe("one-of");
   });
