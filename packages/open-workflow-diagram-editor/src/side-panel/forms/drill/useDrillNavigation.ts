@@ -23,9 +23,11 @@ import {
   drillLabel,
   FIRST_TO_FILL,
   isInlineLevel,
+  isListEntry,
   levelFieldsOf,
   needsAtLeastOne,
   resolveDrillStack,
+  type DrillTarget,
   type VariantSelector,
 } from "./drill";
 
@@ -89,12 +91,15 @@ export function useDrillNavigation({
 }: DrillNavigationOptions): DrillNavigation {
   const { t } = useI18n();
   const [drillStack, setDrillStack] = React.useState<string[]>([]);
+  // A list entry has no label of its own (its row's title is a value), so `open` records it.
+  const [entryLabels, setEntryLabels] = React.useState<Readonly<Record<string, string>>>({});
   const [announcement, setAnnouncement] = React.useState("");
   const [drillNodeId, setDrillNodeId] = React.useState(nodeId);
   if (drillNodeId !== nodeId) {
     // Another node opens at its top level (adjusted during render, not synced in an effect).
     setDrillNodeId(nodeId);
     setDrillStack([]);
+    setEntryLabels({});
     // Cleared too, so opening the same level on the new node is announced again.
     setAnnouncement("");
   }
@@ -112,6 +117,7 @@ export function useDrillNavigation({
       open(path, label, { focus = "back" } = {}) {
         pendingFocus.current = { kind: focus };
         setDrillStack([...levels.map((level) => level.path), path]);
+        setEntryLabels((labels) => ({ ...labels, [path]: label }));
         setAnnouncement(label);
       },
       levelPath: levels[levels.length - 1]?.path,
@@ -120,6 +126,9 @@ export function useDrillNavigation({
     [levels],
   );
 
+  const levelLabel = (level: DrillTarget) =>
+    isListEntry(level) ? (entryLabels[level.path] ?? "") : drillLabel(level, t);
+
   const goTo = (depth: number) => {
     const from = levels[depth];
     if (from === undefined) return;
@@ -127,7 +136,7 @@ export function useDrillNavigation({
     pendingFocus.current = { kind: "row", path: from.path };
     setDrillStack(levels.slice(0, depth).map((level) => level.path));
     const parent = levels[depth - 1];
-    setAnnouncement(parent === undefined ? taskName : drillLabel(parent, t));
+    setAnnouncement(parent === undefined ? taskName : levelLabel(parent));
   };
 
   // Focus the back button after drilling in, or the row a level was opened from after leaving
@@ -156,12 +165,13 @@ export function useDrillNavigation({
     return filterReadOnlyFields(levelFieldsOf(current, selectVariant), task);
   }, [current, fields, isReadOnly, task, selectVariant]);
 
-  const trail = levels.map((level) => drillLabel(level, t));
+  const trail = levels.map(levelLabel);
 
   // The top level, and a level with a single field (a lone object, or a map's own editor), show
   // their objects and maps inline.
   // Counted on the fields shown, so read-only's filtered level follows the same rule.
-  const inlineLevels = current === undefined || isInlineLevel(levelFields);
+  // An entry's top level is laid out like the task's: its objects and maps stand inline.
+  const inlineLevels = current === undefined || isListEntry(current) || isInlineLevel(levelFields);
 
   const levelOneOf = current?.kind === "one-of" ? current : undefined;
 

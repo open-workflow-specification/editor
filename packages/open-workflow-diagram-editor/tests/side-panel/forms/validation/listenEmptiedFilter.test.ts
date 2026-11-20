@@ -60,10 +60,11 @@ describe("listen with an emptied event filter", () => {
 
     const errors = collectTaskErrors("listen", values, fields);
 
-    expect(errors.fieldErrors).toEqual({
+    // A level error: the emptied `with` shows it above its "Add at least one" chips.
+    expect(errors.levelErrors).toEqual({
       "listen.to.any.0.with": "must NOT have fewer than 1 properties",
     });
-    expect(errors.levelErrors).toEqual({});
+    expect(errors.fieldErrors).toEqual({});
     expect(count(errors)).toBe(1);
   });
 
@@ -93,10 +94,10 @@ describe("listen with an emptied event filter", () => {
 
     // Seeding uses task-level validation, falling back to the workflow errors: both agree.
     for (const errors of [seeded, taskLevel]) {
-      expect(errors.fieldErrors).toEqual({
+      expect(errors.levelErrors).toEqual({
         "listen.to.any.0.with": "must NOT have fewer than 1 properties",
       });
-      expect(errors.levelErrors).toEqual({});
+      expect(errors.fieldErrors).toEqual({});
       expect(errors.unplacedErrors).toEqual({});
       expect(count(errors)).toBe(1);
     }

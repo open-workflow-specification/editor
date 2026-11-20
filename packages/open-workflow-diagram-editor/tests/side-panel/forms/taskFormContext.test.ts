@@ -29,13 +29,17 @@ import {
 import { getFormFieldsForNodeType } from "../../../src/core";
 import { getNestedValue } from "../../../src/core/taskDraft";
 import {
+  flattenSentinels,
+  SENTINEL_KEY,
+  sentinelPath,
+} from "../../../src/side-panel/forms/sentinels";
+import {
   COMMON_FIELDS_PATH,
   forEachField,
   type EnumField,
   type FormFieldDescriptor,
   type OneOfField,
 } from "../../../src/core/schemaToFormFields";
-import { sentinelPath } from "../../../src/side-panel/forms/sentinels";
 import { RAISE_BOTH_ERROR_SHAPES_WORKFLOW, SET_EXAMPLE_WORKFLOW } from "../../fixtures/workflows";
 import { nodeAt, parseFixture } from "../../test-utils/workflow-helpers";
 
@@ -72,6 +76,13 @@ describe("getNestedValue", () => {
 
   it("returns undefined when an intermediate segment is an array", () => {
     expect(getNestedValue({ a: [1, 2] }, "a.b")).toBeUndefined();
+  });
+
+  it("reads into list entries", () => {
+    const task = { listen: { to: { all: [{ with: { type: "a" } }, { with: { type: "b" } }] } } };
+    expect(getNestedValue(task, "listen.to.all.1.with.type")).toBe("b");
+    expect(getNestedValue(task, "listen.to.all.2.with")).toBeUndefined();
+    expect(getNestedValue(task, "listen.to.all.x")).toBeUndefined();
   });
 
   it("returns undefined for an empty data object", () => {
@@ -427,6 +438,7 @@ describe("collectFormListPaths", () => {
             label: "To",
             required: false,
             itemFields: [],
+            itemLabel: "Event",
           },
         ],
       },
@@ -714,5 +726,29 @@ describe("computeSentinelDefaults", () => {
         detail: { __self__: "Expression Error Details" },
       },
     });
+  });
+});
+
+describe("computeSentinelDefaults inside event-filter lists", () => {
+  it("seeds each committed entry's options from its own data", () => {
+    const task = {
+      listen: { to: { all: [{ with: { source: "${ .s }" } }, { with: { source: "https://x" } }] } },
+    };
+    const fields = getFormFieldsForNodeType("listen");
+    const flat = flattenSentinels({ [SENTINEL_KEY]: computeSentinelDefaults(fields, task) });
+    expect(flat[sentinelPath("listen.to.all.0.with.source")]).toMatch(/Expression/);
+    expect(flat[sentinelPath("listen.to.all.1.with.source")]).not.toMatch(/Expression/);
+    expect(flat[sentinelPath("listen.to.all.1.with.source")]).toBeDefined();
+  });
+});
+
+describe("collectWholeValuePaths: keyed objects", () => {
+  it("treats correlate as one whole value", () => {
+    const task = {
+      listen: { to: { one: { with: { type: "t" }, correlate: { k: { from: ".a" } } } } },
+    };
+    expect(collectWholeValuePaths(getFormFieldsForNodeType("listen"), task)).toContain(
+      "listen.to.one.correlate",
+    );
   });
 });

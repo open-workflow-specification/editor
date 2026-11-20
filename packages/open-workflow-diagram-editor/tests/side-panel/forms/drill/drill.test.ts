@@ -17,6 +17,10 @@
 import { describe, expect, it } from "vitest";
 import {
   drillLabel,
+  findShownField,
+  isFixedField,
+  isListEntry,
+  rendersAsDrillRow,
   levelFieldsOf,
   oneOfDrills,
   resolveDrillStack,
@@ -28,7 +32,9 @@ import type {
   ObjectField,
   OneOfField,
   SectionField,
+  EventFilterListField,
 } from "../../../../src/core/schemaToFormFields";
+import { getFormFieldsForNodeType } from "../../../../src/core";
 
 const str = (path: string): FormFieldDescriptor => ({
   kind: "string",
@@ -199,5 +205,46 @@ describe("drillLabel", () => {
     ["a one-of, by its label rather than its variant's", endpoint, "Endpoint"],
   ] as const)("names %s", (_name, field, expected) => {
     expect(drillLabel(field, t)).toBe(expected);
+  });
+});
+
+describe("event-filter-list entries", () => {
+  const listenFields = getFormFieldsForNodeType("listen");
+  // Shows the All option of `listen.to`, and the first option of every other one-of.
+  const selectAll: VariantSelector = (field) =>
+    field.path === "listen.to"
+      ? field.variants.find((v) => v.fields.some((f) => f.path === "listen.to.all"))
+      : field.variants[0];
+  const list = findShownField(listenFields, "listen.to.all", selectAll) as EventFilterListField;
+
+  it("resolves <list>.<n> to a synthesized entry and paths inside it", () => {
+    expect(list.kind).toBe("event-filter-list");
+    const entry = findShownField(listenFields, "listen.to.all.1", selectAll);
+    expect(entry).toMatchObject({
+      kind: "object",
+      path: "listen.to.all.1",
+      entryOf: "listen.to.all",
+    });
+    expect(entry && isListEntry(entry)).toBe(true);
+    expect(findShownField(listenFields, "listen.to.all.1.with.type", selectAll)?.kind).toBe(
+      "string",
+    );
+    expect(findShownField(listenFields, "listen.to.all.x", selectAll)).toBeUndefined();
+  });
+
+  it("resolveDrillStack opens an entry level, then a level inside it", () => {
+    expect(
+      resolveDrillStack(
+        listenFields,
+        ["listen.to", "listen.to.all.0", "listen.to.all.0.with"],
+        selectAll,
+      ).map((l) => l.path),
+    ).toEqual(["listen.to", "listen.to.all.0", "listen.to.all.0.with"]);
+  });
+
+  it("an event-filter list is fixed and renders in place, never as a row", () => {
+    expect(isFixedField(list)).toBe(true);
+    expect(rendersAsDrillRow(list, false)).toBe(false);
+    expect(isListEntry(list)).toBe(false);
   });
 });

@@ -128,41 +128,16 @@ export function DrillRow({
     ).length;
     summary = `${setCount} ${t("sidebar.drill.of")} ${field.children.length} ${t("sidebar.drill.set")}`;
   }
-  const changedText = `${changedCount} ${t("sidebar.form.changed")}`;
-  const errorText = `${errorCount} ${t(errorCount === 1 ? "sidebar.drill.error" : "sidebar.drill.errors")}`;
-  const ariaLabel = [
-    `${t("sidebar.drill.open")} ${label}`,
-    summary,
-    ...(changedCount > 0 ? [changedText] : []),
-    ...(errorCount > 0 ? [errorText] : []),
-  ].join(", ");
-
   const row = (
-    <button
-      type="button"
-      className={`dec-form-drill-row${errorCount > 0 ? " has-error" : ""}`}
-      data-drill-path={field.path}
-      aria-label={ariaLabel}
-      onClick={() => open(field.path, label)}
-    >
-      <span className="dec-form-drill-row-text">
-        <span className="dec-form-drill-row-label">
-          {label}
-          {field.required && (
-            <span className="dec-form-field-required" aria-hidden="true">
-              {" "}
-              *
-            </span>
-          )}
-        </span>
-        <span className="dec-form-drill-row-summary">{summary}</span>
-      </span>
-      <span className="dec-form-drill-row-pills">
-        {errorCount > 0 && <span className="dec-form-drill-pill error">{errorText}</span>}
-        {changedCount > 0 && <span className="dec-form-drill-pill changed">{changedText}</span>}
-      </span>
-      <ChevronRight className="dec-form-drill-row-chevron" aria-hidden="true" />
-    </button>
+    <DrillRowButton
+      path={field.path}
+      label={label}
+      required={field.required}
+      summary={summary}
+      {...(changedCount > 0 ? { changedText: `${changedCount} ${t("sidebar.form.changed")}` } : {})}
+      errorCount={errorCount}
+      onOpen={() => open(field.path, label)}
+    />
   );
   // A "Custom fields" map's help: from editor not the schema as it has none
   const help =
@@ -177,5 +152,69 @@ export function DrillRow({
     </div>
   ) : (
     row
+  );
+}
+
+/**
+ * The button of a drill row: label (a value's in mono), summary, error and changed pills, chevron.
+ * Shared by `DrillRow` and event-filter-list entry rows, which only differ in how they summarise.
+ */
+export function DrillRowButton({
+  path,
+  label,
+  labelIsValue = false,
+  required = false,
+  summary,
+  changedText,
+  errorCount,
+  onOpen,
+}: {
+  path: string;
+  label: string;
+  /** The label is a value (an event's type), shown in mono. */
+  labelIsValue?: boolean;
+  required?: boolean;
+  summary: string;
+  /** The "changed" pill's text; omitted when nothing changed. */
+  changedText?: string;
+  errorCount: number;
+  onOpen: () => void;
+}) {
+  const { t } = useI18n();
+  const errorText = `${errorCount} ${t(errorCount === 1 ? "sidebar.drill.error" : "sidebar.drill.errors")}`;
+  const ariaLabel = [
+    `${t("sidebar.drill.open")} ${label}`,
+    summary,
+    ...(changedText !== undefined ? [changedText] : []),
+    ...(errorCount > 0 ? [errorText] : []),
+  ].join(", ");
+  return (
+    <button
+      type="button"
+      className={`dec-form-drill-row${errorCount > 0 ? " has-error" : ""}`}
+      data-drill-path={path}
+      aria-label={ariaLabel}
+      onClick={onOpen}
+    >
+      <span className="dec-form-drill-row-text">
+        <span className={`dec-form-drill-row-label${labelIsValue ? " is-value" : ""}`}>
+          {label}
+          {required && (
+            <span className="dec-form-field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+          )}
+        </span>
+        <span className="dec-form-drill-row-summary">{summary}</span>
+      </span>
+      <span className="dec-form-drill-row-pills">
+        {errorCount > 0 && <span className="dec-form-drill-pill error">{errorText}</span>}
+        {changedText !== undefined && (
+          <span className="dec-form-drill-pill changed">{changedText}</span>
+        )}
+      </span>
+      <ChevronRight className="dec-form-drill-row-chevron" aria-hidden="true" />
+    </button>
   );
 }

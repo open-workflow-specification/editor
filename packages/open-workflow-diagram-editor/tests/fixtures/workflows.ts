@@ -1006,3 +1006,40 @@ export const EMIT_CUSTOM_FIELDS_WORKFLOW = {
     },
   ],
 };
+
+/** Listen tasks whose event filters are a list: two `all` filters, and one `any` with `until`. */
+export const LISTEN_FILTERS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "listen-filters", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      awaitOrder: {
+        listen: {
+          to: {
+            all: [
+              { with: { type: "com.acme.a", source: "https://a" } },
+              {
+                with: {
+                  type: "com.acme.b",
+                  source: "https://b",
+                  datacontenttype: "application/json",
+                  tenantid: "acme-eu",
+                },
+                correlate: { orderId: { from: ".order.id", expect: "${ .id }" } },
+              },
+            ],
+          },
+        },
+      },
+    },
+    {
+      awaitAny: {
+        listen: {
+          to: {
+            any: [{ with: { type: "com.acme.ping" } }],
+            until: "${ .done }",
+          },
+        },
+      },
+    },
+  ],
+};

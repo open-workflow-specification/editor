@@ -315,7 +315,8 @@ describe("classifyWorkflowErrors on a one-of with an active variant", () => {
       }),
     ]);
 
-    expect(result.fieldErrors).toEqual({ "listen.to.any": "must have required property 'any'" });
+    // The list's own error goes to the level that shows the list.
+    expect(result.levelErrors).toEqual({ "listen.to": "must have required property 'any'" });
   });
 
   it("drops unevaluatedProperties errors as noise", () => {
@@ -342,7 +343,7 @@ describe("classifyWorkflowErrors on a one-of with an active variant", () => {
       }),
     ]);
 
-    expect(result.fieldErrors).toEqual({
+    expect(result.levelErrors).toEqual({
       "listen.to.any.0.with": "must NOT have fewer than 1 properties",
     });
   });

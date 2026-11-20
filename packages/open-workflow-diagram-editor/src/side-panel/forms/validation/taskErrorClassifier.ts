@@ -16,9 +16,14 @@
 
 import type { ErrorObject } from "ajv/dist/2020";
 import { hasPassingSchemas } from "@/core/ajvErrorUtils";
-import { getParentPath, isAtOrBelow, isPointerAtOrBelow, joinPath } from "@/core/paths";
+import {
+  getParentPath,
+  isAtOrBelow,
+  isPointerAtOrBelow,
+  joinPath,
+  nearestAncestor,
+} from "@/core/paths";
 import type { FormFieldDescriptor } from "@/core/schemaToFormFields";
-import { EVENT_PROPERTY_KEYS } from "../customFields/eventFilterProperties";
 import type { ActiveFormView } from "./activeFormView";
 import { GROUP_KEYWORD, collapseBranchGroups } from "./branchGroups";
 import { ajvErrorToFieldPath, buildOptionalSectionSet, isSectionEmpty } from "./fieldErrorMapper";
@@ -98,12 +103,7 @@ function isMalformedContainer(params: ErrorObject["params"]): boolean {
 
 /** Nearest field at or above the path: an exact match, or the owner of a whole value. */
 function findLeaf(path: string, view: ActiveFormView): string | undefined {
-  let current = path;
-  while (current !== "") {
-    if (view.leaves.has(current)) return current;
-    current = getParentPath(current);
-  }
-  return undefined;
+  return nearestAncestor(path, view.leaves);
 }
 
 export type Classification =
@@ -115,22 +115,22 @@ export type Classification =
 const DROP: Classification = { kind: "drop" };
 
 /**
- * An event-filter list renders each item itself, so an error inside an item belongs to the part
- * of the item the list shows. The list itself is not a place for an error that names an item.
+ * An event-filter-list entry renders at `<list>.<i>.<item path>`. An error inside one belongs to the
+ * entry's field at or above it, else to the deepest of the entry's objects above it (its `with`
+ * for `minProperties` or an extension attribute), else to the entry's own level. An error on the
+ * list itself goes to the level that shows the list.
  */
 function classifyInEventFilterList(path: string, view: ActiveFormView): Classification | undefined {
-  for (const listPath of view.eventFilterLists) {
-    if (path === listPath || !isAtOrBelow(path, listPath)) continue;
-    const [index, part, property] = path.slice(listPath.length + 1).split(".");
-    const item = joinPath(listPath, index ?? "");
-    if (part === "with") {
-      const shown = property !== undefined && EVENT_PROPERTY_KEYS.has(property);
-      return {
-        kind: "field",
-        path: shown ? joinPath(joinPath(item, part), property) : `${item}.with`,
-      };
-    }
-    return { kind: "field", path: part === undefined ? item : joinPath(item, part) };
+  for (const [listPath, list] of view.eventFilterLists) {
+    if (!isAtOrBelow(path, listPath)) continue;
+    if (path === listPath) return { kind: "level", path: list.parent };
+    const [index = "", ...rest] = path.slice(listPath.length + 1).split(".");
+    const entry = joinPath(listPath, index);
+    const itemPath = rest.join(".");
+    const leaf = nearestAncestor(itemPath, list.itemLeaves);
+    if (leaf !== undefined) return { kind: "field", path: joinPath(entry, leaf) };
+    const container = nearestAncestor(itemPath, list.itemContainers);
+    return { kind: "level", path: container === undefined ? entry : joinPath(entry, container) };
   }
   return undefined;
 }
@@ -197,9 +197,7 @@ function showsFieldsBelow(path: string, view: ActiveFormView): boolean {
 
 /** The closest container at or above the path; the task root (`""`) when none is. */
 function nearestContainer(path: string, view: ActiveFormView): string {
-  let current: string = getParentPath(path);
-  while (current !== "" && !view.containers.has(current)) current = getParentPath(current);
-  return current;
+  return nearestAncestor(getParentPath(path), view.containers) ?? "";
 }
 
 /** Records a classified error into the result; the first message of a path wins. */

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import { getParentPath, joinPath } from "./paths";
+import { getParentPath, isIndexSegment, joinPath } from "./paths";
 import { ROOT_ONE_OF_PATH } from "./schemaToFormFields";
 import { getTaskTypeKey } from "./taskTypes";
-import { isObjectNotArray, isSafeKey } from "./utils";
+import { isEmptyObject, isObjectNotArray, isSafeKey } from "./utils";
 
 /**
  * Flattens a task object into a dot-notation record (`with.endpoint.uri`), the shape the panel's
@@ -69,7 +69,9 @@ export function getNestedValue(data: Record<string, unknown>, path: string): unk
   let current: unknown = data;
   for (const part of parts) {
     if (current === null || current === undefined) return undefined;
-    if (typeof current !== "object" || Array.isArray(current)) return undefined;
+    if (typeof current !== "object") return undefined;
+    // A numeric segment indexes a list (an event-filter-list entry: `to.all.1.with`).
+    if (Array.isArray(current) && !isListIndexInto(current, part)) return undefined;
     if (!Object.prototype.hasOwnProperty.call(current, part)) return undefined;
     current = (current as Record<string, unknown>)[part];
   }
@@ -85,13 +87,20 @@ export function setNestedPath(obj: Record<string, unknown>, dotPath: string, val
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i]!;
     const next = Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
-    current[part] =
-      next && typeof next === "object" && !Array.isArray(next)
+    // Copy on write: a list entry path (`all.1.with`) copies the list, never replaces it.
+    current[part] = isListIndexInto(next, parts[i + 1]!)
+      ? [...next]
+      : next && typeof next === "object" && !Array.isArray(next)
         ? { ...(next as Record<string, unknown>) }
         : {};
     current = current[part] as Record<string, unknown>;
   }
   current[parts[parts.length - 1]!] = value;
+}
+
+/** Whether `segment` indexes into `value` as a list entry (`all.1` on an array). */
+export function isListIndexInto(value: unknown, segment: string): value is unknown[] {
+  return Array.isArray(value) && isIndexSegment(segment);
 }
 
 /**
@@ -146,6 +155,32 @@ export function pruneEmptyLeaves<T>(value: T): T {
   return result as T;
 }
 
+/**
+ * Prune empty `containers` from draft list entries. Remove any `containers` path that became
+ * `{}` in the draft (was non-empty in committed version). Process deepest-first to cascade
+ * removal up to emptied parents. Note: Only `containers` are pruned - other `{}` values may be unintentional
+ */
+export function pruneEmptiedObjects(
+  list: unknown[],
+  committed: unknown,
+  containers: readonly string[],
+): unknown[] {
+  const before = Array.isArray(committed) ? committed : [];
+  const deepestFirst = [...containers].sort((x, y) => y.split(".").length - x.split(".").length);
+  return list.map((entry, index) => {
+    if (!isObjectNotArray(entry)) return entry;
+    const committedEntry = isObjectNotArray(before[index]) ? before[index] : {};
+    let result: Record<string, unknown> = entry;
+    for (const path of deepestFirst) {
+      if (!isEmptyObject(getNestedValue(result, path))) continue;
+      if (isEmptyObject(getNestedValue(committedEntry, path))) continue;
+      result = deepClone(result);
+      deletePath(result, path.split("."), { prune: false });
+    }
+    return result;
+  });
+}
+
 export type ApplyDirtyOptions = {
   /** Paths dirty solely because the variant selector (sentinel) changed. */
   sentinelPaths?: Set<string>;
@@ -164,6 +199,11 @@ export type ApplyDirtyOptions = {
    * empty leaves pruned, because clearing a control is how you remove a key there.
    */
   formListPaths?: Set<string>;
+  /**
+   * Prune emptied `with` and `correlate` containers from event-filter entries.
+   * Exception: preserve switch case names even when their content is empty
+   */
+  eventFilterLists?: ReadonlyMap<string, readonly string[]>;
   /** Presence key of each selected variant on screen (e.g. run -> container). */
   sentinelPresenceKeys?: Map<string, string>;
 };
@@ -191,6 +231,7 @@ export function applyDirtyValues(
     sentinelConstWrites = new Map(),
     sentinelStalePaths = new Map(),
     formListPaths = new Set(),
+    eventFilterLists = new Map(),
     sentinelPresenceKeys = new Map(),
   }: ApplyDirtyOptions = {},
 ): Record<string, unknown> {
@@ -209,7 +250,15 @@ export function applyDirtyValues(
         protectedKey: taskTypeKey,
       });
     } else if (Array.isArray(value) && formListPaths.has(dotPath)) {
-      setPath(result, dotPath.split("."), pruneEmptyLeaves(value));
+      const pruned = pruneEmptyLeaves(value);
+      const containers = eventFilterLists.get(dotPath);
+      setPath(
+        result,
+        dotPath.split("."),
+        containers === undefined
+          ? pruned
+          : pruneEmptiedObjects(pruned, getNestedValue(original, dotPath), containers),
+      );
     } else {
       setPath(result, dotPath.split("."), value);
     }
