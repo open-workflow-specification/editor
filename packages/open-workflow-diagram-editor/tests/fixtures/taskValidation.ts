@@ -31,7 +31,7 @@ export interface InvalidTaskCase extends TaskCase {
   levelPaths: string[];
 }
 
-const ASYNCAPI_DOC = { endpoint: "https://example.com/a.json" };
+export const ASYNCAPI_DOC = { endpoint: "https://example.com/a.json" };
 const HTTP_CHILD = { call: "http", with: { method: "get", endpoint: "https://example.com" } };
 
 /** Schema-valid tasks: one or more per node type, covering every variant family. */
@@ -86,11 +86,31 @@ export const VALID_TASKS: TaskCase[] = [
     nodeType: "call",
     task: {
       call: "asyncapi",
-      with: {
-        document: { endpoint: "https://example.com/a.json" },
-        operation: "op",
-        message: { payload: { a: 1 } },
-      },
+      with: { document: ASYNCAPI_DOC, operation: "op", message: { payload: { a: 1 } } },
+    },
+  },
+  {
+    name: "call asyncapi operation with subscription",
+    nodeType: "call",
+    task: {
+      call: "asyncapi",
+      with: { document: ASYNCAPI_DOC, operation: "op", subscription: { consume: { amount: 1 } } },
+    },
+  },
+  {
+    name: "call asyncapi channel with message",
+    nodeType: "call",
+    task: {
+      call: "asyncapi",
+      with: { document: ASYNCAPI_DOC, channel: "ch", message: { payload: { a: 1 } } },
+    },
+  },
+  {
+    name: "call asyncapi channel with subscription",
+    nodeType: "call",
+    task: {
+      call: "asyncapi",
+      with: { document: ASYNCAPI_DOC, channel: "ch", subscription: { consume: { amount: 1 } } },
     },
   },
   {
@@ -257,14 +277,21 @@ export const INVALID_TASKS: InvalidTaskCase[] = [
     nodeType: "call",
     task: { call: "asyncapi", with: { document: ASYNCAPI_DOC, operation: "op" } },
     fieldPaths: [],
-    levelPaths: ["with"],
+    levelPaths: ["with.message"],
+  },
+  {
+    name: "call asyncapi with a channel but no message or subscription",
+    nodeType: "call",
+    task: { call: "asyncapi", with: { document: ASYNCAPI_DOC, channel: "ch" } },
+    fieldPaths: [],
+    levelPaths: ["with.message"],
   },
   {
     name: "call asyncapi with only a document",
     nodeType: "call",
     task: { call: "asyncapi", with: { document: ASYNCAPI_DOC } },
-    fieldPaths: [],
-    levelPaths: ["with"],
+    fieldPaths: ["with.operation"],
+    levelPaths: ["with.message"],
   },
   {
     name: "run container without image",

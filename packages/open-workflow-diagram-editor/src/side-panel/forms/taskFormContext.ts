@@ -80,7 +80,7 @@ export function dropSnapshotsBelow(snapshots: VariantSnapshots, path: string): v
 
 /**
  * Returns the index of the currently displayed one-of variant.
- * Priority: sentinel selection > data match > first variant. Used by both form and drill navigation.
+ * Priority: saved sentinel label > data match > first variant. Used by form, drill and defaults.
  */
 export function selectedVariantIndex(
   field: OneOfField,
@@ -600,20 +600,7 @@ function collectSentinelDefaults(
         });
       }
     } else if (f.kind === "one-of") {
-      const dataAtPath = oneOfData(f, taskData);
-      const idx = f.variants.findIndex((v) => v.matchesData(dataAtPath));
-      let selectedIdx: number;
-      if (idx >= 0) {
-        selectedIdx = idx;
-      } else {
-        // No variant matches — fall back to the sentinel label, then to 0.
-        const fallbackLabel = currentSentinels[f.path];
-        const fallbackIdx = fallbackLabel
-          ? f.variants.findIndex((v) => v.label === fallbackLabel)
-          : -1;
-        selectedIdx = fallbackIdx >= 0 ? fallbackIdx : 0;
-      }
-      const selected = f.variants[selectedIdx];
+      const selected = f.variants[selectedVariantIndex(f, currentSentinels[f.path], taskData)];
       setNestedSentinel(result, f.path, selected?.label ?? "", overwrite);
       if (selected) {
         collectSentinelDefaults(selected.fields, taskData, currentSentinels, result, overwrite);
@@ -629,16 +616,13 @@ function collectSentinelDefaults(
 
 /**
  * The sentinel value for every one-of the task's fields can show, inside uncommitted variants
- * too (see `collectSentinelDefaults`): the variant the committed data matches, else
- * `currentSentinels`' label for it, else the first variant. Nested under `SENTINEL_KEY` in the
- * form's default values.
+ * too (see `collectSentinelDefaults`), chosen as in `selectedVariantIndex`. Nested under
+ * `SENTINEL_KEY` in the form's default values.
  */
 export function computeSentinelDefaults(
   fields: FormFieldDescriptor[],
   taskData: Record<string, unknown>,
-  /** Optional: current sentinel label values keyed by field path (dot-notation).
-   *  Used as a fallback when no variant matches the committed data — preserves
-   *  the user's last variant selection instead of snapping back to index 0. */
+  /** Optional: saved sentinel label values keyed by field path (dot-notation). */
   currentSentinels: Record<string, string> = {},
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
