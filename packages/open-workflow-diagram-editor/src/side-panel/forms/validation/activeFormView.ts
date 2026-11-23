@@ -24,7 +24,7 @@ import { collectLeafKinds, selectedVariantIndexFromSentinels } from "../taskForm
 
 /**
  * Keys that identify the variants of a one-of: the selected variant's, and those of its other
- * variants. A variant is identified by its presence key, or else by its only required property.
+ * variants. A variant is identified by its identifying keys, or else by its presence key.
  */
 export interface PresenceKeys {
   active: Set<string>;
@@ -95,8 +95,10 @@ export function buildActiveFormView(
         const selected = selectedVariantIndexFromSentinels(field, sentinels, formValues);
         const entry = view.presence.get(key) ?? { active: new Set(), other: new Set() };
         field.variants.forEach((variant, index) => {
-          const identifier = variant.requiredKey ?? variant.presenceKey;
-          if (identifier !== undefined) {
+          const identifiers =
+            variant.identifyingKeys ??
+            (variant.presenceKey !== undefined ? [variant.presenceKey] : []);
+          for (const identifier of identifiers) {
             (index === selected ? entry.active : entry.other).add(identifier);
           }
         });
