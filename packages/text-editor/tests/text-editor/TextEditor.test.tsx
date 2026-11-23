@@ -109,7 +109,7 @@ describe("TextEditor", () => {
         }),
       );
     });
-
+    ("");
     it("updates Monaco's accessible label without recreating the editor", () => {
       const { rerenderEditor } = renderEditor({ ariaLabel: "Workflow JSON source" });
       mockEditorUpdateOptions.mockClear();
