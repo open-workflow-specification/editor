@@ -99,13 +99,12 @@ describe("TextEditor", () => {
       );
     });
 
-    it("enables Monaco accessibility support and passes the accessible label", () => {
+    it("passes the accessible label to Monaco", () => {
       const { container } = renderEditor({ ariaLabel: "Workflow JSON source" });
 
       expect(mockEditorCreate).toHaveBeenCalledWith(
         container.firstElementChild,
         expect.objectContaining({
-          accessibilitySupport: "on",
           ariaLabel: "Workflow JSON source",
         }),
       );

@@ -79,7 +79,6 @@ export const TextEditor = ({
       model,
       readOnly: isReadOnly,
       ariaLabel,
-      accessibilitySupport: "on",
       codeLens: !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
