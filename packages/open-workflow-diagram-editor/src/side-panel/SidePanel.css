@@ -415,7 +415,6 @@
   .dec-root .dec-form-breadcrumb-back:focus-visible,
   .dec-root .dec-form-breadcrumb-crumb:focus-visible,
   .dec-root .dec-form-drill-row:focus-visible,
-  .dec-root .dec-task-list-chip.is-selectable:focus-visible,
   .dec-root .dec-form-add-chip:focus-visible,
   .dec-root .dec-form-remove-btn:focus-visible {
     outline: 2px solid rgb(var(--dec-selected-rgb));
@@ -667,7 +666,7 @@
     @apply dec:flex dec:flex-col dec:gap-2;
   }
 
-  /* ── Group heading (an inline object, Flow) and divider (Advanced) ─ */
+  /* ── Group heading (an inline object, Flow) and divider (Common fields) ─ */
 
   .dec-root .dec-form-group {
     @apply dec:flex dec:flex-col dec:gap-2;
@@ -741,34 +740,15 @@
   }
 
   .dec-root .dec-task-list-chip {
-    @apply dec:flex dec:w-full dec:items-center dec:gap-1.5
+    @apply dec:flex dec:items-center dec:gap-1.5
       dec:rounded-sm
       dec:border dec:border-gray-200
       dec:bg-white
-      dec:px-2 dec:py-1 dec:text-left;
+      dec:px-2 dec:py-1;
   }
 
   .dec-root.dark .dec-task-list-chip {
     @apply dec:border-gray-700 dec:bg-gray-800;
-  }
-
-  /* A chip whose task has a canvas node selects it, like a drill row opens a level */
-  .dec-root .dec-task-list-chip.is-selectable {
-    @apply dec:cursor-pointer dec:transition-colors;
-  }
-
-  .dec-root .dec-task-list-chip.is-selectable:hover {
-    @apply dec:border-gray-300 dec:bg-gray-100;
-  }
-
-  .dec-root.dark .dec-task-list-chip.is-selectable:hover {
-    @apply dec:border-gray-600 dec:bg-gray-700;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .dec-root .dec-task-list-chip.is-selectable {
-      @apply dec:transition-none;
-    }
   }
 
   /* The task type's canvas colour (--task-node-color, set inline), else neutral */
@@ -794,7 +774,7 @@
     @apply dec:text-gray-500;
   }
 
-  /* "Edit in diagram" hint below chips */
+  /* "Edit on the canvas" hint below chips */
   .dec-root .dec-task-list-hint {
     @apply dec:flex dec:items-center dec:gap-1
       dec:pt-1.5 dec:mt-0.5

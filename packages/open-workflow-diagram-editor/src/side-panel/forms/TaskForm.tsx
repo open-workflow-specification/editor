@@ -209,7 +209,6 @@ export function TaskForm({ nodeType, task, nodeId, taskReference, topLevelFooter
       value={{
         isReadOnly,
         siblingTaskNames,
-        nodeId,
         taskData,
         fields: allFields,
         validateField,
@@ -285,7 +284,7 @@ function CommittedTaskForm({
 const topLevelHeading = (field: FormFieldDescriptor) => <TopLevelHeading field={field} />;
 
 /**
- * The top level's "Flow" heading over `then`, and a hr over advanced
+ * The top level's "Flow" heading over `then`, and a hr over Common fields
  */
 function TopLevelHeading({ field }: { field: FormFieldDescriptor }) {
   const { t } = useI18n();

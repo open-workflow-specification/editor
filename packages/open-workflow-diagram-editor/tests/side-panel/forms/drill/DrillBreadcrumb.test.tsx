@@ -30,10 +30,10 @@ function renderCrumbs(levels: string[]) {
 
 describe("DrillBreadcrumb", () => {
   it("names the trail and marks the current level", () => {
-    renderCrumbs(["Advanced"]);
+    renderCrumbs(["Common fields"]);
     expect(screen.getByRole("navigation", { name: "Field path" })).toBeInTheDocument();
-    expect(screen.getByText("Advanced")).toHaveAttribute("aria-current", "location");
-    expect(screen.queryByRole("button", { name: "Advanced" })).not.toBeInTheDocument();
+    expect(screen.getByText("Common fields")).toHaveAttribute("aria-current", "location");
+    expect(screen.queryByRole("button", { name: "Common fields" })).not.toBeInTheDocument();
   });
 
   it("goes up one level, to the top, or to a crumb", async () => {

@@ -125,7 +125,7 @@ export function partitionTaskBaseFields(
     {
       kind: "section",
       path: COMMON_FIELDS_PATH,
-      label: "Advanced",
+      label: "Common fields",
       required: false,
       children: common,
     },

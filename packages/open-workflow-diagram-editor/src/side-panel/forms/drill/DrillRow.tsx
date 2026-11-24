@@ -86,7 +86,7 @@ export function DrillRow({
   const { paths: changed } = useDraftChanges();
   const changedCount = childPaths.reduce((sum, path) => sum + countChangedUnder(changed, path), 0);
   const { levelErrors } = useTaskValidation().taskValidation;
-  // The virtual Advanced (common fields) section has no real path: its children keep their task paths.
+  // The virtual "Common fields" section has no real path: its children keep their task paths.
   const levelErrorPaths = field.path === COMMON_FIELDS_PATH ? childPaths : [field.path];
   const levelErrorsCount = levelErrorPaths.reduce(
     (sum, path) => sum + countLevelErrorsUnder(levelErrors, path),

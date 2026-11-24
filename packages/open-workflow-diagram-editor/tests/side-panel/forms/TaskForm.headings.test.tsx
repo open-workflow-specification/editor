@@ -44,7 +44,7 @@ const headings = () => screen.queryAllByRole("heading", { level: 4 }).map((h) =>
 
 describe("TaskForm group headings", () => {
   it.each([false, true])(
-    "groups the top level as the payload and Flow, with no heading over Advanced (read-only %s)",
+    "groups the top level as the payload and Flow, with no heading over Common fields (read-only %s)",
     async (isReadOnly) => {
       await renderTask("/do/callBearer", isReadOnly);
 

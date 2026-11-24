@@ -17,9 +17,6 @@
 import * as React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import type { ChildTaskListField as ChildTaskListFieldDescriptor } from "../../../core/schemaToFormFields";
-import { dotPathToPointer } from "../../../core/paths";
-import { useDiagramEditorContext } from "@/store/DiagramEditorContext";
-import { useSelectNode } from "../../useSelectNode";
 import { useTaskFormContext } from "../taskFormContext";
 import { TaskListDisplay } from "./TaskListDisplay";
 
@@ -34,28 +31,14 @@ export type ChildTaskListFieldProps = {
 
 export function ChildTaskListField({ field }: ChildTaskListFieldProps) {
   const { control } = useFormContext<Record<string, unknown>>();
-  const { nodeId } = useTaskFormContext();
-  const { nodes } = useDiagramEditorContext();
-  const selectNode = useSelectNode();
-
-  // A child's node id is its task's node id, then the list's path, then its name
-  const findNodeId = React.useMemo(() => {
-    const ids = new Set(nodes.map((node) => node.id));
-    const shown = nodes.find((node) => node.id === nodeId);
-    const taskNodeId = shown?.data.taskReference !== undefined ? shown.id : shown?.parentId;
-    const listId = `${taskNodeId}${dotPathToPointer(field.path)}`;
-    return (name: string): string | undefined => {
-      const id = `${listId}/${name}`;
-      return taskNodeId !== undefined && ids.has(id) ? id : undefined;
-    };
-  }, [nodes, nodeId, field.path]);
+  const { isReadOnly } = useTaskFormContext();
 
   return (
     <Controller
       name={field.path}
       control={control}
       render={({ field: rhfField }) => (
-        <TaskListDisplay tasks={rhfField.value} findNodeId={findNodeId} onSelect={selectNode} />
+        <TaskListDisplay tasks={rhfField.value} isReadOnly={isReadOnly} />
       )}
     />
   );

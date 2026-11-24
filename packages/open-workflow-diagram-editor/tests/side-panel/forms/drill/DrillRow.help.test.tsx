@@ -40,8 +40,8 @@ describe("drill row help", () => {
     },
   );
 
-  it("gives Advanced none: it is the editor's grouping, not a schema key", async () => {
+  it("gives Common fields none: it is the editor's grouping, not a schema key", async () => {
     await renderTaskPanel(model, "/do/callUri");
-    expect(help("Advanced")).toBeNull();
+    expect(help("Common fields")).toBeNull();
   });
 });

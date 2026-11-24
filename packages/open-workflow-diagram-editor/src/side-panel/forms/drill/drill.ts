@@ -32,7 +32,7 @@ import { prefixFields, variantFieldsOf } from "../taskFormContext";
 /**
  * Core types and utilities for drill-in navigation.
  *
- * Drill-in navigation allows users to "drill into" a section ("Advanced"), an object, a
+ * Drill-in navigation allows users to "drill into" a section ("Common fields"), an object, a
  * map or a one-of to edit it as its own level.
  */
 
@@ -262,9 +262,9 @@ export function resolveDrillStack(
 }
 
 /**
- * Returns display label for a drill level. Advanced (the common fields) is recognised by its path, not by being
+ * Returns display label for a drill level. Common fields is recognised by its path, not by being
  * a section, so any other section shows its own label.
  */
 export function drillLabel(field: DrillTarget, t: (key: string) => string): string {
-  return field.path === COMMON_FIELDS_PATH ? t("sidebar.drill.advanced") : field.label;
+  return field.path === COMMON_FIELDS_PATH ? t("sidebar.drill.commonFields") : field.label;
 }

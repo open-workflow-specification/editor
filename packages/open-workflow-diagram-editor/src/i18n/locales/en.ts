@@ -104,7 +104,7 @@ export const en = {
   "sidebar.guard.description": "You have unsaved edits to this node. Leaving will discard them",
   "sidebar.guard.keepEditing": "Keep editing",
   "sidebar.guard.discard": "Discard",
-  "sidebar.drill.advanced": "Advanced",
+  "sidebar.drill.commonFields": "Common fields",
   "sidebar.group.flow": "Flow",
   "sidebar.drill.open": "Open",
   "sidebar.drill.of": "of",
@@ -121,8 +121,7 @@ export const en = {
   "sidebar.drill.hiddenLevels": "Hidden levels",
   "taskList.noTasks": "No child tasks defined.",
   "taskList.label": "Task list",
-  "taskList.select": "Select",
-  "taskList.selectHint": "Select a task to open it",
+  "taskList.editHint": "Click a task on the canvas to edit",
 } as const;
 
 export type TranslationKeys = keyof typeof en;
