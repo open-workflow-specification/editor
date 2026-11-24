@@ -46,6 +46,7 @@ export type TextEditorProps = {
   onContentChange?: (content: string) => void;
   isReadOnly?: boolean;
   colorMode?: ColorMode;
+  ariaLabel?: string;
 };
 
 export const TextEditor = ({
@@ -56,6 +57,7 @@ export const TextEditor = ({
   onContentChange,
   isReadOnly = false,
   colorMode = "system",
+  ariaLabel = "Workflow source editor",
 }: TextEditorProps) => {
   const resolvedColorMode = useResolvedColorMode(colorMode);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -76,6 +78,7 @@ export const TextEditor = ({
     const editor = monaco.editor.create(containerRef.current, {
       model,
       readOnly: isReadOnly,
+      ariaLabel,
       codeLens: !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
@@ -102,6 +105,10 @@ export const TextEditor = ({
     // Recreate Monaco and its language service only when the language changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
+
+  React.useEffect(() => {
+    editorRef.current?.updateOptions({ ariaLabel });
+  }, [ariaLabel]);
 
   React.useEffect(() => {
     const editor = editorRef.current;

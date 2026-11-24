@@ -48,6 +48,39 @@ describe("WorkflowActions", () => {
     await user.click(copyButton);
 
     expect(copySpy).toHaveBeenCalledWith(MERMAID_CODE);
+    await vi.waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Copied!"));
+  });
+
+  it("announces the same result again when the action is repeated", async () => {
+    const user = userEvent.setup();
+    const { model } = parseWorkflow(WORKFLOW_WITH_METADATA_JSON);
+    vi.spyOn(clipboard, "copyToClipboard").mockResolvedValue(undefined);
+    vi.spyOn(core, "exportToMermaid").mockReturnValue(MERMAID_CODE);
+
+    renderWithProviders(<WorkflowActions model={model!} />, { model });
+
+    const copyButton = screen.getByRole("button", { name: /Copy Mermaid Code/i });
+    const status = screen.getByRole("status");
+
+    await user.click(copyButton);
+    expect(status).toHaveTextContent("Copied!");
+
+    const statusUpdates: string[] = [];
+    const observer = new MutationObserver(() => {
+      statusUpdates.push(status.textContent ?? "");
+    });
+    observer.observe(status, { childList: true, characterData: true, subtree: true });
+
+    try {
+      await user.click(copyButton);
+      await vi.waitFor(() => {
+        expect(statusUpdates).toContain("");
+        expect(statusUpdates.at(-1)).toBe("Copied!");
+      });
+    } finally {
+      observer.disconnect();
+    }
+    expect(clipboard.copyToClipboard).toHaveBeenCalledTimes(2);
   });
 
   it("should show error message when clipboard copy fails", async () => {
@@ -65,6 +98,9 @@ describe("WorkflowActions", () => {
     await user.click(copyButton);
 
     expect(clipboard.copyToClipboard).toHaveBeenCalledWith(MERMAID_CODE);
+    await vi.waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Could not copy Mermaid code."),
+    );
   });
 
   it("should call downloadMermaidFile and show Downloading when download button is clicked", async () => {
@@ -83,6 +119,9 @@ describe("WorkflowActions", () => {
 
     expect(downloadSpy).toHaveBeenCalledWith(MERMAID_CODE, "test-wf.mmd");
     expect(screen.getByRole("button", { name: "Downloading" })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Mermaid file downloaded."),
+    );
   });
 
   it("should handle download failure", async () => {
@@ -102,6 +141,9 @@ describe("WorkflowActions", () => {
     await user.click(downloadButton);
 
     expect(download.downloadFile).toHaveBeenCalledWith(MERMAID_CODE, "test-wf.mmd");
+    await vi.waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Could not download the Mermaid file."),
+    );
   });
 
   it("should disable the PNG button when isExporting is true", () => {
@@ -128,6 +170,9 @@ describe("WorkflowActions", () => {
 
     expect(exportSpy).toHaveBeenCalledWith(expect.anything(), "test-wf.png", null);
     expect(screen.getByRole("button", { name: "Downloading" })).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Diagram image downloaded."),
+    );
     expect(setIsExporting).toHaveBeenCalledWith(true);
     expect(setIsExporting).toHaveBeenLastCalledWith(false);
   });
@@ -142,5 +187,8 @@ describe("WorkflowActions", () => {
 
     await user.click(screen.getByRole("button", { name: /Download as PNG/i }));
     await vi.waitFor(() => expect(setIsExporting).toHaveBeenLastCalledWith(false));
+    await vi.waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Could not export the diagram image."),
+    );
   });
 });
