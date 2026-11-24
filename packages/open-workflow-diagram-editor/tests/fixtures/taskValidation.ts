@@ -143,7 +143,7 @@ export const VALID_TASKS: TaskCase[] = [
     task: {
       run: {
         return: "all",
-        script: { language: "python", arguments: ["a"], environment: { A: "b" }, code: "x" },
+        script: { language: "python", arguments: { a: "b" }, environment: { A: "b" }, code: "x" },
       },
     },
   },

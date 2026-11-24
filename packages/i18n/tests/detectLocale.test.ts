@@ -35,4 +35,46 @@ describe("detectLocale", () => {
     const result = detectLocale(["en", "fr"]);
     expect(result).toBe("en");
   });
+
+  it("uses navigator.language when navigator.languages is empty", () => {
+    vi.stubGlobal("navigator", {
+      languages: [],
+      language: "fr-CA",
+    });
+
+    expect(detectLocale(["en", "fr"])).toBe("fr");
+  });
+
+  it("uses the first supported language in the browser preference order", () => {
+    vi.stubGlobal("navigator", {
+      languages: ["de-DE", "FR-ca", "en-US"],
+      language: "en-US",
+    });
+
+    expect(detectLocale(["en", " fr "])).toBe("fr");
+  });
+
+  it("skips empty browser language entries and accepts normalized supported locales", () => {
+    vi.stubGlobal("navigator", {
+      languages: ["", " FR-fr "],
+      language: "en-US",
+    });
+
+    expect(detectLocale([" FR "])).toBe("fr");
+  });
+
+  it("uses the supplied fallback when no browser language is supported", () => {
+    vi.stubGlobal("navigator", {
+      languages: ["de-DE"],
+      language: "de-DE",
+    });
+
+    expect(detectLocale(["fr"], "es")).toBe("es");
+  });
+
+  it("uses the fallback when navigator is unavailable", () => {
+    vi.stubGlobal("navigator", undefined);
+
+    expect(detectLocale(["fr"], "es")).toBe("es");
+  });
 });

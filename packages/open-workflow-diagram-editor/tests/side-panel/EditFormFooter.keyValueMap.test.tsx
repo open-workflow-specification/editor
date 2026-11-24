@@ -38,8 +38,8 @@ const { RUN_PROCESS_TYPES_WORKFLOW } = await import("../fixtures/workflows");
 const { renderWithEditorProviders } = await import("../test-utils/render-helpers");
 const { nodeAt, clickApply } = await import("../test-utils");
 
-/** `transform`'s environment starts as `{ LOG_LEVEL: "info" }`. */
-const NODE_ID = "/do/transform";
+/** `summarise`'s environment starts as `{ MODE: "fast" }`, and is the script's only map. */
+const NODE_ID = "/do/summarise";
 
 let committed: Specification.Workflow | null = null;
 
@@ -102,12 +102,12 @@ describe("removing key/value map entries and applying", () => {
 
     await addRow(user, "NEW", "x");
     await clickApply(user);
-    expect(rowKeys()).toEqual(["LOG_LEVEL", "NEW"]);
+    expect(rowKeys()).toEqual(["MODE", "NEW"]);
 
     await deleteRow(user, 1);
     await clickApply(user);
 
-    expect(environment()).toEqual({ LOG_LEVEL: "info" });
-    expect(rowKeys()).toEqual(["LOG_LEVEL"]);
+    expect(environment()).toEqual({ MODE: "fast" });
+    expect(rowKeys()).toEqual(["MODE"]);
   });
 });

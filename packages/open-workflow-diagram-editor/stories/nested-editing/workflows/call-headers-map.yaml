@@ -40,7 +40,7 @@ do:
             call: http
             with:
               method: get
-              endpoint: https://api.example.com/users/${ .userId }
+              endpoint: ${ "https://api.example.com/users/\(.userId)" }
               headers:
                 Accept: application/json
                 Authorization: Bearer ${ .accessToken }
@@ -50,7 +50,7 @@ do:
             call: http
             with:
               method: get
-              endpoint: https://api.example.com/users/${ .userId }/permissions
+              endpoint: ${ "https://api.example.com/users/\(.userId)/permissions" }
               headers:
                 Accept: application/json
                 Authorization: Bearer ${ .accessToken }

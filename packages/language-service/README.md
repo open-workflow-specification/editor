@@ -57,6 +57,30 @@ Creates the Open Workflow-specific JSON completion plugin.
 
 Creates the Open Workflow JSON CodeLens plugin.
 
+### `createYamlLanguageServicePlugins()`
+
+Creates the default set of Volar `LanguageServicePlugin`s for Open Workflow YAML support.
+
+It combines the schema, completion, and CodeLens plugins provided by this package.
+
+```ts
+import { createYamlLanguageServicePlugins } from "@openworkflowspec/language-service";
+
+const plugins = createYamlLanguageServicePlugins();
+```
+
+### `createYamlSchemaLanguageServicePlugin()`
+
+Creates the YAML language service plugin based on `volar-service-yaml` and the Open Workflow schema. It provides schema completions, validation, and hover. The native YAML CodeLenses are disabled.
+
+### `createYamlCompletionsPlugin()`
+
+Creates the Open Workflow-specific YAML completion plugin.
+
+### `createYamlCodeLensesPlugin()`
+
+Creates the Open Workflow YAML CodeLens plugin.
+
 ## Development
 
 ```bash

@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Nested editing focus: run task with an arguments array and environment map,
+# Nested editing focus: run task with an arguments map and environment map,
 # inside a do container alongside a for loop that also contains a run task.
-# Tests reordering the arguments array and editing the environment map
+# Tests editing the arguments and environment maps
 # at multiple nesting levels.
 document:
-  dsl: "1.0.3"
+  dsl: "1.1.0"
   namespace: examples
   name: run-task-array
   version: "0.1.0"
@@ -34,9 +34,8 @@ do:
               script:
                 language: python
                 arguments:
-                  - --mode
-                  - validate
-                  - --strict
+                  mode: validate
+                  strict: true
                 environment:
                   LOG_LEVEL: info
                   TIMEOUT: "30"
@@ -51,24 +50,17 @@ do:
                 language: python
                 stdin: ${ .fileContents }
                 arguments:
-                  - --output-format
-                  - json
-                  - --verbose
-                  - --max-retries
-                  - "3"
+                  output_format: json
+                  verbose: true
+                  max_retries: 3
                 environment:
                   LOG_LEVEL: info
                   TIMEOUT: "60"
                   OUTPUT_DIR: ${ .outputDir }
                 code: |
-                  import sys, json, argparse
-                  parser = argparse.ArgumentParser()
-                  parser.add_argument('--output-format')
-                  parser.add_argument('--verbose', action='store_true')
-                  parser.add_argument('--max-retries', type=int)
-                  args = parser.parse_args()
+                  import sys, json
                   data = json.loads(sys.stdin.read())
-                  print(json.dumps({"processed": data, "format": args.output_format}))
+                  print(json.dumps({"processed": data, "format": output_format}))
         - cleanUp:
             run:
               shell:
@@ -94,14 +86,12 @@ do:
         script:
           language: javascript
           arguments:
-            - --summary
-            - --output
-            - ${ .outputDir }
+            summary: true
+            output: ${ .outputDir }
           environment:
             NODE_ENV: production
           code: |
-            const [,, , , dir] = process.argv;
-            console.log(JSON.stringify({ summary: true, dir }));
+            console.log(JSON.stringify({ summary, dir: output }));
   - notifyOwners:
       run:
         workflow:

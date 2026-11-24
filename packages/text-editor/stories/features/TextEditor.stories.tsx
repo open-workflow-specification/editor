@@ -76,6 +76,12 @@ export const EmptyJson: Story = createTextEditorStory({
   language: "json",
 });
 
+/** Empty YAML document. */
+export const EmptyYaml: Story = createTextEditorStory({
+  content: "",
+  language: "yaml",
+});
+
 /** JSON document that is syntactically valid but does not conform to the OWS schema. */
 export const InvalidWorkflow: Story = createTextEditorStory({
   content: invalidWorkflowJson,

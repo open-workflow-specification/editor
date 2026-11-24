@@ -41,7 +41,9 @@ export const mockModel = {
   pushEditOperations: mockModelPushEditOperations,
 };
 
-export const mockCreateModel = vi.fn((value: string, language: string) => {
+export const mockCreateModel = vi.fn<
+  (value: string, language: string, uri: object) => typeof mockModel
+>((value, language) => {
   state.value = value;
   state.language = language;
   return mockModel;

@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from "vitest";
 import * as React from "react";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { parseWorkflow, buildFlatGraph } from "../../src/core";
+import { parseWorkflow, buildFlatGraph, type SdkError } from "../../src/core";
 import { getTaskReferences } from "../../src/core/graph";
 import { EditFormFooter } from "../../src/side-panel/EditFormFooter";
 import { TaskForm } from "../../src/side-panel/forms/TaskForm";
@@ -36,11 +36,14 @@ import { panel } from "../test-utils/panel-helpers";
 
 const DOCUMENT = { dsl: "1.0.3", namespace: "default", name: "test", version: "0.1.0" };
 
-/** Renders the form and footer of `step1`, with the errors workflow validation reports. */
-async function openTask(task: Record<string, unknown>) {
-  const { model, errors } = parseWorkflow(
-    JSON.stringify({ document: DOCUMENT, do: [{ step1: task }] }),
-  );
+/**
+ * Renders the form and footer of `step1`, with the errors workflow validation reports plus
+ * `extraErrors`.
+ */
+async function openTask(task: Record<string, unknown>, extraErrors: SdkError[] = []) {
+  const parsed = parseWorkflow(JSON.stringify({ document: DOCUMENT, do: [{ step1: task }] }));
+  const model = parsed.model;
+  const errors: SdkError[] = [...parsed.errors, ...extraErrors];
   if (model === null) throw new Error("the workflow does not parse");
   const node = nodeAt(model, "/do/step1");
 
@@ -83,9 +86,11 @@ describe("EditFormFooter — error counter consistency", () => {
   });
 
   it("shows an error the SDK reports even when the form's own validation finds none", async () => {
-    // The "Raise Reusable" story after switching to an inline error with a relative type: the
-    // form accepts `test`, the SDK rejects it, and only its error on `raise.error` is left.
-    await openTask({ raise: { error: { type: "test", status: 400 } } });
+    // The form validates against the same schema as the SDK, so no task shows this today; the
+    // error is injected. Workflow validation still reports what the form's own pass cannot see.
+    await openTask({ raise: { error: { type: "https://example.com/errors/test", status: 400 } } }, [
+      { path: "/do/0/step1/raise/error", message: "must be string" },
+    ]);
 
     expect(counter()).toBe("1 error");
     expect(levelErrors()).toEqual(["must be string"]);
@@ -114,7 +119,7 @@ describe("EditFormFooter — error counter consistency", () => {
   });
 
   it("shows the error of a string list on the list", async () => {
-    await openTask({ run: { script: { language: "js", code: "x", arguments: [1] } } });
+    await openTask({ run: { shell: { command: "x", arguments: [1] } } });
 
     expect(counter()).toBe("1 error");
     expect(inlineErrors()).toEqual(["must be string"]);

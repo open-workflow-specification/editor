@@ -22,6 +22,9 @@ export default defineConfig({
     timeout: 30000,
   },
   use: {
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
+    trace: "retain-on-failure",
     baseURL: "http://localhost:6008",
     permissions: ["clipboard-read", "clipboard-write"],
   },

@@ -29,5 +29,3 @@ export * from "./schemaWalker";
 export * from "./structuralEqual";
 export * from "./schemaToFormFields";
 export * from "./schemaValidator";
-/* TEMPORARY — remove with the workaround; see the revert steps in specWorkarounds.ts. */
-export * from "./specWorkarounds";

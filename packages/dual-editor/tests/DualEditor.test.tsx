@@ -15,7 +15,7 @@
  */
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { ComponentProps } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DualEditor } from "../src/DualEditor";
@@ -28,17 +28,21 @@ vi.mock("@openworkflowspec/text-editor", () => ({
     content: string;
     onContentChange?: (content: string) => void;
   }) => {
-    const [editorContent, setEditorContent] = useState(content);
-    useEffect(() => setEditorContent(content), [content]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+      if (textareaRef.current && textareaRef.current.value !== content) {
+        textareaRef.current.value = content;
+      }
+    }, [content]);
 
     return (
       <textarea
         aria-label="Text source"
         data-testid="text-source"
-        value={editorContent}
+        ref={textareaRef}
+        defaultValue={content}
         onChange={(event) => {
           const nextContent = event.currentTarget.value;
-          setEditorContent(nextContent);
           onContentChange?.(nextContent);
         }}
       />
@@ -56,18 +60,22 @@ vi.mock("@openworkflowspec/diagram-editor", () => ({
     language?: "json" | "yaml";
     onContentChange?: (content: string) => void;
   }) => {
-    const [diagramContent, setDiagramContent] = useState(content);
-    useEffect(() => setDiagramContent(content), [content]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    useEffect(() => {
+      if (textareaRef.current && textareaRef.current.value !== content) {
+        textareaRef.current.value = content;
+      }
+    }, [content]);
 
     return (
       <textarea
         aria-label="Diagram source"
         data-testid="diagram-source"
         data-format={language}
-        value={diagramContent}
+        ref={textareaRef}
+        defaultValue={content}
         onChange={(event) => {
           const nextContent = event.currentTarget.value;
-          setDiagramContent(nextContent);
           onContentChange?.(nextContent);
         }}
       />
@@ -179,6 +187,37 @@ describe("DualEditor", () => {
     vi.useRealTimers();
   });
 
+  it("resets to the same host content and cancels a pending text edit when the reset key changes", () => {
+    const onContentChange = vi.fn();
+    const content = "original workflow";
+    const { rerender } = renderDualEditor({ content, contentResetKey: 0, onContentChange });
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByTestId("text-source"), {
+      target: { value: "pending edit" },
+    });
+    expect(screen.getByTestId("text-source")).toHaveValue("pending edit");
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+
+    rerender(
+      <DualEditor
+        content={content}
+        contentResetKey={1}
+        createLanguageServiceWorker={createLanguageServiceWorker}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    expect(screen.getByTestId("text-source")).toHaveValue(content);
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+
+    act(() => vi.advanceTimersByTime(3000));
+    expect(onContentChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("text-source")).toHaveValue(content);
+    expect(screen.getByTestId("diagram-source")).toHaveValue(content);
+    vi.useRealTimers();
+  });
+
   it("notifies the host of a pending text edit when unmounted", () => {
     const onContentChange = vi.fn();
     const { unmount } = renderDualEditor({ onContentChange });
@@ -281,6 +320,33 @@ describe("DualEditor", () => {
     expect(onSplitChange).toHaveBeenLastCalledWith(80);
   });
 
+  it("supports larger keyboard steps and returns to the minimum with Home", () => {
+    const onSplitChange = vi.fn();
+    renderDualEditor({ onSplitChange });
+    const divider = screen.getByRole("separator");
+
+    fireEvent.keyDown(divider, { key: "ArrowRight", shiftKey: true });
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
+
+    fireEvent.keyDown(divider, { key: "Home" });
+    expect(divider).toHaveAttribute("aria-valuenow", "20");
+    expect(onSplitChange).toHaveBeenNthCalledWith(1, 60);
+    expect(onSplitChange).toHaveBeenNthCalledWith(2, 20);
+  });
+
+  it("does not report a split change when keyboard input cannot move past a boundary", () => {
+    const onSplitChange = vi.fn();
+    renderDualEditor({ onSplitChange });
+    const divider = screen.getByRole("separator");
+
+    fireEvent.keyDown(divider, { key: "End" });
+    fireEvent.keyDown(divider, { key: "ArrowRight" });
+
+    expect(divider).toHaveAttribute("aria-valuenow", "80");
+    expect(onSplitChange).toHaveBeenCalledOnce();
+    expect(onSplitChange).toHaveBeenCalledWith(80);
+  });
+
   it("resizes the panes when the divider is dragged", () => {
     Object.defineProperties(HTMLElement.prototype, {
       setPointerCapture: { configurable: true, value: vi.fn() },
@@ -329,5 +395,44 @@ describe("DualEditor", () => {
     expect(divider).toHaveAttribute("aria-orientation", "horizontal");
     fireEvent.keyDown(divider, { key: "ArrowDown" });
     expect(divider).toHaveAttribute("aria-valuenow", "52");
+  });
+
+  it("uses the vertical container bounds to resize stacked panes", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query.includes("max-width"),
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    );
+    Object.defineProperties(HTMLElement.prototype, {
+      setPointerCapture: { configurable: true, value: vi.fn() },
+      hasPointerCapture: { configurable: true, value: vi.fn(() => true) },
+      releasePointerCapture: { configurable: true, value: vi.fn() },
+    });
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 100,
+      right: 1000,
+      bottom: 900,
+      width: 1000,
+      height: 800,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    renderDualEditor();
+    const divider = screen.getByRole("separator");
+    fireEvent.pointerDown(divider, { pointerId: 1, clientY: 500 });
+    fireEvent.pointerMove(divider, { pointerId: 1, clientY: 580 });
+
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
   });
 });

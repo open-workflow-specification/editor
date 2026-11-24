@@ -48,14 +48,19 @@ export const MINIMAL_CONTEXT = {
  * @example
  * const { content, doc, cursorPosition } = treat(`{ "document": { 🎯 } }`);
  */
-export function treat(content: string, languageId: "json" | "yaml" = "json") {
+export function treat(
+  content: string,
+  languageId: "json" | "yaml" = "json",
+  uri = `file:///test.${languageId}`,
+) {
   const trimmedContent = content.trim();
   const treatedContent = trimmedContent.replace(CURSOR, "");
-  const doc = TextDocument.create("file:///test.json", languageId, 1, trimmedContent);
+  const doc = TextDocument.create(uri, languageId, 1, trimmedContent);
   const cursorOffset = trimmedContent.indexOf(CURSOR);
+
   return {
     content: treatedContent,
-    doc: TextDocument.create("file:///test.json", languageId, 1, treatedContent),
+    doc: TextDocument.create(uri, languageId, 1, treatedContent),
     cursorPosition: doc.positionAt(cursorOffset),
     cursorOffset,
   };

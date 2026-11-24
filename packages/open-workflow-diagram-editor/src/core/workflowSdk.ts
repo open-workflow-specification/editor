@@ -20,7 +20,6 @@ import type { ErrorObject } from "ajv/dist/2020";
 import { fixNodesConnections } from "./graph";
 import { isObjectNotArray, isSafeKey } from "./utils";
 import { cleanTaskAjvErrors, validateTaskData } from "./schemaValidator";
-import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
 import { getTaskTypeKey } from "./taskTypes";
 import { readTaskEntry } from "./workflowEditing";
 
@@ -316,9 +315,9 @@ function collectTaskAjvErrors(
  *    JSON Schema alone. All SDK errors are kept, task-level ones included.
  *
  * 2. **Per-task Ajv validation** — every top-level task is validated
- *    individually against its task-specific sub-schema (which has spec
- *    workaround patches applied). Cascade filtering, summary dropping and
- *    de-duplication remove the `oneOf` noise that `allErrors: true` produces. This
+ *    individually against its task-specific sub-schema. Cascade filtering,
+ *    summary dropping and de-duplication remove the `oneOf` noise that
+ *    `allErrors: true` produces. This
  *    covers all tasks — unlike the SDK which short-circuits after the
  *    first failing one. Errors the SDK already reported (same path and
  *    message) are not repeated.
@@ -336,7 +335,7 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
       // Keep all SDK errors (including task-level) so semantic checks like cross-task
       // then references are not lost. Their cascade noise is filtered downstream by isNoiseError
       // and removeBranchGhosts; the per-task Ajv errors are cleaned by cleanTaskAjvErrors.
-      sdkErrors.push(...stripSpecAheadOfSdkErrors(parsed));
+      sdkErrors.push(...parsed);
     } else if (err instanceof Error) {
       sdkErrors.push(err);
     } else {

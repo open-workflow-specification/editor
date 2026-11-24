@@ -28,11 +28,17 @@ export type {
 import { createJsonSchemaLanguageServicePlugin } from "./json/schema";
 import { createJsonCompletionsPlugin } from "./json/completions";
 import { createJsonCodeLensesPlugin } from "./json/code-lenses";
+import { createYamlSchemaLanguageServicePlugin } from "./yaml/schema";
+import { createYamlCompletionsPlugin } from "./yaml/completions";
+import { createYamlCodeLensesPlugin } from "./yaml/code-lenses";
 
 export {
   createJsonSchemaLanguageServicePlugin,
   createJsonCompletionsPlugin,
   createJsonCodeLensesPlugin,
+  createYamlSchemaLanguageServicePlugin,
+  createYamlCompletionsPlugin,
+  createYamlCodeLensesPlugin,
 };
 
 export function createJsonLanguageServicePlugins() {
@@ -40,5 +46,13 @@ export function createJsonLanguageServicePlugins() {
     createJsonSchemaLanguageServicePlugin(),
     createJsonCompletionsPlugin(),
     createJsonCodeLensesPlugin(),
+  ];
+}
+
+export function createYamlLanguageServicePlugins() {
+  return [
+    createYamlSchemaLanguageServicePlugin(),
+    createYamlCompletionsPlugin(),
+    createYamlCodeLensesPlugin(),
   ];
 }

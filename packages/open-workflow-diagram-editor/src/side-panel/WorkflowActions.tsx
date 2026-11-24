@@ -31,8 +31,10 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
   const { t } = useI18n();
   const [isCopied, setIsCopied] = React.useState(false);
   const [downloadingType, setDownloadingType] = React.useState<"mermaid" | "png" | null>(null);
+  const [statusMessage, setStatusMessage] = React.useState("");
   const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const downloadTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statusTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const reactFlowInstance = useReactFlow();
   const diagramDomNode = useStore((s) => s.domNode);
   const { isExporting, setIsExporting } = useDiagramEditorContext();
@@ -46,14 +48,28 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
       }
+
+      if (statusTimeoutRef.current) {
+        clearTimeout(statusTimeoutRef.current);
+      }
     };
   }, []);
+
+  const announceStatus = (message: string) => {
+    if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+    setStatusMessage("");
+    statusTimeoutRef.current = setTimeout(() => {
+      setStatusMessage(message);
+      statusTimeoutRef.current = null;
+    }, 0);
+  };
 
   const handleCopyMermaid = async () => {
     try {
       const mermaidCode = exportToMermaid(model);
       await copyToClipboard(mermaidCode);
       setIsCopied(true);
+      announceStatus(t("sidebar.exportMermaid.copied"));
 
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
@@ -64,6 +80,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         copyTimeoutRef.current = null;
       }, 2000);
     } catch (error) {
+      announceStatus(t("sidebar.exportMermaid.copyFailed"));
       console.error(
         "Failed to copy Mermaid code:",
         error instanceof Error ? error.message : undefined,
@@ -77,6 +94,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
       const filename = `${sanitizeFilename(model.document?.name)}.mmd`;
       downloadFile(mermaidCode, filename);
       setDownloadingType("mermaid");
+      announceStatus(t("sidebar.exportMermaid.downloaded"));
 
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
@@ -87,6 +105,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         downloadTimeoutRef.current = null;
       }, 2000);
     } catch (error) {
+      announceStatus(t("sidebar.exportMermaid.downloadFailed"));
       console.error(
         "Failed to download Mermaid file:",
         error instanceof Error ? error.message : undefined,
@@ -104,6 +123,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
       );
 
       setDownloadingType("png");
+      announceStatus(t("sidebar.exportPng.downloaded"));
 
       if (downloadTimeoutRef.current) {
         clearTimeout(downloadTimeoutRef.current);
@@ -114,6 +134,7 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         downloadTimeoutRef.current = null;
       }, 2000);
     } catch (error) {
+      announceStatus(t("sidebar.exportPng.downloadFailed"));
       console.error(
         "Failed to export diagram as PNG:",
         error instanceof Error ? error.message : undefined,
@@ -125,13 +146,16 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
 
   return (
     <>
+      <span className="dec:sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {statusMessage}
+      </span>
       <Button
         onClick={handleCopyMermaid}
         variant="outline"
         size="sm"
         className="dec:cursor-pointer"
       >
-        {isCopied ? <ClipboardCheck /> : <ClipboardPen />}
+        {isCopied ? <ClipboardCheck aria-hidden="true" /> : <ClipboardPen aria-hidden="true" />}
         {isCopied ? t("sidebar.exportMermaid.copied") : t("sidebar.exportMermaid.copy")}
       </Button>
       <Button
@@ -140,7 +164,11 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         size="sm"
         className="dec:cursor-pointer"
       >
-        {downloadingType === "mermaid" ? <Import /> : <Download />}
+        {downloadingType === "mermaid" ? (
+          <Import aria-hidden="true" />
+        ) : (
+          <Download aria-hidden="true" />
+        )}
         {downloadingType === "mermaid"
           ? t("sidebar.export.downloading")
           : t("sidebar.exportMermaid.download")}
@@ -152,7 +180,11 @@ export function WorkflowActions({ model }: { model: Specification.Workflow }): R
         className="dec:cursor-pointer"
         disabled={isExporting}
       >
-        {downloadingType === "png" ? <Import /> : <FileImage />}
+        {downloadingType === "png" ? (
+          <Import aria-hidden="true" />
+        ) : (
+          <FileImage aria-hidden="true" />
+        )}
         {isExporting
           ? t("sidebar.export.downloading")
           : downloadingType === "png"

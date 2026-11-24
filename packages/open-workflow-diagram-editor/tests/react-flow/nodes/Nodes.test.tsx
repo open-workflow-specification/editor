@@ -369,16 +369,15 @@ describe("React Flow custom node types", () => {
       "renders the error badge and has-error class on a $kind node when data.hasError is set",
       ({ id, type, testId, nodeClass }) => {
         const nodes = [withError(testNode(id, type, 0, "Node"))];
-        render(
-          <div>
-            <RF.ReactFlow nodeTypes={ReactFlowNodeTypes} nodes={nodes} edges={[]} />
-          </div>,
+        renderWithProviders(
+          <RF.ReactFlow nodeTypes={ReactFlowNodeTypes} nodes={nodes} edges={[]} />,
         );
 
         const node = screen.getByTestId(`${testId}-node-${id}`);
         expect(node).toHaveClass(nodeClass);
         expect(node).toHaveClass("has-error");
         expect(screen.getByTestId(`${testId}-node-${id}-error`)).toBeInTheDocument();
+        expect(screen.getByText(en["node.errorBadge"])).toBeInTheDocument();
       },
     );
 

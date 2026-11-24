@@ -40,11 +40,20 @@ function App() {
 
 The component fills its parent. Give the parent a definite height. Edits in either pane are synchronized and reported through `onContentChange`. Drag the divider to resize the panes; keyboard users can focus it and use the arrow keys, with Shift for larger steps. On narrow screens the panes stack vertically and the divider resizes their heights.
 
+## Monaco Editor Worker
+
+The Dual Editor uses the Text Editor internally. The host application must configure Monaco's built-in Editor Worker before mounting the component.
+
+See the [Text Editor documentation](../text-editor/README.md#monaco-editor-worker) for the worker configuration.
+
+No additional Dual Editor props are required.
+
 ## Props
 
 | Prop                          | Type                        | Required | Default    | Description                                                   |
 | ----------------------------- | --------------------------- | -------- | ---------- | ------------------------------------------------------------- |
 | `content`                     | `string`                    | Yes      | —          | Workflow definition as JSON or YAML.                          |
+| `contentResetKey`             | `number`                    | No       | —          | Reapplies host content and cancels pending text edits.        |
 | `onContentChange`             | `(content: string) => void` | No       | —          | Called when either editor changes the workflow content.       |
 | `createLanguageServiceWorker` | `() => Worker`              | Yes      | —          | Creates the language service worker for the text editor.      |
 | `language`                    | `TextEditorLanguage`        | No       | `"json"`   | Sets text syntax and diagram output format; defaults to JSON. |

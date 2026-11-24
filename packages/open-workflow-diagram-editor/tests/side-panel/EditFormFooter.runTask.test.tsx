@@ -197,7 +197,7 @@ describe("run task editing", () => {
       script: {
         language: "python",
         stdin: "${ .payload }",
-        arguments: ["--mode", "strict"],
+        arguments: { mode: "strict" },
         environment: { LOG_LEVEL: "info" },
         source: {},
       },

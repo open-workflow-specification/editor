@@ -14,42 +14,44 @@
  * limitations under the License.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { createJsonCompletionsPlugin } from "../../../src/index";
-import type { LanguageServicePlugin, LanguageServicePluginInstance } from "../../../src/index";
 import { treat, getAllCompletionLabels, MINIMAL_CONTEXT } from "../../testUtils";
 
+const getPluginInstance = () => createJsonCompletionsPlugin().create(MINIMAL_CONTEXT);
+
 describe("createJsonCompletionsPlugin", () => {
-  let plugin: LanguageServicePlugin;
-  let instance: LanguageServicePluginInstance;
-
-  beforeEach(() => {
-    plugin = createJsonCompletionsPlugin();
-    instance = plugin.create(MINIMAL_CONTEXT);
-  });
-
   describe("provideCompletionItems", () => {
     it("proposes Hello World completion on empty document", async () => {
       const { doc, cursorPosition } = treat("🎯");
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
+      expect(labels).toContain("Insert Hello World workflow");
+    });
+
+    it("proposes Hello World completion when the document contains only whitespace", async () => {
+      const text = "  \n  \t";
+      const doc = TextDocument.create("file:///whitespace.json", "json", 1, text);
+      const cursorPosition = doc.positionAt(text.length);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).toContain("Insert Hello World workflow");
     });
 
     it("does not propose Hello World completion on bare {}", async () => {
       const { doc, cursorPosition } = treat("{🎯}");
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).not.toContain("Insert Hello World workflow");
     });
 
     it("does not propose Hello World completion on partial OWS content", async () => {
       const { doc, cursorPosition } = treat('{ "document": { 🎯 }, "do": [] }');
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).not.toContain("Insert Hello World workflow");
     });
 
     it("does not propose Hello World completion on an empty YAML document", async () => {
       const { doc, cursorPosition } = treat("🎯", "yaml");
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).not.toContain("Insert Hello World workflow");
     });
   });

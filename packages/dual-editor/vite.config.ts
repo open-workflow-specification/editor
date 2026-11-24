@@ -19,6 +19,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
+    alias: {
+      path: "path-browserify",
+    },
   },
   build: {
     emptyOutDir: false,

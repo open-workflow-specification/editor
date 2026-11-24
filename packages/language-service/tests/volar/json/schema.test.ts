@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { createJsonSchemaLanguageServicePlugin } from "../../../src/index";
-import type { LanguageServicePluginInstance } from "../../../src/index";
 import {
   treat,
   getAllCompletionLabels,
@@ -25,24 +24,20 @@ import {
   MINIMAL_CONTEXT,
 } from "../../testUtils";
 
+const getPluginInstance = () => createJsonSchemaLanguageServicePlugin().create(MINIMAL_CONTEXT);
+
 describe("createJsonSchemaLanguageServicePlugin", () => {
-  let instance: LanguageServicePluginInstance;
-
-  beforeEach(() => {
-    instance = createJsonSchemaLanguageServicePlugin().create(MINIMAL_CONTEXT);
-  });
-
   describe("provideCompletionItems", () => {
     it("suggests top-level OWS properties on an empty object", async () => {
       const { doc, cursorPosition } = treat("{🎯}");
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).toContain("document");
       expect(labels).toContain("do");
     });
 
     it("suggests document nested properties", async () => {
       const { doc, cursorPosition } = treat('{ "document": { 🎯 }, "do": [] }');
-      const labels = await getAllCompletionLabels([instance], doc, cursorPosition);
+      const labels = await getAllCompletionLabels([getPluginInstance()], doc, cursorPosition);
       expect(labels).toContain("dsl");
       expect(labels).toContain("namespace");
       expect(labels).toContain("name");
@@ -60,7 +55,7 @@ describe("createJsonSchemaLanguageServicePlugin", () => {
         "do": [{ "greet": { "call": "http", "with": { "method": "GET", "endpoint": "https://httpbin.org/get" } } }]
       }`,
       );
-      const messages = await getDiagnosticMessages([instance], doc);
+      const messages = await getDiagnosticMessages([getPluginInstance()], doc);
       expect(messages).toHaveLength(0);
     });
 
@@ -73,7 +68,7 @@ describe("createJsonSchemaLanguageServicePlugin", () => {
         "document": { "dsl": "1.0.3", "namespace": "examples", "name": "hello-world", "version": "0.1.0" }
       }`,
       );
-      const messages = await getDiagnosticMessages([instance], doc);
+      const messages = await getDiagnosticMessages([getPluginInstance()], doc);
       expect(messages).toContain('Missing property "do".');
     });
   });

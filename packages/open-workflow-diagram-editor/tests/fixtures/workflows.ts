@@ -705,7 +705,7 @@ export const RUN_PROCESS_TYPES_WORKFLOW = {
           script: {
             language: "python",
             stdin: "${ .payload }",
-            arguments: ["--mode", "strict"],
+            arguments: { mode: "strict" },
             environment: { LOG_LEVEL: "info" },
             code: "print('hello')",
           },

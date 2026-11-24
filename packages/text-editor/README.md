@@ -34,6 +34,7 @@ React text editor component for Open Workflow documents, based on [Monaco Editor
 | `content`                     | `string`                    | ✅       | —           | Current document content.                        |
 | `language`                    | `TextEditorLanguage`        | ✅       | —           | Document language: `json` or `yaml`.             |
 | `createLanguageServiceWorker` | `() => Worker`              | ✅       | —           | Creates the Worker used by the language service. |
+| `onLanguageServiceReady`      | `() => void`                | —        | `undefined` | Called once the language service is ready.       |
 | `isReadOnly`                  | `boolean`                   | —        | `false`     | Prevents editing when enabled.                   |
 | `onContentChange`             | `(content: string) => void` | —        | `undefined` | Called when the user modifies the document.      |
 | `colorMode`                   | `light, dark, system`       | —        | `system`    | Controls the editor theme.                       |
@@ -66,6 +67,31 @@ function App() {
 }
 ```
 
+## Monaco Editor Worker
+
+Monaco's built-in `editorWorkerService` requires a separate worker from the OWS language-service worker passed through `createLanguageServiceWorker`.
+
+The host application must configure `MonacoEnvironment` before mounting the Text Editor. For Vite:
+
+```ts
+import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
+
+Object.assign(self, {
+  MonacoEnvironment: {
+    getWorker(_workerId: string, label: string) {
+      if (label === "editorWorkerService") {
+        return new EditorWorker();
+      }
+      throw new Error(`Unexpected Monaco worker: ${label}`);
+    },
+  },
+});
+```
+
+The `?worker` suffix is specific to Vite. Other bundlers must configure equivalent worker loading for `@openworkflowspec/text-editor/editor-worker`. This configuration belongs to the host application, not to the Text Editor props.
+
+The OWS language-service worker remains separate and is created using `createLanguageServiceWorker` as shown above.
+
 ## Language service
 
 ### Lifecycle and ownership
@@ -83,6 +109,6 @@ Multiple concurrently mounted Text Editor instances and shared-worker reuse are 
 | Language | Syntax highlighting | OWS completions | OWS diagnostics | OWS code lenses |
 | -------- | ------------------- | --------------- | --------------- | --------------- |
 | JSON     | ✅                  | ✅              | ✅              | ✅              |
-| YAML     | ✅                  | 🚧 planned      | 🚧 planned      | 🚧 planned      |
+| YAML     | ✅                  | ✅              | ✅              | ✅              |
 
-YAML language-service support is not yet available. Until then, YAML documents use Monaco's built-in syntax highlighting and language configuration only.
+When the `language` prop changes, the Text Editor recreates the Monaco editor, model and language-service Worker. Undo history, cursor position and scroll position are not preserved.

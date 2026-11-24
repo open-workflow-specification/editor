@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 document:
-  dsl: "1.0.3"
+  dsl: "1.1.0"
   namespace: examples
   name: all-task-types
   version: "0.1.0"
@@ -60,13 +60,11 @@ do:
         script:
           language: javascript
           arguments:
-            - --user-id
-            - ${ .userId }
+            userId: ${ .userId }
           environment:
             NODE_ENV: production
           code: |
-            const [,, flag, id] = process.argv;
-            console.log(JSON.stringify({ processed: id }));
+            console.log(JSON.stringify({ processed: userId }));
   - waitTask:
       wait:
         seconds: 5
@@ -124,7 +122,7 @@ do:
             call: http
             with:
               method: post
-              endpoint: https://api.example.com/users/${ .userId }/roles
+              endpoint: ${ "https://api.example.com/users/\(.userId)/roles" }
               body:
                 role: ${ .role }
   - tryTask:
@@ -133,7 +131,7 @@ do:
             call: http
             with:
               method: get
-              endpoint: https://api.example.com/users/${ .userId }/preferences
+              endpoint: ${ "https://api.example.com/users/\(.userId)/preferences" }
       catch:
         errors:
           with:
@@ -162,7 +160,7 @@ do:
             call: http
             with:
               method: get
-              endpoint: https://api.example.com/profile/${ .userId }
+              endpoint: ${ "https://api.example.com/profile/\(.userId)" }
         - storeProfile:
             set:
               profile: ${ .body }

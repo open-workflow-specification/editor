@@ -14,44 +14,10 @@
  * limitations under the License.
  */
 
-import type { LanguageServicePlugin, LanguageServicePluginInstance } from "@volar/language-service";
+import type { LanguageServicePlugin } from "@volar/language-service";
 import { HELLO_WORLD_SAMPLE } from "../../samples/hello-world";
-import { isEmptyWorkflow } from "../../utils";
-
-// CompletionItemKind.Snippet = 15 (LSP spec, cast needed because kind is a const enum)
-const SNIPPET_KIND = 15;
-
-const EMPTY_RANGE = {
-  start: { line: 0, character: 0 },
-  end: { line: 0, character: 0 },
-};
+import { createHelloWorldCompletionsPlugin } from "../hello-world";
 
 export function createJsonCompletionsPlugin(): LanguageServicePlugin {
-  return {
-    capabilities: {
-      completionProvider: {},
-    },
-    create(): LanguageServicePluginInstance {
-      return {
-        isAdditionalCompletion: true,
-        provideCompletionItems(document) {
-          if (document.languageId !== "json" || !isEmptyWorkflow(document.getText())) {
-            return null;
-          }
-
-          return {
-            isIncomplete: false,
-            items: [
-              {
-                label: "Insert Hello World workflow",
-                kind: SNIPPET_KIND as 15,
-                detail: "Insert a Hello World Open Workflow document",
-                textEdit: { range: EMPTY_RANGE, newText: HELLO_WORLD_SAMPLE },
-              },
-            ],
-          };
-        },
-      };
-    },
-  };
+  return createHelloWorldCompletionsPlugin("json", HELLO_WORLD_SAMPLE);
 }

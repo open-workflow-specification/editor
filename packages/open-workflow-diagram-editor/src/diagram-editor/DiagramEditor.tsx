@@ -141,11 +141,31 @@ export type DiagramEditorProps = {
 const DiagramEditorContent = ({
   diagramDivRef,
   colorMode,
+  content,
 }: {
   diagramDivRef: React.RefObject<HTMLDivElement | null>;
   colorMode: ResolvedColorMode;
+  content: string;
 }): React.JSX.Element => {
-  const { model } = useDiagramEditorContext();
+  const { model, processedContent } = useDiagramEditorContext();
+  const { t } = useI18n();
+  if (content.trim().length === 0 && model === null) {
+    return (
+      <div className="dec-empty-state">
+        <div className="dec-empty-state__content">
+          <h2 className="dec-empty-state__title">{t("workflowEmpty.title")}</h2>
+          <p className="dec-empty-state__message">{t("workflowEmpty.message")}</p>
+        </div>
+      </div>
+    );
+  }
+  if (model === null && processedContent !== content) {
+    return (
+      <div role="status" aria-busy="true" className="dec-loading-state">
+        {t("workflowLoading")}
+      </div>
+    );
+  }
   return model === null ? (
     <ParsingErrorPage />
   ) : (
@@ -188,7 +208,11 @@ const DiagramEditorBody = ({
           <SidebarProvider defaultOpen={false}>
             <EditSessionProvider>
               <div className="dec-diagram-content">
-                <DiagramEditorContent diagramDivRef={diagramDivRef} colorMode={resolvedColorMode} />
+                <DiagramEditorContent
+                  diagramDivRef={diagramDivRef}
+                  colorMode={resolvedColorMode}
+                  content={props.content}
+                />
               </div>
               <SidePanel />
             </EditSessionProvider>
