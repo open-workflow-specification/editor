@@ -21,7 +21,7 @@ import {
   getEdgeType,
   edgeSourceAndTargetExist,
   buildDiagramElements,
-  getCatchContainerNodeIds,
+  getContainerNodeIds,
 } from "../../../src/react-flow/diagram/diagramBuilder";
 import { EdgeTypes } from "../../../src/react-flow/edges/Edges";
 import {
@@ -34,10 +34,15 @@ import {
   BASIC_VALID_WORKFLOW_JSON,
   BASIC_VALID_WORKFLOW_JSON_TASKS,
   NESTED_CONTAINERS_WORKFLOW,
+  NESTED_TASK_LISTS_WORKFLOW,
 } from "../../fixtures/workflows";
 import { createFlatGraph } from "../../test-utils/graph-helpers";
 import { parseFixture } from "../../test-utils/workflow-helpers";
-import { CATCH_CONTAINER_NODE_TYPE } from "../../../src/react-flow/nodes/taskNodeConfig";
+import {
+  CALL_CONTAINER_NODE_TYPE,
+  CATCH_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
+} from "../../../src/react-flow/nodes/taskNodeConfig";
 
 // Type alias for diagram elements to reduce verbosity
 type DiagramElements = ReturnType<typeof buildDiagramElements>;
@@ -606,6 +611,40 @@ describe("diagramBuilder", () => {
       });
     });
 
+    describe("nested task list containers", () => {
+      const diagram = buildDiagramElements(parseFixture(NESTED_TASK_LISTS_WORKFLOW));
+      const nodeById = new Map(diagram.nodes.map((node) => [node.id, node]));
+
+      it.each([
+        { id: "/do/onReading", type: LISTEN_CONTAINER_NODE_TYPE },
+        { id: "/do/onMessage", type: CALL_CONTAINER_NODE_TYPE },
+        { id: "/do/awaitReady", type: GraphNodeType.Listen },
+        { id: "/do/fetch", type: GraphNodeType.Call },
+      ])("renders $id as $type", ({ id, type }) => {
+        expect(nodeById.get(id)?.type).toBe(type);
+      });
+
+      it.each([
+        { id: "/do/onReading/foreach/do/storeReading", parentId: "/do/onReading" },
+        { id: "/do/onReading/foreach/do/pause", parentId: "/do/onReading" },
+        {
+          id: "/do/onMessage/with/subscription/foreach/do/handleMessage",
+          parentId: "/do/onMessage",
+        },
+      ])("draws $id inside its task", ({ id, parentId }) => {
+        const node = nodeById.get(id);
+        expect(node?.parentId).toBe(parentId);
+        expect(node?.extent).toBe("parent");
+        expect(node?.data.taskReference).toBeDefined();
+      });
+
+      it("keeps the container's own task and reference, so its panel edits it", () => {
+        const listen = nodeById.get("/do/onReading");
+        expect(listen?.data.taskReference).toBe("/do/0/onReading");
+        expect(listen?.data.task).toHaveProperty("listen");
+      });
+    });
+
     describe("task data preservation", () => {
       it("preserves task data in node data", () => {
         const diagram: DiagramElements = buildDiagramFromWorkflow(BASIC_VALID_WORKFLOW_JSON_TASKS);
@@ -795,7 +834,7 @@ describe("diagramBuilder", () => {
     });
   });
 
-  describe("getCatchContainerNodeIds", () => {
+  describe("getContainerNodeIds", () => {
     it("should not include leaf catch nodes", () => {
       const sdkGraph = createFlatGraph(
         [
@@ -816,7 +855,7 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
       expect(result.size).toBe(0);
     });
 
@@ -856,13 +895,36 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
 
       expect(result.has("/do/0/CatchContainer")).toBe(true);
       expect(result.size).toBe(1);
     });
 
-    it("should not include non-catch nodes", () => {
+    it("should include listen and call nodes that have children", () => {
+      const sdkGraph = createFlatGraph(
+        [
+          { id: "/do/onEvent", type: GraphNodeType.Listen } as FlatGraphNode,
+          {
+            id: "/do/onEvent/foreach/do/step",
+            type: GraphNodeType.Set,
+            parentId: "/do/onEvent",
+          } as FlatGraphNode,
+          { id: "/do/onMessage", type: GraphNodeType.Call } as FlatGraphNode,
+          {
+            id: "/do/onMessage/with/subscription/foreach/do/step",
+            type: GraphNodeType.Set,
+            parentId: "/do/onMessage",
+          } as FlatGraphNode,
+          { id: "/do/plainListen", type: GraphNodeType.Listen } as FlatGraphNode,
+        ],
+        [],
+      );
+
+      expect(getContainerNodeIds(sdkGraph)).toEqual(new Set(["/do/onEvent", "/do/onMessage"]));
+    });
+
+    it("should not include childless nodes of types that can be containers", () => {
       const sdkGraph = createFlatGraph(
         [
           {
@@ -887,7 +949,7 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
       expect(result.size).toBe(0);
     });
 
@@ -923,7 +985,7 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
 
       expect(result.has("/do/0/TryCatch/catch")).toBe(true);
       expect(result.has("/do/0/TryCatch")).toBe(false);
@@ -966,7 +1028,7 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
 
       expect(result.has("/do/0/Catch1")).toBe(true);
       expect(result.has("/do/0/Catch2")).toBe(true);
@@ -976,7 +1038,7 @@ describe("diagramBuilder", () => {
     it("should return empty set for graph with no nodes", () => {
       const sdkGraph = createFlatGraph([], []);
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
 
       expect(result.size).toBe(0);
     });
@@ -1009,7 +1071,7 @@ describe("diagramBuilder", () => {
         [],
       );
 
-      const result = getCatchContainerNodeIds(sdkGraph);
+      const result = getContainerNodeIds(sdkGraph);
 
       expect(result.has("/do/0/OuterCatch")).toBe(true);
       expect(result.has("/do/0/OuterCatch/do/0/InnerCatch")).toBe(true);
@@ -1021,14 +1083,18 @@ describe("diagramBuilder", () => {
     const model = parseFixture(NESTED_CONTAINERS_WORKFLOW);
     const diagram = buildDiagramElements(model);
 
-    it("resolves every node the panel treats as an editable task", () => {
-      const editableIds = diagram.nodes
-        .filter((node) => node.data.taskReference !== undefined)
+    it.each([
+      { name: "containers", fixture: NESTED_CONTAINERS_WORKFLOW },
+      { name: "nested task lists", fixture: NESTED_TASK_LISTS_WORKFLOW },
+    ])("resolves every node the panel treats as an editable task ($name)", ({ fixture }) => {
+      const fixtureModel = parseFixture(fixture);
+      const editableIds = buildDiagramElements(fixtureModel)
+        .nodes.filter((node) => node.data.taskReference !== undefined)
         .map((node) => node.id);
 
       expect(editableIds.length).toBeGreaterThan(0);
       for (const id of editableIds) {
-        expect(() => updateTask(model, id, { set: { touched: true } })).not.toThrow();
+        expect(() => updateTask(fixtureModel, id, { set: { touched: true } })).not.toThrow();
       }
     });
 

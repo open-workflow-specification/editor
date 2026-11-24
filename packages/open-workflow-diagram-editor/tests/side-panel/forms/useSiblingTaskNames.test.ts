@@ -18,7 +18,12 @@ import { describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { Classes, type Specification } from "@openworkflowspec/sdk";
 import { useSiblingTaskNames } from "../../../src/side-panel/forms/useSiblingTaskNames";
-import { SET_EXAMPLE_WORKFLOW, MANAGING_GITHUB_ISSUES_WORKFLOW } from "../../fixtures/workflows";
+import {
+  SET_EXAMPLE_WORKFLOW,
+  MANAGING_GITHUB_ISSUES_WORKFLOW,
+  NESTED_FORK_WORKFLOW,
+  NESTED_TASK_LISTS_WORKFLOW,
+} from "../../fixtures/workflows";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -133,5 +138,51 @@ describe("useSiblingTaskNames — nested tasks", () => {
   it("returns [] when the parent task entry cannot be found", () => {
     const model = makeModel(nestedWorkflow);
     expect(invoke(model, "/do/missing/do/assign")).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task lists under object properties (not strict <list>/<taskName> pairs)
+// ---------------------------------------------------------------------------
+
+describe("useSiblingTaskNames — task lists under object properties", () => {
+  it.each([
+    {
+      name: "listen foreach",
+      workflow: NESTED_TASK_LISTS_WORKFLOW,
+      id: "/do/onReading/foreach/do/storeReading",
+      expected: ["pause"],
+    },
+    {
+      name: "AsyncAPI subscription foreach",
+      workflow: NESTED_TASK_LISTS_WORKFLOW,
+      id: "/do/onMessage/with/subscription/foreach/do/ackMessage",
+      expected: ["handleMessage"],
+    },
+    {
+      name: "fork branches",
+      workflow: NESTED_FORK_WORKFLOW,
+      id: "/do/raiseAlarm/fork/branches/notifyStaff/fork/branches/callNurse",
+      expected: ["callDoctor"],
+    },
+  ])("returns the siblings inside a $name", ({ workflow, id, expected }) => {
+    expect(invoke(makeModel(workflow), id)).toEqual(expected);
+  });
+
+  it("returns the siblings inside a catch.do", () => {
+    const model = makeModel({
+      document: { dsl: "1.1.0", namespace: "test", name: "catch-do", version: "0.1.0" },
+      do: [
+        {
+          guarded: {
+            try: [{ attempt: { set: { tried: true } } }],
+            catch: {
+              do: [{ recover: { set: { recovered: true } } }, { report: { set: { sent: true } } }],
+            },
+          },
+        },
+      ],
+    });
+    expect(invoke(model, "/do/guarded/catch/do/recover")).toEqual(["report"]);
   });
 });

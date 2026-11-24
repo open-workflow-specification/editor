@@ -17,7 +17,9 @@
 import { it, expect, describe } from "vitest";
 import { GraphNodeType } from "@openworkflowspec/sdk";
 import {
+  CALL_CONTAINER_NODE_TYPE,
   CATCH_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
   type ContainerNodeType,
   type LeafNodeType,
   type TerminalNodeType,
@@ -47,6 +49,8 @@ const containerNodeTypes: ContainerNodeType[] = [
   GraphNodeType.Try,
   GraphNodeType.TryCatch,
   CATCH_CONTAINER_NODE_TYPE,
+  CALL_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
 ];
 
 const terminalNodeTypes: TerminalNodeType[] = [GraphNodeType.Entry, GraphNodeType.Exit];
@@ -112,6 +116,13 @@ describe("taskNodeConfig", () => {
       expect(getNodeVisualConfig(CATCH_CONTAINER_NODE_TYPE)).toBe(
         containerNodeConfigMap[CATCH_CONTAINER_NODE_TYPE],
       );
+    });
+
+    it.each<{ container: ContainerNodeType; leaf: LeafNodeType }>([
+      { container: CALL_CONTAINER_NODE_TYPE, leaf: GraphNodeType.Call },
+      { container: LISTEN_CONTAINER_NODE_TYPE, leaf: GraphNodeType.Listen },
+    ])("gives $container the look of $leaf", ({ container, leaf }) => {
+      expect(getNodeVisualConfig(container)).toBe(leafNodeConfigMap[leaf]);
     });
 
     it("returns undefined for an unknown type", () => {

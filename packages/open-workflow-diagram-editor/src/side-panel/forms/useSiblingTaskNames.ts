@@ -15,27 +15,14 @@
  */
 
 import type { Specification } from "@openworkflowspec/sdk";
+import { getSiblingTaskNames } from "../../core/workflowEditing";
 
 /**
  * Returns the names of every task that shares the same parent task list as the
- * currently selected task.
+ * currently selected task — the targets its `then` may name (same scope only).
  *
- * **Path format**
- *
- * `nodeId` is the non-indexed structural path that mirrors the workflow model
- * hierarchy, e.g. `/do/consumeReading` or `/do/logReading/do/callOrderService`.
- *
- * Segments alternate strictly as `<listProp>/<taskName>` pairs:
- *
- * ```
- * /do/logReading/do/callOrderService
- *  ^   ^          ^   ^
- *  list task-name list task-name
- * ```
- *
- * To reach the parent list, walk every pair except the last, following
- * `model[listProp][taskName]` at each step. The final `<listProp>` names the
- * array whose entries are the siblings.
+ * `nodeId` is the non-indexed node id, resolved like `updateTask` resolves it, so task lists
+ * under object properties (fork branches, `catch.do`, listen / AsyncAPI `foreach.do`) work.
  *
  * Note: spec-defined flow-directive values (`continue`, `exit`, `end`) are
  * **not** returned here — they are spec constants, not model tasks. The
@@ -50,59 +37,5 @@ export function useSiblingTaskNames(
   nodeId: string | undefined,
 ): string[] {
   if (!model || !nodeId) return [];
-
-  const segments = nodeId.split("/").filter(Boolean);
-  // Each depth level is a <listProp>/<taskName> pair — need at least one pair.
-  if (segments.length < 2 || segments.length % 2 !== 0) return [];
-
-  // Walk every pair except the last to reach the object that owns the parent list.
-  // At each step: current[listProp] is a task array; find the entry keyed by taskName
-  // and descend into its value (the task body).
-  let current: unknown = model;
-  for (let i = 0; i < segments.length - 2; i += 2) {
-    const listProp = segments[i]!;
-    const taskName = segments[i + 1]!;
-
-    if (
-      current === null ||
-      current === undefined ||
-      typeof current !== "object" ||
-      Array.isArray(current)
-    ) {
-      return [];
-    }
-
-    const list = (current as Record<string, unknown>)[listProp];
-    if (!Array.isArray(list)) return [];
-
-    // Find the entry { [taskName]: taskBody } and descend into taskBody
-    const entry = (list as Array<Record<string, unknown>>).find((e) => taskName in e);
-    if (!entry) return [];
-    current = entry[taskName];
-  }
-
-  // current is now the object that owns the final list (the model root or a task body)
-  if (
-    current === null ||
-    current === undefined ||
-    typeof current !== "object" ||
-    Array.isArray(current)
-  ) {
-    return [];
-  }
-
-  const listProp = segments[segments.length - 2]!;
-  const currentTaskName = segments[segments.length - 1]!;
-
-  const list = (current as Record<string, unknown>)[listProp];
-  if (!Array.isArray(list)) return [];
-
-  const siblings: string[] = [];
-  for (const entry of list as Array<Record<string, unknown>>) {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
-    const name = Object.keys(entry)[0];
-    if (name && name !== currentTaskName) siblings.push(name);
-  }
-
-  return siblings;
+  return getSiblingTaskNames(model, nodeId);
 }

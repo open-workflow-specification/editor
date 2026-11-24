@@ -27,7 +27,9 @@ import {
   terminalNodeConfigMap,
 } from "./taskNodeConfig";
 import {
+  CALL_CONTAINER_NODE_TYPE,
   CATCH_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
   getCallSubType,
   getListenSubType,
   getRunSubType,
@@ -54,6 +56,8 @@ export const ReactFlowNodeTypes: RF.NodeTypes = {
   [GraphNodeType.Try]: TryNode,
   [GraphNodeType.Catch]: CatchNode,
   [CATCH_CONTAINER_NODE_TYPE]: CatchContainerNode,
+  [CALL_CONTAINER_NODE_TYPE]: CallContainerNode,
+  [LISTEN_CONTAINER_NODE_TYPE]: ListenContainerNode,
   [GraphNodeType.Wait]: WaitNode,
 };
 
@@ -257,6 +261,21 @@ export function CallNode({ id, data, selected, type }: RF.NodeProps<CallNodeType
   return <LeafNodeContent id={id} data={data} selected={selected} type={type} badge={badge} />;
 }
 
+/* call container node: an AsyncAPI call whose subscription runs tasks for each message */
+export type CallContainerNodeType = RF.Node<
+  BaseNodeData<Specification.CallTask>,
+  typeof CALL_CONTAINER_NODE_TYPE
+>;
+export function CallContainerNode({
+  id,
+  data,
+  selected,
+  type,
+}: RF.NodeProps<CallContainerNodeType>) {
+  const badge = data.task ? getCallSubType(data.task) : undefined;
+  return <ContainerNodeContent id={id} data={data} selected={selected} type={type} badge={badge} />;
+}
+
 /* do container node */
 export type DoNodeType = RF.Node<BaseNodeData<Specification.DoTask>, typeof GraphNodeType.Do>;
 export function DoNode({ id, data, selected, type }: RF.NodeProps<DoNodeType>) {
@@ -291,6 +310,21 @@ export type ListenNodeType = RF.Node<
 export function ListenNode({ id, data, selected, type }: RF.NodeProps<ListenNodeType>) {
   const badge = data.task ? getListenSubType(data.task) : undefined;
   return <LeafNodeContent id={id} data={data} selected={selected} type={type} badge={badge} />;
+}
+
+/* listen container node: a listen that runs tasks for each consumed event */
+export type ListenContainerNodeType = RF.Node<
+  BaseNodeData<Specification.ListenTask>,
+  typeof LISTEN_CONTAINER_NODE_TYPE
+>;
+export function ListenContainerNode({
+  id,
+  data,
+  selected,
+  type,
+}: RF.NodeProps<ListenContainerNodeType>) {
+  const badge = data.task ? getListenSubType(data.task) : undefined;
+  return <ContainerNodeContent id={id} data={data} selected={selected} type={type} badge={badge} />;
 }
 
 /* raise leaf node */

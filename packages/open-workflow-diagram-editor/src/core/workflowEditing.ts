@@ -476,6 +476,29 @@ function resolveParentTaskList(
   return taskList;
 }
 
+/**
+ * Names the other tasks in the task list that holds `taskId` — the tasks its `then` may
+ * target (same scope only). Resolves every id shape `updateTask` does, including lists under
+ * object properties (`/do/f/fork/branches/b1`, `/do/t/catch/do/x`,
+ * `/do/l/foreach/do/x`, `/do/c/with/subscription/foreach/do/x`).
+ *
+ * @param workflow - Workflow containing the task.
+ * @param taskId - Non-indexed editor task id.
+ * @returns The sibling task names in list order, excluding the task itself; `[]` when the id
+ * cannot be resolved.
+ */
+export function getSiblingTaskNames(workflow: Specification.Workflow, taskId: string): string[] {
+  let target: TaskMutationTarget;
+  try {
+    target = resolveTaskMutationTarget(workflow, taskId);
+  } catch {
+    return [];
+  }
+  return target.container
+    .map((entry) => readTaskEntry(entry)?.name)
+    .filter((name): name is string => name !== undefined && name !== target.taskName);
+}
+
 // ---------------------------------------------------------------------------
 // Exported editing operations
 // ---------------------------------------------------------------------------

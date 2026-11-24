@@ -17,7 +17,9 @@
 import { describe, expect, it } from "vitest";
 import { GraphNodeType } from "@openworkflowspec/sdk";
 import {
+  CALL_CONTAINER_NODE_TYPE,
   CATCH_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
   getFormFieldsForNodeType,
   partitionTaskBaseFields,
 } from "../../src/core/schemaWalker";
@@ -63,11 +65,22 @@ describe("try task frames", () => {
   it.each([GraphNodeType.TryCatch, GraphNodeType.Catch, CATCH_CONTAINER_NODE_TYPE])(
     "%s shows the same form as the Try frame",
     (type) => {
-       expect(JSON.stringify(getFormFieldsForNodeType(type))).toBe(
-         JSON.stringify(getFormFieldsForNodeType(GraphNodeType.Try)),
-       );
+      expect(JSON.stringify(getFormFieldsForNodeType(type))).toBe(
+        JSON.stringify(getFormFieldsForNodeType(GraphNodeType.Try)),
+      );
     },
   );
+});
+
+describe("nested task list containers", () => {
+  it.each([
+    { container: CALL_CONTAINER_NODE_TYPE, leaf: GraphNodeType.Call },
+    { container: LISTEN_CONTAINER_NODE_TYPE, leaf: GraphNodeType.Listen },
+  ])("$container shows the same form as $leaf", ({ container, leaf }) => {
+    expect(JSON.stringify(getFormFieldsForNodeType(container))).toBe(
+      JSON.stringify(getFormFieldsForNodeType(leaf)),
+    );
+  });
 });
 
 describe("partitionTaskBaseFields", () => {

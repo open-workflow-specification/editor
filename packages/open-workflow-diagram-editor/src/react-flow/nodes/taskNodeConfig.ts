@@ -34,9 +34,13 @@ import {
 } from "lucide-react";
 import type { ComponentType } from "react";
 import type { TranslationKeys } from "../../i18n/locales/en";
-import { CATCH_CONTAINER_NODE_TYPE } from "@/core";
+import {
+  CALL_CONTAINER_NODE_TYPE,
+  CATCH_CONTAINER_NODE_TYPE,
+  LISTEN_CONTAINER_NODE_TYPE,
+} from "@/core";
 
-export { CATCH_CONTAINER_NODE_TYPE };
+export { CALL_CONTAINER_NODE_TYPE, CATCH_CONTAINER_NODE_TYPE, LISTEN_CONTAINER_NODE_TYPE };
 
 export interface TaskNodeConfig {
   color: string;
@@ -57,7 +61,9 @@ export type ContainerNodeType =
   | typeof GraphNodeType.Fork
   | typeof GraphNodeType.Try
   | typeof GraphNodeType.TryCatch
-  | typeof CATCH_CONTAINER_NODE_TYPE;
+  | typeof CATCH_CONTAINER_NODE_TYPE
+  | typeof CALL_CONTAINER_NODE_TYPE
+  | typeof LISTEN_CONTAINER_NODE_TYPE;
 
 export type LeafNodeType =
   | typeof GraphNodeType.Call
@@ -149,6 +155,9 @@ export const containerNodeConfigMap: Record<ContainerNodeType, TaskNodeConfig> =
     icon: ShieldAlert,
     typeLabel: "CATCH",
   },
+  // A task holding nested tasks looks like its leaf form, framed.
+  [CALL_CONTAINER_NODE_TYPE]: leafNodeConfigMap[GraphNodeType.Call],
+  [LISTEN_CONTAINER_NODE_TYPE]: leafNodeConfigMap[GraphNodeType.Listen],
 };
 
 export const terminalNodeConfigMap: Record<TerminalNodeType, TerminalNodeConfig> = {
