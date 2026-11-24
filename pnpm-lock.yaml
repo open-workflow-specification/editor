@@ -19,8 +19,8 @@ catalogs:
       specifier: ^5.6.0
       version: 5.6.0
     '@openworkflowspec/sdk':
-      specifier: ^1.0.3-alpha8
-      version: 1.0.3-alpha8
+      specifier: ^1.1.0-alpha1
+      version: 1.1.0-alpha1
     '@playwright/test':
       specifier: ^1.65.1
       version: 1.65.1
@@ -417,7 +417,7 @@ importers:
     dependencies:
       '@openworkflowspec/sdk':
         specifier: 'catalog:'
-        version: 1.0.3-alpha8
+        version: 1.1.0-alpha1
       '@volar/language-service':
         specifier: 'catalog:'
         version: 2.4.31(typescript@6.0.3)
@@ -469,7 +469,7 @@ importers:
         version: link:../i18n
       '@openworkflowspec/sdk':
         specifier: 'catalog:'
-        version: 1.0.3-alpha8
+        version: 1.1.0-alpha1
       '@xyflow/react':
         specifier: 'catalog:'
         version: 12.12.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1151,8 +1151,8 @@ packages:
   '@neoconfetti/react@1.0.0':
     resolution: {integrity: sha512-klcSooChXXOzIm+SE5IISIAn3bYzYfPjbX7D7HoqZL84oAfgREeSg5vSIaSFH+DaGzzvImTyWe1OyrJ67vik4A==}
 
-  '@openworkflowspec/sdk@1.0.3-alpha8':
-    resolution: {integrity: sha512-bJk0kr7MYXjqj3km32ZxG60Gj57OWC81BH3hy1Gv7QxCj76w43RtzTCEUWGr6H9ilvpfYinHVqNBEE1xuQY9+w==}
+  '@openworkflowspec/sdk@1.1.0-alpha1':
+    resolution: {integrity: sha512-vJplnDLxB4JTmOuOvkYiAo9Lbcf0W2peQhliDrNd6i17uS7ikWXpnGTLZDqLOphfYVw8d2qxWPBlqfKHhmqsqA==}
     engines: {node: '>=22.0.0', npm: '>=10.0.0'}
 
   '@oxc-parser/binding-android-arm-eabi@0.127.0':
@@ -2897,9 +2897,6 @@ packages:
     resolution: {integrity: sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==}
     engines: {node: '>=10'}
 
-  argparse@2.0.1:
-    resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
-
   argparse@3.0.3:
     resolution: {integrity: sha512-Sn98ftV3KfsO8xfLPHG6oT8y+b0yvbrLgZjgPDXsharNY15tTAjqIsIju4S32nl6/iEUNNE4v+yL2Zhm8ooP3w==}
 
@@ -3287,10 +3284,6 @@ packages:
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
-
-  js-yaml@5.4.3:
-    resolution: {integrity: sha512-yzzNtgczwgoVHNigCyKTXcQJU4Y8t/ikU4UxXW0BvrLfHTGWZhsNcOT2s/a7vn81/4KqVnNmHjaUEPlvWnNwVw==}
-    hasBin: true
 
   js-yaml@5.5.0:
     resolution: {integrity: sha512-paNr4LFIFPjeeSmwNYdrb8FafLLG/Cr2Af3GjbsHJ5CxIjH4r0c2emlmRdAtpPAieP1gRVzk6buBbVP5gBMGAg==}
@@ -4633,11 +4626,11 @@ snapshots:
 
   '@neoconfetti/react@1.0.0': {}
 
-  '@openworkflowspec/sdk@1.0.3-alpha8':
+  '@openworkflowspec/sdk@1.1.0-alpha1':
     dependencies:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
-      js-yaml: 5.4.3
+      js-yaml: 5.5.0
       semver: 7.8.5
 
   '@oxc-parser/binding-android-arm-eabi@0.127.0':
@@ -6185,8 +6178,6 @@ snapshots:
 
   ansi-styles@5.2.0: {}
 
-  argparse@2.0.1: {}
-
   argparse@3.0.3: {}
 
   aria-hidden@1.2.6:
@@ -6508,10 +6499,6 @@ snapshots:
   js-tokens@10.0.0: {}
 
   js-tokens@4.0.0: {}
-
-  js-yaml@5.4.3:
-    dependencies:
-      argparse: 2.0.1
 
   js-yaml@5.5.0:
     dependencies:

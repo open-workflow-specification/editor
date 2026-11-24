@@ -17,7 +17,6 @@
 import { load } from "js-yaml";
 import * as sdk from "@openworkflowspec/sdk";
 import { fixNodesConnections } from "./graph";
-import { stripSpecAheadOfSdkErrors } from "./specWorkarounds";
 
 export type ContentFormat = "json" | "yaml";
 
@@ -241,14 +240,9 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
     const message = err instanceof Error ? err.message : String(err);
     const parsedErrors = dedupeValidationErrors(parseValidationErrorMessage(message));
 
-    /* If parsing succeeded and returned errors, use them.
-     *
-     * TEMPORARY — TO REVERT WHEN THE SDK IS BUMPED (see core/specWorkarounds.ts):
-     * Replace `stripSpecAheadOfSdkErrors(...)` with `return parsedErrors;` again.
-     */
+    // If parsing succeeded and returned errors, use them.
     if (parsedErrors.length > 0) {
-      //return parsedErrors;
-      return stripSpecAheadOfSdkErrors(parsedErrors);
+      return parsedErrors;
     }
 
     // Otherwise, return the original error as-is

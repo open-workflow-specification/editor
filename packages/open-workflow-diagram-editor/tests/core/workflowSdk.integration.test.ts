@@ -174,6 +174,101 @@ describe("validateWorkflow", () => {
     expect(errors).toHaveLength(0);
   });
 
+  /* DSL 1.1.0 syntax the editor must accept: guards against an SDK bump (or a
+   * future workaround) reporting spec-valid workflows as invalid. */
+  const DSL_1_1_0_DOCUMENT = `document:
+  dsl: '1.1.0'
+  namespace: test
+  name: dsl-1-1-0
+  version: '1.0.0'
+`;
+
+  it.each([
+    {
+      change: "spec#1169: relative URI in a call endpoint",
+      body: `do:
+  - getPets:
+      call: openapi
+      with:
+        document:
+          endpoint: openapi/petstore.json
+        operationId: findPets
+`,
+    },
+    {
+      change: "spec#1169: relative URI in an emit event source",
+      body: `do:
+  - emitIt:
+      emit:
+        event:
+          with:
+            source: /orders/service
+            type: com.example.order
+`,
+    },
+    {
+      change: "spec#1175: emit event with no source",
+      body: `do:
+  - emitIt:
+      emit:
+        event:
+          with:
+            type: com.example.order
+`,
+    },
+    {
+      change: "spec#1170: inline array in for.in",
+      body: `do:
+  - loopIt:
+      for:
+        each: item
+        in:
+          - name: a
+          - name: b
+      do:
+        - noop:
+            set:
+              x: 1
+`,
+    },
+    {
+      change: "spec#1178: read on schedule",
+      body: `schedule:
+  on:
+    one:
+      with:
+        type: com.example.order-placed
+  read: envelope
+do:
+  - noop:
+      set:
+        x: 1
+`,
+    },
+    {
+      change: "spec#1173: then on catch",
+      body: `do:
+  - tryIt:
+      try:
+        - noop:
+            set:
+              x: 1
+      catch:
+        errors:
+          with:
+            type: https://example.com/err
+        then: recordFailure
+  - recordFailure:
+      set:
+        y: 2
+`,
+    },
+  ])("returns no errors for a valid DSL 1.1.0 workflow: $change", ({ body }) => {
+    const { model, errors } = parseWorkflow(`${DSL_1_1_0_DOCUMENT}${body}`);
+    expect(model).not.toBeNull();
+    expect(errors).toEqual([]);
+  });
+
   it("returns parsed validation errors for an invalid workflow", () => {
     const invalid = new Classes.Workflow({
       do: [{ step1: { set: { variable: "value" } } }],

@@ -6,7 +6,7 @@ catalog:
   "@changesets/changelog-github": ^1.0.1
   "@changesets/cli": ^3.0.3
   "@chromatic-com/storybook": ^5.6.0
-  "@openworkflowspec/sdk": "^1.0.3-alpha8"
+  "@openworkflowspec/sdk": "^1.1.0-alpha1"
   "@playwright/test": ^1.65.1
   "@storybook/addon-a11y": ^10.6.7
   "@storybook/addon-docs": ^10.6.7
