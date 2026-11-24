@@ -85,7 +85,7 @@ function ComboboxInput({
     >
       <ComboboxPrimitive.Input
         data-slot="combobox-input"
-        className="dec:h-7 dec:min-w-0 dec:flex-1 dec:bg-transparent dec:px-2 dec:text-xs dec:outline-none dec:placeholder:text-muted-foreground dec:disabled:cursor-not-allowed"
+        className="dec:h-7 dec:min-w-0 dec:flex-1 dec:bg-transparent dec:px-2 dec:text-body dec:outline-none dec:placeholder:text-muted-foreground dec:disabled:cursor-not-allowed"
         disabled={disabled}
         {...props}
       />
@@ -156,7 +156,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "dec:relative dec:flex dec:w-full dec:cursor-default dec:items-center dec:gap-2 dec:rounded-sm dec:py-1.5 dec:pr-8 dec:pl-2 dec:text-sm dec:outline-hidden dec:select-none dec:data-highlighted:bg-slate-100 dec:data-highlighted:text-slate-900 dec:dark:data-highlighted:bg-blue-600 dec:dark:data-highlighted:text-white dec:data-[disabled]:pointer-events-none dec:data-[disabled]:opacity-50 dec:[&_svg]:pointer-events-none dec:[&_svg]:shrink-0 dec:[&_svg:not([class*=size-])]:size-4",
+        "dec:relative dec:flex dec:w-full dec:cursor-default dec:items-center dec:gap-2 dec:rounded-sm dec:py-1.5 dec:pr-8 dec:pl-2 dec:text-body dec:outline-hidden dec:select-none dec:data-highlighted:bg-slate-100 dec:data-highlighted:text-slate-900 dec:dark:data-highlighted:bg-blue-600 dec:dark:data-highlighted:text-white dec:data-[disabled]:pointer-events-none dec:data-[disabled]:opacity-50 dec:[&_svg]:pointer-events-none dec:[&_svg]:shrink-0 dec:[&_svg:not([class*=size-])]:size-4",
         className,
       )}
       {...props}
@@ -185,7 +185,7 @@ function ComboboxLabel({ className, ...props }: ComboboxPrimitive.GroupLabel.Pro
     <ComboboxPrimitive.GroupLabel
       data-slot="combobox-label"
       className={cn(
-        "dec:px-2 dec:py-1.5 dec:text-xs dec:text-slate-500 dec:dark:text-slate-400 dec:pointer-coarse:px-3 dec:pointer-coarse:py-2 dec:pointer-coarse:text-sm",
+        "dec:px-2 dec:py-1.5 dec:text-meta dec:text-slate-500 dec:dark:text-slate-400 dec:pointer-coarse:px-3 dec:pointer-coarse:py-2 dec:pointer-coarse:text-sm",
         className,
       )}
       {...props}

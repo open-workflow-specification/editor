@@ -26,6 +26,7 @@ import {
   type SectionField,
 } from "../../../core/schemaToFormFields";
 import { entryIndexBelow, isAtOrBelow, joinPath } from "../../../core/paths";
+import { TASK_TYPE_KEYS } from "../../../core/taskTypes";
 import { prefixFields, variantFieldsOf } from "../taskFormContext";
 
 /**
@@ -120,6 +121,16 @@ const FIXED_KINDS: ReadonlySet<FormFieldDescriptor["kind"]> = new Set<FormFieldD
 /** Whether a field is part of the task's shape, so it is never added or removed. */
 export function isFixedField(field: FormFieldDescriptor): boolean {
   return field.required || field.path === ROOT_ONE_OF_PATH || FIXED_KINDS.has(field.kind);
+}
+
+/**
+ * The field holding the task's type key (`listen`, `run`…) or call's root one-of.
+ */
+export function isTaskTypeField(field: FormFieldDescriptor): boolean {
+  return (
+    (field.kind === "object" || field.kind === "one-of") &&
+    (TASK_TYPE_KEYS.has(field.path) || field.path === ROOT_ONE_OF_PATH)
+  );
 }
 
 /**

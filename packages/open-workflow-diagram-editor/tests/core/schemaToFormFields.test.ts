@@ -700,6 +700,8 @@ describe("schemaToFormFields required-only oneOf combinations", () => {
     expect(withField?.kind).toBe("one-of");
     expect(withField?.required).toBe(true);
     expect(withField?.variants.map((v) => v.label)).toEqual(ASYNCAPI_LABELS);
+    // Laid out like the object it stands for (Document, Server, Message drill)
+    expect(withField?.keyCombinations).toBe(true);
   });
 
   it("each variant requires document and its own combination, and hides the others' keys", () => {
@@ -761,6 +763,7 @@ describe("schemaToFormFields required-only oneOf combinations", () => {
     }) as OneOfField | undefined;
     expect(field?.variants.map((v) => v.label)).toEqual(["B", "C"]);
     expect(field?.variants.map((v) => v.identifyingKeys)).toEqual([["b"], ["c"]]);
+    expect(field?.keyCombinations).toBe(true);
     expect(field?.variants[0]?.fields.map((f) => [f.path, f.required])).toEqual([
       ["obj.a", true],
       ["obj.b", true],

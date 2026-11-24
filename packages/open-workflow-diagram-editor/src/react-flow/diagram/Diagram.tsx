@@ -288,6 +288,8 @@ export const Diagram = ({ divRef, colorMode = "light" }: DiagramProps) => {
           elevateEdgesOnSelect={false}
           nodesDraggable={false}
           nodesConnectable={false}
+          // TEMPORARY until allowing deleting nodes
+          deleteKeyCode={null}
         >
           {minimapVisible && (
             <RF.MiniMap pannable zoomable position={"bottom-left"} maskStrokeWidth={2} />

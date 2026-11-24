@@ -44,6 +44,7 @@ export function BooleanControl({ field }: BooleanControlProps) {
       render={({ field: rhfField }) => (
         <FieldWithError errorMessage={errorMessage}>
           <Switch
+            size="sm"
             checked={(rhfField.value as boolean | undefined) ?? field.defaultValue ?? false}
             onCheckedChange={(checked) => {
               rhfField.onChange(checked);

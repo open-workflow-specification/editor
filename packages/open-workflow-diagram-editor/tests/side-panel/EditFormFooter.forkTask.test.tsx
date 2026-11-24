@@ -124,15 +124,13 @@ describe("fork task editing", () => {
 
     expect(screen.getByText("notifyStaff")).toBeInTheDocument();
     expect(screen.getByText("logAlarm")).toBeInTheDocument();
-    expect(screen.getByText("Edit tasks by selecting them from the diagram")).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /notifyStaff|logAlarm/ })).not.toBeInTheDocument();
   });
 
-  it("lists the branches without the edit hint in read-only", async () => {
+  it("lists the branches in read-only too", async () => {
     await renderTaskPanel(model, OUTER_FORK_ID, { isReadOnly: true });
 
     expect(screen.getByText("notifyStaff")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Edit tasks by selecting them from the diagram"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("logAlarm")).toBeInTheDocument();
   });
 });

@@ -23,6 +23,7 @@ import {
   isPointerAtOrBelow,
   joinPath,
   pointerToDotPath,
+  dotPathToPointer,
 } from "../../src/core/paths";
 
 describe("joinPath", () => {
@@ -108,5 +109,16 @@ describe("nearestAncestor", () => {
     ["", undefined],
   ])("nearestAncestor(%j) is %j", (path, expected) => {
     expect(nearestAncestor(path, paths)).toBe(expected);
+  });
+});
+
+describe("dotPathToPointer", () => {
+  it.each([
+    ["", ""],
+    ["try", "/try"],
+    ["catch.do", "/catch/do"],
+    ["fork.branches", "/fork/branches"],
+  ])("dotPathToPointer(%j) is %j", (path, expected) => {
+    expect(dotPathToPointer(path)).toBe(expected);
   });
 });

@@ -948,6 +948,27 @@ export const ADD_FIELDS_WORKFLOW = {
 };
 
 /**
+ * An AsyncAPI call. Its `with` is a one-of (operation/channel × message/subscription), so it is
+ * the only field the call's option shows.
+ */
+export const ASYNCAPI_CALL_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "asyncapi-call", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      publishGreeting: {
+        call: "asyncapi",
+        with: {
+          document: { endpoint: "https://example.com/asyncapi.json" },
+          operation: "greet",
+          server: { name: "staging" },
+          message: { payload: { greeting: "hello" } },
+        },
+      },
+    },
+  ],
+};
+
+/**
  * Emit tasks for the "Custom fields" map: CloudEvents extension attributes beside an event's own
  * attributes (`eventProperties` allows keys beyond its properties), and one without any.
  */
@@ -1042,4 +1063,10 @@ export const LISTEN_FILTERS_WORKFLOW = {
       },
     },
   ],
+};
+
+/** Wait task fixture: an inline duration (several fields) and an ISO 8601 literal (one value). */
+export const WAIT_DURATIONS_WORKFLOW = {
+  document: { dsl: "1.0.3", name: "wait-durations", version: "1.0.0", namespace: "default" },
+  do: [{ waitInline: { wait: { seconds: 30 } } }, { waitLiteral: { wait: "PT30S" } }],
 };

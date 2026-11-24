@@ -195,6 +195,19 @@ describe("Diagram Component", () => {
     });
   });
 
+  it.each([true, false])(
+    "should not delete nodes from the keyboard (isReadOnly=%s)",
+    async (isReadOnly) => {
+      renderDiagram({ isReadOnly });
+
+      await waitFor(() => {
+        expect(ReactFlow).toHaveBeenCalled();
+      });
+
+      expect(vi.mocked(ReactFlow).mock.calls.at(-1)![0].deleteKeyCode).toBeNull();
+    },
+  );
+
   it("should disable automatic edge elevation on select", async () => {
     renderDiagram({ isReadOnly: false });
 

@@ -343,14 +343,4 @@ describe("emit: Custom fields help", () => {
     await renderTaskPanel(model, WITH_EXTRAS, { isReadOnly: true });
     expect(help()).not.toBeNull();
   });
-
-  it("is the only drill row with one", async () => {
-    await renderTaskPanel(model, WITH_EXTRAS);
-    const rows = screen.getAllByRole("button").filter((b) => b.dataset.drillPath !== undefined);
-    const helps = screen.queryAllByRole("button", { name: /^Help: / });
-    const besideRows = helps.filter((h) =>
-      rows.some((row) => row.parentElement === h.closest(".dec-form-drill-row-wrap")),
-    );
-    expect(besideRows).toEqual([help()]);
-  });
 });

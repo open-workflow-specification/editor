@@ -242,6 +242,11 @@ export interface JsonField extends FieldBase {
 export interface OneOfField extends FieldBase {
   kind: "one-of";
   variants: OneOfVariant[];
+  /**
+   * The options are one object's required-key combinations (AsyncAPI `with`: operation/channel ×
+   * message/subscription), so the one-of is laid out like that object.
+   */
+  keyCombinations?: true;
 }
 
 export interface OneOfVariant {
@@ -1092,9 +1097,17 @@ export function schemaToFormFields(
             format,
           );
           if (combinationVariants.length > 1) {
-            fields.push(
-              buildOneOfField(fieldPath, prop, key, description, isRequired, combinationVariants),
-            );
+            fields.push({
+              ...buildOneOfField(
+                fieldPath,
+                prop,
+                key,
+                description,
+                isRequired,
+                combinationVariants,
+              ),
+              keyCombinations: true,
+            });
             continue;
           }
         }

@@ -85,7 +85,7 @@ describe("TaskForm field-level validation", () => {
     const user = await userEvent.setup();
     await renderTask("/do/waitStep", false);
 
-    const input = screen.getByLabelText("wait");
+    const input = screen.getByLabelText("Type");
     expect(input).toHaveValue("PT5S");
     expect(input).not.toHaveAttribute("aria-invalid");
 
@@ -112,7 +112,7 @@ describe("TaskForm field-level validation", () => {
   it("does not generate validation errors in read-only mode", async () => {
     await renderTask("/do/waitStep", true);
 
-    expect(screen.getByText("wait")).toBeInTheDocument();
+    expect(screen.getByText("Type")).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

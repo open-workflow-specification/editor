@@ -20,23 +20,25 @@ import { GraphNodeType } from "@openworkflowspec/sdk";
 import { getTaskTypeKey } from "../../../core/taskTypes";
 import { isObjectNotArray } from "../../../core/utils";
 import { readTaskEntry } from "../../../core/workflowEditing";
+import { getNodeVisualConfig } from "@/react-flow/nodes/taskNodeConfig";
 
 // ---------------------------------------------------------------------------
 // TaskListDisplay
 // ---------------------------------------------------------------------------
 
-function deriveTaskType(body: unknown): string | undefined {
-  if (!isObjectNotArray(body)) return undefined;
+/** The task's type key (`call`, `set`…) and its label, which names a call's kind (`call: http`). */
+function readTaskType(body: unknown): { key?: string; label?: string } {
+  if (!isObjectNotArray(body)) return {};
   const key = getTaskTypeKey(body);
   if (key === GraphNodeType.Call && typeof body[key] === "string") {
-    return `${GraphNodeType.Call}: ${body[key] as string}`;
+    return { key, label: `${GraphNodeType.Call}: ${body[key] as string}` };
   }
-  return key;
+  return key === undefined ? {} : { key, label: key };
 }
 
 export type TaskListDisplayProps = {
   tasks: unknown;
-  /** Hides the hint to edit the tasks from the diagram, which nothing can do in read-only. */
+  /** Hides the hint to edit the tasks from the canvas, which nothing can do in read-only. */
   isReadOnly?: boolean;
 };
 
@@ -56,20 +58,32 @@ export function TaskListDisplay({ tasks, isReadOnly = false }: TaskListDisplayPr
 
   const entries = (tasks as unknown[]).map((item, idx) => {
     const entry = readTaskEntry(item);
+    const type = readTaskType(entry?.task);
     return {
       key: entry !== undefined ? `${entry.name}-${idx}` : String(idx),
       name: entry?.name,
-      type: deriveTaskType(entry?.task),
+      type: type.label,
+      // From the task's own type, so a child the canvas doesn't draw (listen's foreach) has it too.
+      color: getNodeVisualConfig(type.key)?.color,
     };
   });
 
   return (
     <div className="dec-task-list">
       <ul className="dec-task-list-chips" aria-label={t("taskList.label")}>
-        {entries.map(({ key, name, type }) =>
+        {entries.map(({ key, name, type, color }) =>
           name !== undefined ? (
             <li key={key} className="dec-task-list-chip">
-              <span className="dec-task-list-chip-dot" aria-hidden="true" />
+              {/* The dot takes the task type's canvas colour; the type text beside it says the same. */}
+              <span
+                className="dec-task-list-chip-dot"
+                aria-hidden="true"
+                style={
+                  color !== undefined
+                    ? ({ "--task-node-color": color } as React.CSSProperties)
+                    : undefined
+                }
+              />
               <span className="dec-task-list-chip-name">{name}</span>
               {type !== undefined && <span className="dec-task-list-chip-type">{type}</span>}
             </li>

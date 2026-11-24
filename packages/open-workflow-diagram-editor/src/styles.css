@@ -27,6 +27,16 @@
 
 @custom-variant dark (&:where(.dec-root.dark, .dec-root.dark *));
 
+
+@theme {
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1rem;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.25rem;
+  --text-heading: 0.875rem;
+  --text-heading--line-height: 1.25rem;
+}
+
 @layer base {
   .dec-root,
   .dec-root *,
@@ -86,6 +96,19 @@
     --dec-teal-text: #0d9488;
     --dec-teal-text-hover: #047857;
 
+    /* Side panel text roles*/
+    --dec-text: #111827;
+    --dec-text-muted: #4b5563;
+    --dec-text-subtle: #6b7280;
+
+    /* Inline code: runtime-expression values.. */
+    --dec-code-bg: #f3f4f6;
+    --dec-code-text: #1f2937;
+
+    /* Popovers (field help) */
+    --dec-popover-bg: #ffffff;
+    --dec-popover-border: #cbd5e1;
+
     /* node hover glow */
     --dec-node-hover-glow: rgba(0, 65, 208, 0.3);
 
@@ -133,6 +156,14 @@
     --dec-success-text: #34d399;
     --dec-teal-text: #2dd4bf;
     --dec-teal-text-hover: #5eead4;
+    --dec-text: #f3f4f6;
+    --dec-text-muted: #cbd5e1;
+    --dec-text-subtle: #9ca3af;
+
+    --dec-code-bg: var(--dec-surface-dark);
+    --dec-code-text: #e5e7eb;
+    --dec-popover-bg: var(--dec-surface-dark-line);
+    --dec-popover-border: #56657a;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
     --dec-node-hover-glow: rgba(255, 255, 255, 0.3);
 

@@ -283,12 +283,12 @@ function CommittedTaskForm({
 
 const topLevelHeading = (field: FormFieldDescriptor) => <TopLevelHeading field={field} />;
 
-/** The top level's groups after the task's own fields: Flow (`then`), then Task settings. */
+/**
+ * The top level's "Flow" heading over `then`, and a hr over Common fields
+ */
 function TopLevelHeading({ field }: { field: FormFieldDescriptor }) {
   const { t } = useI18n();
   if (field.kind === "then") return <GroupHeading label={t("sidebar.group.flow")} />;
-  if (field.path === COMMON_FIELDS_PATH) {
-    return <GroupHeading label={t("sidebar.group.taskSettings")} />;
-  }
+  if (field.path === COMMON_FIELDS_PATH) return <hr className="dec-form-group-divider" />;
   return null;
 }
