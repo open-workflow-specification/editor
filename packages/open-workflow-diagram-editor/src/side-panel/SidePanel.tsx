@@ -31,7 +31,7 @@ import { NodeDetailsView } from "@/side-panel/NodeDetailsView";
 import { WorkflowActions } from "@/side-panel/WorkflowActions";
 import { getNodeVisualConfig } from "@/react-flow/nodes/taskNodeConfig";
 import { getTaskDescriptionForNodeType } from "@/core";
-import { HelpPopover } from "./forms/FieldLabel";
+import { HelpTooltip } from "./forms/FieldLabel";
 import type { BaseNodeData } from "@/react-flow/nodes/Nodes";
 import "./SidePanel.css";
 import { EditFormFooter } from "./EditFormFooter";
@@ -99,7 +99,7 @@ export function SidePanel() {
                   : t("sidebar.document")}
               </span>
               {taskDescription !== undefined && nodeConfig !== undefined && (
-                <HelpPopover label={nodeConfig.typeLabel} description={taskDescription} />
+                <HelpTooltip label={nodeConfig.typeLabel} description={taskDescription} />
               )}
             </span>
           </div>

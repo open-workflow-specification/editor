@@ -36,7 +36,7 @@ import {
 } from "./taskFormContext";
 import { LevelErrors } from "./validation";
 import { useFieldChanged } from "../EditSession";
-import { FieldLabel, HelpPopover, RequiredMark } from "./FieldLabel";
+import { FieldLabel, HelpTooltip, RequiredMark } from "./FieldLabel";
 import { VariantPicker } from "./VariantPicker";
 import { KeyValueMapField } from "./customFields/KeyValueMapField";
 import { DrillRow } from "./drill/DrillRow";
@@ -189,7 +189,7 @@ function OrderedMapRow({ field }: { field: OrderedMapField }) {
           </span>
         </button>
         {field.description !== undefined && (
-          <HelpPopover label={field.label} description={field.description} />
+          <HelpTooltip label={field.label} description={field.description} />
         )}
       </div>
 
@@ -305,7 +305,7 @@ export function GroupHeading({
     <h4 id={id} className="dec-form-group-heading">
       {label}
       <RequiredMark required={required} />
-      {description !== undefined && <HelpPopover label={label} description={description} />}
+      {description !== undefined && <HelpTooltip label={label} description={description} />}
       <RemoveFieldButton path={fieldPath} />
     </h4>
   );

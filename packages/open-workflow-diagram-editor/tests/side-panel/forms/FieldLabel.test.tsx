@@ -15,7 +15,8 @@
  */
 
 /**
- * Field help opens on click (not hover) in a popover kept inside the editor's own root;
+ * Field help opens on hover after a delay, on focus, or on click/tap, in a tooltip kept inside the
+ * editor's own root;
  * read-only hides the required `*` but keeps help; runtime expressions read as inline code.
  */
 
@@ -26,7 +27,7 @@ import { RUN_PROCESS_TYPES_WORKFLOW } from "../../fixtures/workflows";
 import { parseFixture } from "../../test-utils";
 import { renderTaskPanel } from "../../test-utils/panel-helpers";
 import { renderWithProviders } from "../../test-utils/render-helpers";
-import { HelpPopover } from "../../../src/side-panel/forms/FieldLabel";
+import { HELP_TOOLTIP_DELAY_MS, HelpTooltip } from "../../../src/side-panel/forms/FieldLabel";
 
 vi.mock("../../../src/side-panel/forms/ui/combobox", async () => {
   const { createComboboxStub } = await import("../../test-utils/combobox-stub");
@@ -40,57 +41,70 @@ const STDIN_HELP = /standard input/i;
 const helpFor = (label: string) => screen.getByRole("button", { name: `Help: ${label}` });
 
 describe("field help", () => {
-  it("opens on click, not on hover", async () => {
-    const { user } = await renderTaskPanel(
-      parseFixture(RUN_PROCESS_TYPES_WORKFLOW),
-      SCRIPT_NODE_ID,
-    );
+  const render = (isReadOnly = false) =>
+    renderTaskPanel(parseFixture(RUN_PROCESS_TYPES_WORKFLOW), SCRIPT_NODE_ID, { isReadOnly });
+  const tooltip = () => screen.queryByRole("tooltip");
+
+  it("opens on hover only after a delay, so passing over a ? opens nothing", async () => {
+    const { user } = await render();
 
     await user.hover(helpFor("Stdin"));
-    expect(screen.queryByText(STDIN_HELP)).not.toBeInTheDocument();
+    expect(tooltip()).not.toBeInTheDocument();
 
-    await user.click(helpFor("Stdin"));
-    expect(screen.getByRole("dialog", { name: "Stdin" })).toHaveTextContent(STDIN_HELP);
-    expect(helpFor("Stdin")).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(STDIN_HELP);
   });
 
-  it("closes on Escape and returns focus to the ?", async () => {
-    const { user } = await renderTaskPanel(
-      parseFixture(RUN_PROCESS_TYPES_WORKFLOW),
-      SCRIPT_NODE_ID,
-    );
+  it("does not open when the pointer leaves before the delay", async () => {
+    const { user } = await render();
+
+    await user.hover(helpFor("Stdin"));
+    await user.unhover(helpFor("Stdin"));
+    await new Promise((resolve) => setTimeout(resolve, HELP_TOOLTIP_DELAY_MS + 100));
+
+    expect(tooltip()).not.toBeInTheDocument();
+  });
+
+  it("describes the ? with the help text", async () => {
+    const { user } = await render();
+    await user.hover(helpFor("Stdin"));
+
+    await screen.findByRole("tooltip");
+    expect(helpFor("Stdin")).toHaveAccessibleDescription(STDIN_HELP);
+  });
+
+  it("opens on keyboard focus", async () => {
+    const { user } = await render();
+
+    while (document.activeElement !== helpFor("Stdin")) await user.tab();
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(STDIN_HELP);
+  });
+
+  it("toggles on click, for touch where there is no hover", async () => {
+    const { user } = await render();
+
+    await user.click(helpFor("Stdin"));
+    expect(tooltip()).toHaveTextContent(STDIN_HELP);
+
+    await user.click(helpFor("Stdin"));
+    expect(tooltip()).not.toBeInTheDocument();
+  });
+
+  it("closes on Escape", async () => {
+    const { user } = await render();
     await user.click(helpFor("Stdin"));
 
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(helpFor("Stdin")).toHaveFocus();
-  });
-
-  it("closes when the ? is clicked again", async () => {
-    const { user } = await renderTaskPanel(
-      parseFixture(RUN_PROCESS_TYPES_WORKFLOW),
-      SCRIPT_NODE_ID,
-    );
-    await user.click(helpFor("Stdin"));
-
-    await user.click(helpFor("Stdin"));
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(tooltip()).not.toBeInTheDocument();
   });
 
   it("works in read-only", async () => {
-    const { user } = await renderTaskPanel(
-      parseFixture(RUN_PROCESS_TYPES_WORKFLOW),
-      SCRIPT_NODE_ID,
-      {
-        isReadOnly: true,
-      },
-    );
+    const { user } = await render(true);
 
     await user.click(helpFor("Stdin"));
 
-    expect(screen.getByRole("dialog", { name: "Stdin" })).toHaveTextContent(STDIN_HELP);
+    expect(tooltip()).toHaveTextContent(STDIN_HELP);
   });
 
   it("renders inside its own editor root, never in the host's document body", async () => {
@@ -99,15 +113,16 @@ describe("field help", () => {
       <>
         <div className="dec-root" data-testid="first-editor" />
         <div className="dec-root" data-testid="second-editor">
-          <HelpPopover label="Image" description="The container image to run." />
+          <HelpTooltip label="Image" description="The container image to run." />
         </div>
       </>,
     );
 
     await user.click(helpFor("Image"));
 
-    const dialog = screen.getByRole("dialog", { name: "Image" });
-    expect(dialog.closest(".dec-root")).toBe(screen.getByTestId("second-editor"));
+    expect(screen.getByRole("tooltip").closest(".dec-root")).toBe(
+      screen.getByTestId("second-editor"),
+    );
   });
 });
 

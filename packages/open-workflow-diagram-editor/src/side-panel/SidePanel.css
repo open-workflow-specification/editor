@@ -464,7 +464,7 @@
     @apply dec:absolute dec:-left-3 dec:top-1/2 dec:flex dec:-translate-y-1/2;
   }
 
-  /* Help "?" button - click opens the help popover. */
+  /* Help "?" button: hover (after a delay), focus or click opens its help tooltip. */
   .dec-root .dec-form-field-help {
     @apply dec:inline-flex dec:items-center dec:justify-center dec:shrink-0
       dec:h-5 dec:w-5 dec:-my-0.5 dec:p-0 dec:rounded
@@ -473,7 +473,7 @@
   }
 
   .dec-root .dec-form-field-help:hover,
-  .dec-root .dec-form-field-help[data-state="open"] {
+  .dec-root .dec-form-field-help:is([data-state="delayed-open"], [data-state="instant-open"]) {
     color: var(--dec-text);
     background-color: color-mix(in srgb, var(--dec-text-subtle) 16%, transparent);
   }
@@ -482,7 +482,7 @@
     @apply dec:h-3 dec:w-3;
   }
 
-  /* Popover surface (help, breadcrumb hidden levels): portalled into this editor's .dec-root,
+  /* Popover surface (help tooltip, breadcrumb hidden levels): portalled into this editor's .dec-root,
      never document.body */
   .dec-root .dec-popover {
     @apply dec:z-50 dec:rounded-lg;
@@ -504,7 +504,7 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    .dec-root .dec-popover[data-state="open"] {
+    .dec-root .dec-popover:is([data-state="open"], [data-state="delayed-open"], [data-state="instant-open"]) {
       animation: dec-popover-in 120ms ease-out;
     }
   }
@@ -516,18 +516,18 @@
     }
   }
 
-  .dec-root .dec-help-popover {
+  .dec-root .dec-help-tooltip {
     @apply dec:px-3 dec:py-2.5;
-    width: min(260px, var(--radix-popover-content-available-width));
+    width: min(260px, var(--radix-tooltip-content-available-width));
     user-select: text;
   }
 
-  .dec-root .dec-help-popover-title {
+  .dec-root .dec-help-tooltip-title {
     @apply dec:m-0 dec:mb-0.5 dec:text-meta dec:font-semibold;
     color: var(--dec-text-muted);
   }
 
-  .dec-root .dec-help-popover-text {
+  .dec-root .dec-help-tooltip-text {
     @apply dec:m-0 dec:text-body dec:leading-[1.45] dec:font-normal dec:normal-case dec:tracking-normal;
     overflow-wrap: anywhere;
   }

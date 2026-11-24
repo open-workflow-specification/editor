@@ -29,7 +29,7 @@ import { formatEntryCount } from "../customFields/fieldHelpers";
 import { countLevelErrorsUnder, useTaskValidation } from "../validation";
 import { COMMON_FIELDS_PATH } from "@/core/schemaToFormFields";
 import { RemoveFieldButton, useRemoveField } from "../removeField";
-import { HelpPopover, RequiredMark } from "../FieldLabel";
+import { HelpTooltip, RequiredMark } from "../FieldLabel";
 
 /**
  * Displays a clickable row for a section, object, map or one-of, showing:
@@ -143,7 +143,7 @@ export function DrillRow({
   // help comes from the editor: the schema gives its extra keys none.
   const help =
     field.description !== undefined ? (
-      <HelpPopover label={label} description={field.description} />
+      <HelpTooltip label={label} description={field.description} />
     ) : null;
   return removable || help !== null ? (
     <div className="dec-form-drill-row-wrap">
