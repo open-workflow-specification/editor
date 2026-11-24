@@ -1810,3 +1810,23 @@ describe("keyed objects (correlate)", () => {
     ]);
   });
 });
+
+describe("schemaToFormFields for.in", () => {
+  const forIn = () => fieldsByPath(getFormFieldsForNodeType("for")).get("for.in") as OneOfField;
+  const arrayOption = () => forIn().variants.find((v) => v !== forIn().variants[0])!;
+
+  it("edits the inline array option as a structured value", () => {
+    expect(arrayOption().fields.map((f) => f.kind)).toEqual(["json"]);
+  });
+
+  it("marks the inline array option's value as an array", () => {
+    expect(arrayOption().fields[0]).toMatchObject({ isArray: true });
+  });
+
+  it.each([
+    [[1, 2, 3], 1],
+    ["${ .items }", 0],
+  ])("opens %j on option %i", (value, expected) => {
+    expect(forIn().variants.findIndex((v) => v.matchesData(value))).toBe(expected);
+  });
+});

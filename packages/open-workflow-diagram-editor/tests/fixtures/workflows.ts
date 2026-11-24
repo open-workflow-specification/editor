@@ -1070,3 +1070,16 @@ export const WAIT_DURATIONS_WORKFLOW = {
   document: { dsl: "1.0.3", name: "wait-durations", version: "1.0.0", namespace: "default" },
   do: [{ waitInline: { wait: { seconds: 30 } } }, { waitLiteral: { wait: "PT30S" } }],
 };
+
+/** DSL 1.1.0 `for.in`: an inline array beside the runtime-expression form. */
+export const FOR_IN_ARRAY_WORKFLOW = {
+  document: { dsl: "1.1.0", name: "for-in", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      forEachId: {
+        for: { in: [1, 2, 3] },
+        do: [{ logId: { set: { id: "${ $item }" } } }],
+      },
+    },
+  ],
+};

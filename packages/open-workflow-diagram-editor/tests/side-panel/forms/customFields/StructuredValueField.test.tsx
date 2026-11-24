@@ -118,6 +118,16 @@ describe("StructuredValueField — initial render", () => {
     expect(getTextarea().value).toBe("");
   });
 
+  it("shows an inline array's shape in its empty textarea", () => {
+    render(<Wrapper field={{ ...bodyField, isArray: true }} defaultValues={{}} />);
+    expect(getTextarea().placeholder).toBe(en["sidebar.json.arrayPlaceholder"]);
+  });
+
+  it("shows no placeholder for a value of any shape", () => {
+    render(<Wrapper field={bodyField} defaultValues={{}} />);
+    expect(getTextarea().placeholder).toBe("");
+  });
+
   it("serialises a structured default as YAML when format is yaml", () => {
     const defaults = { emit: { event: { with: { data: { key: "val" } } } } };
     render(<Wrapper field={yamlField} defaultValues={defaults} />);
