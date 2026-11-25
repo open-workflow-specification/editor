@@ -20,6 +20,7 @@
     "format:check": "oxfmt --config .oxfmtrc.json --check",
     "build:prod": "pnpm -r --stream --if-present build:prod",
     "build:dev": "pnpm -r --stream --if-present build:dev",
+    "build:storybook": "pnpm -r --if-present build:storybook",
     "prepare": "husky",
     "playwright:install:ci": "playwright install --with-deps"
   },
