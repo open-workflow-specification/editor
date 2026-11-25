@@ -85,6 +85,7 @@
     /* Empty and loading state text */
     --dec-state-title-color: #111827;
     --dec-state-message-color: #4b5563;
+    --dec-error-snippet-bg: #ffffff;
 
     /* edges */
     --dec-edge-selected: #aea6a6;
@@ -103,6 +104,7 @@
   .dec-root.dark {
     --dec-state-title-color: #f3f4f6;
     --dec-state-message-color: #d1d5db;
+    --dec-error-snippet-bg: var(--dec-surface-dark-elevated);
 
     /* canvas */
     --dec-canvas-bg: #1c222c;
@@ -157,5 +159,28 @@
   .dec-root .dec-loading-state {
     @apply dec:flex dec:h-full dec:items-center dec:justify-center dec:text-sm;
     color: var(--dec-state-message-color);
+  }
+
+  /* Error page: fills the editor on the canvas colour, so its text never lands
+     on whatever the host paints behind the editor. */
+  .dec-root .dec-error-state {
+    @apply dec:h-full dec:overflow-auto dec:p-6;
+    background-color: var(--dec-canvas-bg);
+  }
+
+  .dec-root .dec-error-state__title {
+    @apply dec:text-base dec:font-semibold;
+    color: var(--dec-state-title-color);
+  }
+
+  .dec-root .dec-error-state__message {
+    @apply dec:mt-1 dec:text-sm;
+    color: var(--dec-state-message-color);
+  }
+
+  .dec-root .dec-error-state__snippet {
+    @apply dec:mt-3 dec:p-3 dec:overflow-x-auto dec:rounded dec:text-sm;
+    background-color: var(--dec-error-snippet-bg);
+    color: var(--dec-state-title-color);
   }
 }
