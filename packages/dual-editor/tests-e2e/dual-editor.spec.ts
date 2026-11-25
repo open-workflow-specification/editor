@@ -42,6 +42,23 @@ test("YAML workflows render in the text and diagram panes", async ({ page }) => 
   await expect(page.getByTestId("rf__node-/do/greet")).toContainText("greet");
 });
 
+test("YAML autocomplete shows suggestions after deleting the HTTP method", async ({ page }) => {
+  await page.goto("/iframe.html?id=dual-editor--yaml-editor");
+
+  const methodLine = page.locator(".monaco-editor .view-line").filter({ hasText: "method:" });
+  await expect(methodLine).toHaveText("method: GET");
+  await methodLine.click();
+  await page.keyboard.press("End");
+  for (let index = 0; index < "GET".length; index++) {
+    await page.keyboard.press("Shift+ArrowLeft");
+  }
+  await page.keyboard.press("Backspace");
+  await expect(methodLine).toHaveText("method:");
+
+  await page.keyboard.press("Control+Space");
+  await expect(page.locator(".suggest-widget .monaco-list-row").first()).toBeVisible();
+});
+
 test("text edits update the diagram", async ({ page }) => {
   await openDualEditor(page);
   const editor = page.locator(".monaco-editor").first();
