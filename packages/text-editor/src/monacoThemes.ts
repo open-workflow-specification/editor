@@ -19,9 +19,7 @@ import { EDITOR_PALETTE } from "@openworkflowspec/core";
 import type { ResolvedColorMode } from "@openworkflowspec/core";
 
 /**
- * Monaco's own `vs`/`vs-dark` themes are neutral grey, which clashes with the
- * diagram editor's slate surfaces when the two sit side by side. These inherit
- * Monaco's syntax colours and replace only the surfaces.
+ * These inherit Monaco's syntax colours and replace only the surfaces.
  */
 export const MONACO_THEME_NAMES: Record<ResolvedColorMode, string> = {
   light: "ows-light",

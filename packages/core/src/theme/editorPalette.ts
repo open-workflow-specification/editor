@@ -20,9 +20,9 @@ import type { ResolvedColorMode } from "../types/colorMode";
  * Surface colours shared by the editors that sit side by side (text + diagram).
  *
  * Monaco takes hex values only and cannot read CSS custom properties, so these
- * are the single source. The dark values mirror the diagram editor's
- * `--dec-surface-dark*` tokens; `editorPalette.test.ts` in the diagram editor
- * fails if the two drift. `DualEditor.css` repeats `border` for its divider.
+ * are the single source. The dark values mirror the diagram editor's tokens
+ * (background: `--dec-canvas-bg`, border/raised: `--dec-surface-dark-elevated`),
+ * and `DualEditor.css` repeats `border` for its divider: change them together.
  */
 export type EditorPalette = {
   /** Text editor background, gutter and minimap. */
@@ -39,6 +39,8 @@ export type EditorPalette = {
 
 export const EDITOR_PALETTE: Record<ResolvedColorMode, EditorPalette> = {
   light: {
+    // Deliberately white, not --dec-canvas-bg (#e9eef3): Monaco's `vs` syntax
+    // colours are made for white and some (numbers #098658) drop below AA on the canvas.
     background: "#ffffff",
     border: "#cbd5e1",
     raised: "#f8fafc",
@@ -48,7 +50,7 @@ export const EDITOR_PALETTE: Record<ResolvedColorMode, EditorPalette> = {
     indentGuideActive: "#94a3b8",
   },
   dark: {
-    background: "#1a202c", // --dec-surface-dark
+    background: "#1c222c", // --dec-canvas-bg (dark), so the panes meet seamlessly
     border: "#2d3748", // --dec-surface-dark-elevated
     raised: "#2d3748", // --dec-surface-dark-elevated
     lineNumber: "#8492a6",
