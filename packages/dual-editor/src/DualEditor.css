@@ -17,6 +17,7 @@
 .ows-dual-editor {
   --ows-dual-editor-divider-size: 0px;
   --ows-dual-editor-divider-hit-size: 10px;
+  --ows-dual-editor-divider-color: #cbd5e1;
   display: grid;
   grid-template-columns:
     minmax(0, var(--ows-dual-editor-split))
@@ -72,7 +73,7 @@
   left: 50%;
   width: 1px;
   transform: translateX(-50%);
-  background: transparent;
+  background: var(--ows-dual-editor-divider-color);
   content: "";
   transition:
     width 120ms ease,
@@ -89,8 +90,8 @@
   transform: translateY(-50%);
 }
 
-.ows-dual-editor--dark .ows-dual-editor__divider::after {
-  background: transparent;
+.ows-dual-editor--dark {
+  --ows-dual-editor-divider-color: #2d3748;
 }
 
 .ows-dual-editor__divider:hover::after,
@@ -117,13 +118,13 @@
   outline: none;
 }
 
- @media (forced-colors: active) {
-   .ows-dual-editor__divider:focus-visible {
-     outline: 2px solid Highlight;
-     outline-offset: -2px;
-   }
- }
- 
+@media (forced-colors: active) {
+  .ows-dual-editor__divider:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
 .ows-dual-editor--dragging {
   cursor: col-resize;
   user-select: none;
