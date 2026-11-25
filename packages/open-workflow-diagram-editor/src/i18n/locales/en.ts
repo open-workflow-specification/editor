@@ -64,6 +64,7 @@ export const en = {
   "sidebar.duration.title": "Enter an ISO 8601 duration, for example PT30S or PT5M",
   "sidebar.duration.placeholder": "PT30S",
   "sidebar.mcpProtocolVersion.placeholder": "2025-06-18",
+  "sidebar.json.arrayPlaceholder": "[1, 2, 3]",
   "sidebar.then.flowDirectiveGroup": "Flow directive",
   "sidebar.then.taskGroup": "Task",
   "sidebar.field.item": "item",

@@ -33,7 +33,7 @@ vi.mock("../../src/side-panel/forms/ui/combobox", async () => {
 const { EditFormFooter } = await import("../../src/side-panel/EditFormFooter");
 const { TaskForm } = await import("../../src/side-panel/forms/TaskForm");
 const { useDiagramEditorContext } = await import("../../src/store/DiagramEditorContext");
-const { COMMON_FIELDS_WORKFLOW } = await import("../fixtures/workflows");
+const { COMMON_FIELDS_WORKFLOW, FOR_IN_ARRAY_WORKFLOW } = await import("../fixtures/workflows");
 const { renderWithEditorProviders } = await import("../test-utils/render-helpers");
 const { nodeAt, parseFixture, applyButton } = await import("../test-utils");
 const { openLevel } = await import("../test-utils/drill-helpers");
@@ -110,5 +110,24 @@ describe("editing a JSON/YAML value and applying", () => {
 
     await user.click(applyButton());
     expect(valueAt(committedTask(nodeId), path)).toEqual(next);
+  });
+});
+
+describe("an inline for.in array", () => {
+  const FOR_EACH = "/do/forEachId";
+
+  it("opens on the array option and applies an edited array as an array", async () => {
+    renderWithEditorProviders(<Panel nodeId={FOR_EACH} />, {
+      content: JSON.stringify(FOR_IN_ARRAY_WORKFLOW),
+    });
+    await act(async () => {});
+    const user = userEvent.setup();
+
+    const textarea = screen.getByDisplayValue(asText([1, 2, 3]), exact);
+    fireEvent.change(textarea, { target: { value: asText([1, 2, 3, 4]) } });
+    expect(screen.getByText("1 changed")).toBeInTheDocument();
+
+    await user.click(applyButton());
+    expect(valueAt(nodeAt(committed!, FOR_EACH).data.task, "for.in")).toEqual([1, 2, 3, 4]);
   });
 });

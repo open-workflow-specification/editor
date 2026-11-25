@@ -237,6 +237,8 @@ export interface JsonField extends FieldBase {
    * expression string a stale value from a variant switch; elsewhere it is the field's value.
    */
   hasExpressionSibling?: boolean;
+  /** True when the value must be an array (`for.in`'s inline array); the panel shows its shape. */
+  isArray?: boolean;
 }
 
 export interface OneOfField extends FieldBase {
@@ -679,6 +681,7 @@ function formatVariantLabel(title: string): string {
 }
 
 const API_ENDPOINT_PLACEHOLDER = "https://example.com/api/{id}";
+
 const ADDRESS_PATH_SUFFIXES = ["endpoint", "uri", "source"] as const;
 
 /* Whether a path holds the address of a service in workflow calls - and should get the API-endpoint example */
@@ -1499,6 +1502,9 @@ function buildDiscriminator(resolved: Record<string, unknown>): (data: unknown) 
   if (resolved.type === "boolean") {
     return (data: unknown) => typeof data === "boolean";
   }
+  if (resolved.type === "array") {
+    return Array.isArray;
+  }
 
   // Strategy 4: object type
   if (resolved.type === "object" || properties) {
@@ -1673,6 +1679,19 @@ function buildOneOfVariants(
             resolved,
             c,
           },
+        ];
+      } else if (resolved.type === "array") {
+        // An inline array (`for.in`): its items are unconstrained, so it is edited as text.
+        leafField = {
+          kind: "json",
+          format,
+          path: leafPath,
+          label: rawLabel,
+          required: false,
+          isArray: true,
+        };
+        return [
+          { kind: "json" as const, label: rawLabel, matchesData, fields: [leafField], resolved, c },
         ];
       } else if (
         resolved.type === "string" &&

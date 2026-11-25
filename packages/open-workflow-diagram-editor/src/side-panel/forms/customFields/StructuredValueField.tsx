@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import { Controller, useFormContext, useFormState } from "react-hook-form";
+import { useI18n } from "@openworkflowspec/i18n";
 import { Textarea } from "../ui/textarea";
 import { RUNTIME_EXPRESSION_PATTERN, type JsonField } from "../../../core/schemaToFormFields";
 import { parseText, valueToText } from "./innerObjectText";
@@ -35,6 +36,7 @@ export type StructuredValueFieldProps = {
 export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
   const { control, getValues, getFieldState } = useFormContext<Record<string, unknown>>();
   const { validateField } = useTaskFormContext();
+  const { t } = useI18n();
   const errorMessage = useFieldError(field.path);
   // An expression string is stale only when an Expression variant beside this one holds it;
   // elsewhere (an HTTP `body`, `schema.document`) it is the field's own value.
@@ -131,6 +133,7 @@ export function StructuredValueField({ field, id }: StructuredValueFieldProps) {
               id={id}
               value={text}
               onChange={handleChange}
+              placeholder={field.isArray ? t("sidebar.json.arrayPlaceholder") : undefined}
               onBlur={() => {
                 rhfField.onBlur();
                 validateField?.(field.path);
