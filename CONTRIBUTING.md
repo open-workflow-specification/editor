@@ -163,12 +163,19 @@ Pull requests automatically run linting, type checking, tests, and builds. These
 
 Netlify publishes all four previews together for each Deploy Preview it builds. The Deploy Preview link opens the Dual Editor Storybook by default.
 
+| Preview                       | Path               |
+| ----------------------------- | ------------------ |
+| Dual Editor Storybook         | `/dual-editor/`    |
+| Diagram Editor Storybook      | `/diagram-editor/` |
+| Text Editor Storybook         | `/text-editor/`    |
+| Vanilla Web Component example | `/vanilla/`        |
+
 To make the link open a different preview, add `@netlify` followed by its path to the pull request description, then push a commit.
 
 For example, use this line to open the Text Editor preview.
 
 ```text
-@netlify /text-editor
+@netlify /text-editor/
 ```
 
 ## Pull Request Process
