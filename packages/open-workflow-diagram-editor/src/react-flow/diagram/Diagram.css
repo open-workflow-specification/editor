@@ -61,8 +61,9 @@
     cursor: grabbing !important;
   }
 
-  /* hide handles in read-only mode */
-  .dec-root .read-only .react-flow__handle {
+  /* hide handles: nodes are never connected or dragged by hand (read-only or edit mode).
+     They stay in the DOM, collapsed, because edges anchor to their positions. */
+  .dec-root .react-flow__handle {
     visibility: hidden !important;
     width: 0 !important;
     height: 0 !important;
