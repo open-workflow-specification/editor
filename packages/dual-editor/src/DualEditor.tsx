@@ -67,13 +67,13 @@ export const DualEditor = ({
   }, [onContentChange]);
 
   React.useEffect(() => {
-    const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
-    contentResetKeyRef.current = contentResetKey;
-    if (!contentResetRequested && content === editorContentRef.current) return;
-    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    pendingTextContentRef.current = null;
-    editorContentRef.current = content;
-    setEditorContent(content);
+    // const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
+    // contentResetKeyRef.current = contentResetKey;
+    // if (!contentResetRequested && content === editorContentRef.current) return;
+    // if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+    // pendingTextContentRef.current = null;
+    // editorContentRef.current = content;
+    // setEditorContent(content);
   }, [content, contentResetKey]);
 
   React.useEffect(
