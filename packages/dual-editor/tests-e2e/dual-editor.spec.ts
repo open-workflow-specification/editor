@@ -44,7 +44,7 @@ async function openDualEditor(page: import("@playwright/test").Page) {
 
 test("typing a phrase preserves spaces in the YAML text pane", async ({ page }) => {
   await page.goto("/iframe.html?id=dual-editor--yaml-editor");
-  await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
+  await expect(page.locator(".monaco-editor").first()).toBeVisible();
 
   const methodLine = page.locator(".monaco-editor .view-line", { hasText: /method:\s+GE/ });
   await expect(methodLine).toContainText("method: GET");
