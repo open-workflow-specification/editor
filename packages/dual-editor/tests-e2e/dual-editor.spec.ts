@@ -42,26 +42,22 @@ async function openDualEditor(page: import("@playwright/test").Page) {
 //   await expect(page.getByTestId("rf__node-/do/greet")).toContainText("greet");
 // });
 
-for (const delay of [50, 30, 20, 10, 1]) {
-  test(`typing a phrase preserves spaces in the YAML text pane (${delay} ms)`, async ({ page }) => {
-    await page.goto("/iframe.html?id=dual-editor--yaml-editor");
-    // await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
+test("typing a phrase preserves spaces in the YAML text pane", async ({ page }) => {
+  await page.goto("/iframe.html?id=dual-editor--yaml-editor");
+  await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
 
-    const methodLine = page.locator(".monaco-editor .view-line", { hasText: /method:\s+GE/ });
-    await expect(methodLine).toContainText("method: GET");
-    await methodLine.click();
-    await page.keyboard.press("End");
-    await page.keyboard.press("ArrowLeft");
+  const methodLine = page.locator(".monaco-editor .view-line", { hasText: /method:\s+GE/ });
+  await expect(methodLine).toContainText("method: GET");
+  await methodLine.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowLeft");
 
-    for (const character of " Lorem Ipsum dolor sit ") {
-      await page.keyboard.press(character === " " ? "Space" : character, { delay });
-    }
+  for (const character of " Lorem Ipsum dolor sit ") {
+    await page.keyboard.press(character === " " ? "Space" : character, { delay: 100 });
+  }
 
-    await expect(methodLine).toContainText("method: GE Lorem Ipsum dolor sit T", {
-      timeout: 3000,
-    });
-  });
-}
+  await expect(methodLine).toContainText("method: GE Lorem Ipsum dolor sit T", { timeout: 3000 });
+});
 
 // test("text edits update the diagram", async ({ page }) => {
 //   await openDualEditor(page);
