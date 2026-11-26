@@ -42,6 +42,23 @@ test("YAML workflows render in the text and diagram panes", async ({ page }) => 
   await expect(page.getByTestId("rf__node-/do/greet")).toContainText("greet");
 });
 
+test("typing a phrase preserves spaces in the YAML text pane", async ({ page }) => {
+  await page.goto("/iframe.html?id=dual-editor--yaml-editor");
+  await expect(page.getByTestId("react-flow-canvas")).toBeVisible();
+
+  const methodLine = page.locator(".monaco-editor .view-line", { hasText: /method:\s+GE/ });
+  await expect(methodLine).toContainText("method: GET");
+  await methodLine.click();
+  await page.keyboard.press("End");
+  await page.keyboard.press("ArrowLeft");
+
+  for (const character of " Lorem Ipsum dolor sit ") {
+    await page.keyboard.press(character === " " ? "Space" : character);
+  }
+
+  await expect(methodLine).toContainText("method: GE Lorem Ipsum dolor sit T", { timeout: 3000 });
+});
+
 test("text edits update the diagram", async ({ page }) => {
   await openDualEditor(page);
   const editor = page.locator(".monaco-editor").first();
