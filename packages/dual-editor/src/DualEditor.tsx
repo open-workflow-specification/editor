@@ -17,7 +17,6 @@
 import * as React from "react";
 import { TextEditor } from "@openworkflowspec/text-editor";
 import type { TextEditorLanguage } from "@openworkflowspec/text-editor";
-import { DiagramEditor } from "@openworkflowspec/diagram-editor";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 import type { ColorMode } from "@openworkflowspec/core";
 import "@openworkflowspec/diagram-editor/styles.css";
@@ -47,7 +46,6 @@ export const DualEditor = ({
   createLanguageServiceWorker,
   language = "json",
   isReadOnly = false,
-  locale = "en",
   colorMode = "system",
   onContentChange,
   onSplitChange,
@@ -55,7 +53,6 @@ export const DualEditor = ({
   const resolvedColorMode = useResolvedColorMode(colorMode);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [editorContent, setEditorContent] = React.useState(content);
-  const [diagramContent, setDiagramContent] = React.useState(content);
   const editorContentRef = React.useRef(content);
   const contentResetKeyRef = React.useRef(contentResetKey);
   const diagramUpdateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -77,7 +74,6 @@ export const DualEditor = ({
     pendingTextContentRef.current = null;
     editorContentRef.current = content;
     setEditorContent(content);
-    setDiagramContent(content);
   }, [content, contentResetKey]);
 
   React.useEffect(
@@ -115,7 +111,6 @@ export const DualEditor = ({
     diagramUpdateTimeoutRef.current = setTimeout(() => {
       diagramUpdateTimeoutRef.current = null;
       pendingTextContentRef.current = null;
-      setDiagramContent(nextContent);
       onContentChangeRef.current?.(nextContent);
     }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
   }, []);
@@ -126,7 +121,6 @@ export const DualEditor = ({
     pendingTextContentRef.current = null;
     editorContentRef.current = nextContent;
     setEditorContent(nextContent);
-    setDiagramContent(nextContent);
     onContentChangeRef.current?.(nextContent);
   }, []);
 
