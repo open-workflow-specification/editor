@@ -185,10 +185,7 @@ export const DualEditor = ({
       className={`ows-dual-editor${resolvedColorMode === "dark" ? " ows-dual-editor--dark" : ""}${isDragging ? " ows-dual-editor--dragging" : ""}${isStacked ? " ows-dual-editor--stacked" : ""}`}
       style={{ "--ows-dual-editor-split": `${split}%` } as React.CSSProperties}
     >
-      <section
-        className="ows-dual-editor__pane ows-dual-editor__text nokey"
-        aria-label="Text editor"
-      >
+      <section className="ows-dual-editor__pane ows-dual-editor__text" aria-label="Text editor">
         <TextEditor
           content={editorContent}
           language={language}
@@ -219,16 +216,7 @@ export const DualEditor = ({
       <section
         className="ows-dual-editor__pane ows-dual-editor__diagram"
         aria-label="Diagram editor"
-      >
-        <DiagramEditor
-          content={diagramContent}
-          language={language}
-          isReadOnly={isReadOnly}
-          locale={locale}
-          colorMode={colorMode}
-          onContentChange={handleDiagramContentChange}
-        />
-      </section>
+      ></section>
     </div>
   );
 };
