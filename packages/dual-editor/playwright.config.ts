@@ -18,8 +18,6 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests-e2e",
-  workers: 15,
-  fullyParallel: true,
   expect: {
     timeout: 30000,
   },
