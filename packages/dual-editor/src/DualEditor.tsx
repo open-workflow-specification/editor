@@ -115,15 +115,6 @@ export const DualEditor = ({
     }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
   }, []);
 
-  const handleDiagramContentChange = React.useCallback((nextContent: string) => {
-    if (nextContent === editorContentRef.current) return;
-    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    pendingTextContentRef.current = null;
-    editorContentRef.current = nextContent;
-    setEditorContent(nextContent);
-    onContentChangeRef.current?.(nextContent);
-  }, []);
-
   const setSplitFromPointer = (coordinate: number) => {
     const bounds = containerRef.current?.getBoundingClientRect();
     if (!bounds) return;
