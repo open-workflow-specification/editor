@@ -53,7 +53,7 @@ test("typing a phrase preserves spaces in the YAML text pane", async ({ page }) 
   await page.keyboard.press("ArrowLeft");
 
   for (const character of " Lorem Ipsum dolor sit ") {
-    await page.keyboard.press(character === " " ? "Space" : character);
+    await page.keyboard.press(character === " " ? "Space" : character, { delay: 100 });
   }
 
   await expect(methodLine).toContainText("method: GE Lorem Ipsum dolor sit T", { timeout: 3000 });
