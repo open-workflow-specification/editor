@@ -21,6 +21,7 @@ import { jsonDefaults } from "monaco-editor/languages/features/json/register";
 import "monaco-editor/languages/definitions/yaml/register";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 import { createTextEditorLanguageService } from "./language-service";
+import { defineMonacoThemes, MONACO_THEME_NAMES } from "./monacoThemes";
 import type { ColorMode } from "@openworkflowspec/core";
 
 jsonDefaults.setModeConfiguration({
@@ -75,6 +76,8 @@ export const TextEditor = ({
       monaco.Uri.parse(`inmemory://openworkflow/workflow.${language}`),
     );
 
+    defineMonacoThemes();
+
     const editor = monaco.editor.create(containerRef.current, {
       model,
       readOnly: isReadOnly,
@@ -82,9 +85,7 @@ export const TextEditor = ({
       codeLens: !isReadOnly,
       automaticLayout: true,
       renderLineHighlight: "none",
-      ...(resolvedColorMode && {
-        theme: resolvedColorMode === "dark" ? "vs-dark" : "vs",
-      }),
+      theme: MONACO_THEME_NAMES[resolvedColorMode],
     });
 
     const languageService = createTextEditorLanguageService(
@@ -152,7 +153,7 @@ export const TextEditor = ({
       return;
     }
 
-    monaco.editor.setTheme(resolvedColorMode === "dark" ? "vs-dark" : "vs");
+    monaco.editor.setTheme(MONACO_THEME_NAMES[resolvedColorMode]);
   }, [resolvedColorMode]);
 
   return (

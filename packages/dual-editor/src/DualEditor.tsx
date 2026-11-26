@@ -38,7 +38,8 @@ export type DualEditorProps = {
 
 const DEFAULT_SPLIT = 50;
 const MIN_PANE_SIZE = 20;
-const TEXT_TO_DIAGRAM_DEBOUNCE_MS = 3000;
+// How long typing must pause before the diagram (and the host) gets the text.
+export const TEXT_TO_DIAGRAM_DEBOUNCE_MS = 500;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export const DualEditor = ({

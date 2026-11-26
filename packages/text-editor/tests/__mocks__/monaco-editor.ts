@@ -89,6 +89,7 @@ export const simulateEditorContentChange = (value: string) => {
 };
 
 export const mockSetTheme = vi.fn();
+export const mockDefineTheme = vi.fn();
 
 export const mockMonacoWorkerDispose = vi.fn();
 export const mockCreateWebWorker = vi.fn<
@@ -110,6 +111,7 @@ export default {
     createModel: mockCreateModel,
     create: mockEditorCreate,
     setTheme: mockSetTheme,
+    defineTheme: mockDefineTheme,
     setModelLanguage: mockSetModelLanguage,
     createWebWorker: mockCreateWebWorker,
     registerCommand: mockRegisterCommand,
