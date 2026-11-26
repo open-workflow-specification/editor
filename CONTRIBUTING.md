@@ -157,16 +157,32 @@ pnpm typecheck
 
 ## Continuous Integration
 
-Pull requests automatically trigger:
+Pull requests automatically run linting, type checking, tests, and builds. These checks must pass before merging.
 
-- **Netlify Deploy Previews**: Storybook is automatically built and deployed for PRs that modify the `@openworkflowspec/diagram-editor` package, allowing reviewers to preview changes interactively.
-- **Automated Checks**: Linting, type checking, tests, and builds must pass before merging.
+### Netlify Deploy Previews
+
+Netlify publishes all four previews together for each Deploy Preview it builds. The Deploy Preview link opens the Dual Editor Storybook by default.
+
+| Preview                       | Path               |
+| ----------------------------- | ------------------ |
+| Dual Editor Storybook         | `/dual-editor/`    |
+| Diagram Editor Storybook      | `/diagram-editor/` |
+| Text Editor Storybook         | `/text-editor/`    |
+| Vanilla Web Component example | `/vanilla/`        |
+
+To make the link open a different preview, add `@netlify` followed by its path to the pull request description, then push a commit.
+
+For example, use this line to open the Text Editor preview.
+
+```text
+@netlify /text-editor/
+```
 
 ## Pull Request Process
 
 1. **Fork** the repository and create your branch from `main`.
 2. **Commit** your changes with clear, descriptive messages.
-3. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin. The `commit-msg` hook verifies a sign-off is present. Your git identity must also **match your GitHub account** — see *Git identity* below.
+3. **DCO Sign-off**: As a CNCF project, all commits must be signed off (`git commit -s`) to certify the Developer Certificate of Origin. The `commit-msg` hook verifies a sign-off is present. Your git identity must also **match your GitHub account** — see _Git identity_ below.
 4. **Verify** your changes by running the appropriate build and/or test commands for the packages you modified.
 5. If your PR changes a package, run `pnpm changeset` and commit the generated `.changeset/*.md` file.  
    As an alternative you may prefer to compare against upstream explicitly:

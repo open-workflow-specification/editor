@@ -16,32 +16,25 @@
 
 [build.environment]
   NODE_VERSION = "24"
-  PNPM_VERSION = "10.31.0"
-  PREVIEW_PACKAGE_NAME = "@openworkflowspec/diagram-editor"
+  PREVIEWS_DIR = "netlify-previews"
 
 [build]
   command = """
     set -e
-    pnpm -F "${PREVIEW_PACKAGE_NAME}..." --workspace-concurrency=1 build:dev
-    pnpm -F "$PREVIEW_PACKAGE_NAME" build:storybook
+    pnpm build:dev
+    pnpm build:storybook
+
+    rm -rf "$PREVIEWS_DIR"
+    mkdir -p "$PREVIEWS_DIR"
+    cp -R packages/dual-editor/dist-storybook "$PREVIEWS_DIR/dual-editor"
+    cp -R packages/open-workflow-diagram-editor/dist-storybook "$PREVIEWS_DIR/diagram-editor"
+    cp -R packages/text-editor/dist-storybook "$PREVIEWS_DIR/text-editor"
+    cp -R examples/vanilla-web-component/dist "$PREVIEWS_DIR/vanilla"
   """
-  publish = "packages/open-workflow-diagram-editor/dist-storybook"
-  ignore = """
-    set -e -o pipefail
+  publish = "netlify-previews"
 
-    if [ -n "${REVIEW_ID:-}" ]; then
-      # For PR previews, fetch GitHub's synthetic merge commit.
-      FETCH_REF="refs/pull/${REVIEW_ID}/merge"
-    else
-      # For branch builds, fetch the branch being deployed.
-      FETCH_REF="$BRANCH"
-    fi
+[[redirects]]
+  from = "/"
+  to = "/dual-editor/"
+  status = 302
 
-    # Always deploy if fetch fails.
-    git fetch --no-tags --depth=2 origin "$FETCH_REF" || exit 1
-    BASE_REF="$(git rev-parse FETCH_HEAD^1)"
-    echo "FETCH_REF=$FETCH_REF BASE_REF=$BASE_REF"
-
-    npm i -g "pnpm@$PNPM_VERSION"
-    ! pnpm -F "...[$BASE_REF]" -rc exec 'echo "$PNPM_PACKAGE_NAME"' | grep -Fqx "$PREVIEW_PACKAGE_NAME"
-  """
