@@ -29,7 +29,7 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: [/^@volar\//, /^volar-service-/, /^@openworkflowspec\//],
+      external: [/^@volar\//, /^volar-service-/, /^@openworkflowspec\//, "yaml"],
     },
   },
 });

@@ -57,6 +57,9 @@ catalog:
   volar-service-yaml: 0.0.71
   vscode-languageserver-textdocument: ^1.0.16
   vscode-uri: ^3.2.0
+  # Exact: the version yaml-language-server pins, so the language worker bundles one copy.
+  # If they differ, everything still works; the worker just carries a second copy (~34 kB gzip).
+  yaml: 2.8.3
 cleanupUnusedCatalogs: true
 onlyBuiltDependencies:
   - "@swc/core"
@@ -81,4 +84,6 @@ overrides:
   typescript: "catalog:"
   # Temporary workaround for https://github.com/volarjs/services/pull/127
   # Remove once a compatible volar-service-yaml release is available.
+  # When you do, check `pnpm why yaml`: if yaml-language-server now pins another version,
+  # set the catalog's `yaml` to match (else the language worker bundles two copies).
   yaml-language-server: "1.24.0"
