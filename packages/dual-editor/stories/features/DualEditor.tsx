@@ -15,13 +15,12 @@
  */
 
 import * as React from "react";
+// oxlint-disable-next-line import/default
+import LanguageServiceWorker from "@openworkflowspec/text-editor/worker?worker";
 import { DualEditor as Component, type DualEditorProps } from "../../src";
 
 /** Creates the worker used by the text editor pane. */
-export const createLanguageServiceWorker = () =>
-  new Worker(new URL("../../../text-editor/src/worker/language.worker.ts", import.meta.url), {
-    type: "module",
-  });
+export const createLanguageServiceWorker = () => new LanguageServiceWorker();
 
 /** Primary UI component for user interaction. */
 export const DualEditor = ({ ...props }: DualEditorProps) => (

@@ -15,9 +15,22 @@
  */
 
 import * as React from "react";
+// oxlint-disable-next-line import/default
+import EditorWorker from "@openworkflowspec/text-editor/editor-worker?worker";
 import type { Preview } from "@storybook/react-vite";
 import type { Decorator } from "@storybook/react-vite";
 import { useArgs, useGlobals } from "storybook/preview-api";
+
+Object.assign(self, {
+  MonacoEnvironment: {
+    getWorker(_workerId: string, label: string) {
+      if (label === "editorWorkerService") {
+        return new EditorWorker();
+      }
+      throw new Error(`Unexpected Monaco worker: ${label}`);
+    },
+  },
+});
 
 const withColorMode: Decorator = (Story) => {
   const [{ colorMode: argColorMode }, updateArgs] = useArgs();
