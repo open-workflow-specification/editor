@@ -103,16 +103,16 @@ export const DualEditor = ({
   };
 
   const handleTextContentChange = React.useCallback((nextContent: string) => {
-    if (nextContent === editorContentRef.current) return;
-    editorContentRef.current = nextContent;
-    setEditorContent(nextContent);
-    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    pendingTextContentRef.current = nextContent;
-    diagramUpdateTimeoutRef.current = setTimeout(() => {
-      diagramUpdateTimeoutRef.current = null;
-      pendingTextContentRef.current = null;
-      onContentChangeRef.current?.(nextContent);
-    }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
+    // if (nextContent === editorContentRef.current) return;
+    // editorContentRef.current = nextContent;
+    // setEditorContent(nextContent);
+    // if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+    // pendingTextContentRef.current = nextContent;
+    // diagramUpdateTimeoutRef.current = setTimeout(() => {
+    //   diagramUpdateTimeoutRef.current = null;
+    //   pendingTextContentRef.current = null;
+    //   onContentChangeRef.current?.(nextContent);
+    // }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
   }, []);
 
   const setSplitFromPointer = (coordinate: number) => {
