@@ -31,6 +31,7 @@ import {
   EMPTY_WORKFLOW_JSON,
   PARSEABLE_INVALID_WORKFLOW_YAML,
   WORKFLOW_WITH_METADATA_JSON,
+  UNTYPED_TASK_WORKFLOW_YAML,
 } from "../fixtures/workflows";
 import { Classes, Specification } from "@openworkflowspec/sdk";
 
@@ -63,6 +64,14 @@ describe("parseWorkflow", () => {
     const result = parseWorkflow(input);
     expect(result.model).toBeNull();
     expect(result.errors[0]!.message).toContain("Not a valid workflow");
+  });
+
+  it("returns null model with the SDK's error for a workflow it cannot draw", () => {
+    const result = parseWorkflow(UNTYPED_TASK_WORKFLOW_YAML);
+    expect(result.model).toBeNull();
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toBeInstanceOf(Error);
+    expect(result.errors[0]!.message).toContain("'hello'");
   });
 
   it("returns null model with errors for unparseable text", () => {

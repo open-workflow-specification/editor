@@ -21,6 +21,8 @@ export const en = {
   "workflowEmpty.title": "Your diagram will appear here",
   "workflowEmpty.message": "Start by adding YAML or JSON workflow content to see your diagram.",
   workflowLoading: "Loading diagram…",
+  "workflowStale.title": "Showing the last valid diagram.",
+  "workflowStale.message": "The workflow can't be drawn yet. Fix the errors to update the diagram.",
   "sidebar.toggle": "Toggle sidebar",
   "sidebar.workflow": "Workflow",
   "sidebar.document": "Document",

@@ -22,6 +22,7 @@ import { I18nProvider, detectLocale, useI18n } from "@openworkflowspec/i18n";
 import { dictionaries } from "../i18n/locales";
 import { useDiagramEditorContext } from "../store/DiagramEditorContext";
 import { ParsingErrorPage } from "./error-pages/ParsingErrorPage";
+import { StaleDiagramNotice } from "./StaleDiagramNotice";
 import { ColorMode, ResolvedColorMode } from "@openworkflowspec/core";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -108,7 +109,21 @@ export type DiagramEditorProps = {
    * Initial and externally supplied content changes do not trigger the callback.
    */
   onContentChange?: (content: string) => void;
+  /**
+   * What the editor shows when `content` cannot be parsed (a YAML/JSON syntax error) or
+   * cannot be drawn (e.g. a task with no type yet).
+   *
+   * - `"page"` (default): replace the diagram with the parsing error page.
+   * - `"last-valid"`: keep showing the last diagram that parsed, with a notice that
+   *   it is out of date. Undo and redo are disabled until the content parses again,
+   *   so the old diagram is never written back over the host's content. Use this
+   *   when the host already shows the syntax error itself, e.g. beside a text editor.
+   *   With no valid diagram loaded yet, the error page is shown as in `"page"`.
+   */
+  parseErrorDisplay?: ParseErrorDisplay;
 };
+
+export type ParseErrorDisplay = "page" | "last-valid";
 
 const DiagramEditorContent = ({
   diagramDivRef,
@@ -119,7 +134,7 @@ const DiagramEditorContent = ({
   colorMode: ResolvedColorMode;
   content: string;
 }) => {
-  const { model, processedContent } = useDiagramEditorContext();
+  const { model, processedContent, isContentStale } = useDiagramEditorContext();
   const { t } = useI18n();
   if (content.trim().length === 0 && model === null) {
     return (
@@ -141,7 +156,10 @@ const DiagramEditorContent = ({
   return model === null ? (
     <ParsingErrorPage />
   ) : (
-    <Diagram divRef={diagramDivRef} colorMode={colorMode} />
+    <>
+      <Diagram divRef={diagramDivRef} colorMode={colorMode} />
+      <StaleDiagramNotice isStale={isContentStale} />
+    </>
   );
 };
 
@@ -175,6 +193,7 @@ const DiagramEditorBody = ({
           locale={props.locale}
           {...(props.language && { language: props.language })}
           {...(props.onContentChange && { onContentChange: props.onContentChange })}
+          {...(props.parseErrorDisplay && { parseErrorDisplay: props.parseErrorDisplay })}
         >
           <SidebarProvider defaultOpen={false}>
             <div className="dec-diagram-content">

@@ -54,10 +54,12 @@ vi.mock("@openworkflowspec/diagram-editor", () => ({
   DiagramEditor: ({
     content,
     language,
+    parseErrorDisplay,
     onContentChange,
   }: {
     content: string;
     language?: "json" | "yaml";
+    parseErrorDisplay?: "page" | "last-valid";
     onContentChange?: (content: string) => void;
   }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,6 +74,7 @@ vi.mock("@openworkflowspec/diagram-editor", () => ({
         aria-label="Diagram source"
         data-testid="diagram-source"
         data-format={language}
+        data-parse-error-display={parseErrorDisplay}
         ref={textareaRef}
         defaultValue={content}
         onChange={(event) => {
@@ -125,6 +128,15 @@ describe("DualEditor", () => {
     );
 
     expect(screen.getByTestId("diagram-source")).toHaveAttribute("data-format", "json");
+  });
+
+  it("keeps the last valid diagram while the text cannot be parsed, since the text editor shows the error", () => {
+    renderDualEditor();
+
+    expect(screen.getByTestId("diagram-source")).toHaveAttribute(
+      "data-parse-error-display",
+      "last-valid",
+    );
   });
 
   it("debounces text edits to the diagram and content change callback", () => {

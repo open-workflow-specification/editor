@@ -39,6 +39,7 @@ export const createMockContextValue = (
   locale: "en",
   contentFormat: "yaml",
   processedContent: null,
+  isContentStale: false,
   model: null,
   errors: [],
   nodes: [],

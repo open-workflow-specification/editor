@@ -87,6 +87,12 @@
     --dec-state-message-color: #4b5563;
     --dec-error-snippet-bg: #ffffff;
 
+    /* Stale-diagram notice (parseErrorDisplay="last-valid") */
+    --dec-notice-bg: #ffffff;
+    --dec-notice-border: #cbd5e1;
+    --dec-notice-shadow: rgba(15, 23, 42, 0.12);
+    --dec-notice-icon: #b45309;
+
     /* edges */
     --dec-edge-selected: #aea6a6;
     --dec-edge-selected-condition: rgb(var(--dec-selected-rgb));
@@ -105,6 +111,10 @@
     --dec-state-title-color: #f3f4f6;
     --dec-state-message-color: #d1d5db;
     --dec-error-snippet-bg: var(--dec-surface-dark-elevated);
+    --dec-notice-bg: var(--dec-surface-dark-elevated);
+    --dec-notice-border: #4a5568;
+    --dec-notice-shadow: rgba(0, 0, 0, 0.5);
+    --dec-notice-icon: #fbbf24;
 
     /* canvas */
     --dec-canvas-bg: #1c222c;
@@ -130,7 +140,32 @@
   }
 
   .dec-root .dec-diagram-content {
-    @apply dec:flex-1 dec:min-w-0 dec:h-full;
+    @apply dec:relative dec:flex-1 dec:min-w-0 dec:h-full;
+  }
+
+  /* Over the canvas, clear of the top-right sidebar trigger. Not interactive, so the
+     canvas underneath stays pannable. */
+  .dec-root .dec-stale-notice-region {
+    @apply dec:absolute dec:top-3 dec:inset-x-14 dec:z-10 dec:flex dec:justify-center;
+    pointer-events: none;
+  }
+
+  .dec-root .dec-stale-notice {
+    @apply dec:flex dec:items-start dec:gap-2 dec:max-w-md dec:px-3 dec:py-2 dec:rounded-md dec:border dec:text-sm;
+    background-color: var(--dec-notice-bg);
+    border-color: var(--dec-notice-border);
+    box-shadow: 0 1px 3px var(--dec-notice-shadow);
+    color: var(--dec-state-message-color);
+  }
+
+  .dec-root .dec-stale-notice__icon {
+    @apply dec:size-4 dec:shrink-0 dec:mt-0.5;
+    color: var(--dec-notice-icon);
+  }
+
+  .dec-root .dec-stale-notice__title {
+    @apply dec:font-semibold;
+    color: var(--dec-state-title-color);
   }
 
   .dec-root .dec-empty-state {

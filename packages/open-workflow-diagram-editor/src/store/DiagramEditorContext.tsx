@@ -25,6 +25,12 @@ export type DiagramEditorContextType = {
   contentFormat: ContentFormat;
   /** Content string whose most recent parse attempt has completed. */
   processedContent: string | null;
+  /**
+   * `true` while `model` is a workflow the current content cannot produce (it cannot be
+   * parsed or drawn): with `parseErrorDisplay="last-valid"`, or after switching to `"page"`
+   * while stale, until the content changes. Undo/redo are disabled meanwhile.
+   */
+  isContentStale: boolean;
   model: Specification.Workflow | null;
   errors: SdkError[];
   nodes: RF.Node[];

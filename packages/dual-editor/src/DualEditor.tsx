@@ -224,6 +224,9 @@ export const DualEditor = ({
           isReadOnly={isReadOnly}
           locale={locale}
           colorMode={colorMode}
+          // The text editor beside it already marks syntax errors, so a half-typed
+          // document must not replace the diagram with an error page.
+          parseErrorDisplay="last-valid"
           onContentChange={handleDiagramContentChange}
         />
       </section>

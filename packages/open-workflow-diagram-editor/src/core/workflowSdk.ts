@@ -253,6 +253,8 @@ export function validateWorkflow(model: sdk.Specification.Workflow): SdkError[] 
   }
 }
 
+const toError = (err: unknown): Error => (err instanceof Error ? err : new Error(String(err)));
+
 export function parseWorkflow(text: string): WorkflowParseResult {
   let raw: Partial<sdk.Specification.Workflow>;
 
@@ -267,7 +269,7 @@ export function parseWorkflow(text: string): WorkflowParseResult {
   } catch (err) {
     return {
       model: null,
-      errors: [err instanceof Error ? err : new Error(String(err))],
+      errors: [toError(err)],
     };
   }
 
@@ -276,6 +278,16 @@ export function parseWorkflow(text: string): WorkflowParseResult {
   }
 
   const model = new sdk.Classes.Workflow(raw) as sdk.Specification.Workflow;
+
+  // A workflow the SDK cannot turn into a graph (e.g. a task with no type yet, `- hello:`)
+  // cannot be drawn either: report it like unparseable text rather than let the graph
+  // builder throw during render.
+  try {
+    buildFlatGraph(model);
+  } catch (err) {
+    return { model: null, errors: [toError(err)] };
+  }
+
   const errors = validateWorkflow(model);
 
   return { model, errors };
