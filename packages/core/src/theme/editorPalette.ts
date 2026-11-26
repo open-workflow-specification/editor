@@ -31,6 +31,7 @@ export type EditorPalette = {
   border: string;
   /** Raised surfaces over the editor: suggest/hover widgets. */
   raised: string;
+  raisedText: string;
   lineNumber: string;
   lineNumberActive: string;
   indentGuide: string;
@@ -44,6 +45,7 @@ export const EDITOR_PALETTE: Record<ResolvedColorMode, EditorPalette> = {
     background: "#ffffff",
     border: "#cbd5e1",
     raised: "#f8fafc",
+    raisedText: "#1e293b",
     lineNumber: "#64748b",
     lineNumberActive: "#1e293b",
     indentGuide: "#e2e8f0",
@@ -53,6 +55,7 @@ export const EDITOR_PALETTE: Record<ResolvedColorMode, EditorPalette> = {
     background: "#1c222c", // --dec-canvas-bg (dark), so the panes meet seamlessly
     border: "#2d3748", // --dec-surface-dark-elevated
     raised: "#2d3748", // --dec-surface-dark-elevated
+    raisedText: "#e2e8f0",
     lineNumber: "#8492a6",
     lineNumberActive: "#e2e8f0",
     indentGuide: "#2d3748",
