@@ -59,8 +59,11 @@ export const defineMonacoThemes = (): void => {
         "editorWidget.border": palette.border,
         "editorSuggestWidget.background": palette.raised,
         "editorSuggestWidget.border": palette.border,
+        "editorSuggestWidget.foreground": palette.raisedText,
         "editorHoverWidget.background": palette.raised,
         "editorHoverWidget.border": palette.border,
+        "editorHoverWidget.foreground": palette.raisedText,
+        "inputValidation.infoBorder": palette.border,
       },
     });
   }

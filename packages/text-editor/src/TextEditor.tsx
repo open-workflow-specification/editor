@@ -23,6 +23,7 @@ import { useResolvedColorMode } from "@openworkflowspec/core";
 import { createTextEditorLanguageService } from "./language-service";
 import { defineMonacoThemes, MONACO_THEME_NAMES } from "./monacoThemes";
 import type { ColorMode } from "@openworkflowspec/core";
+import "./TextEditor.css";
 
 jsonDefaults.setModeConfiguration({
   tokens: true,
@@ -159,6 +160,7 @@ export const TextEditor = ({
   return (
     <div
       data-testid="text-editor-container"
+      className="ows-text-editor"
       ref={containerRef}
       style={{ width: "100%", height: "100%" }}
     />

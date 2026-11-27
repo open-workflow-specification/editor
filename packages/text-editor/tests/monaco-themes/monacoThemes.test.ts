@@ -32,6 +32,7 @@ describe("defineMonacoThemes", () => {
         inherit: true,
         colors: expect.objectContaining({
           "editor.background": EDITOR_PALETTE.dark.background,
+          "inputValidation.infoBorder": EDITOR_PALETTE.dark.border,
         }),
       }),
     );
