@@ -476,18 +476,28 @@ function resolveParentTaskList(
   return taskList;
 }
 
+/** Whether a non-indexed task id names a fork branch (`…/fork/branches/<name>`). */
+function isForkBranchId(taskId: string): boolean {
+  const segments = getPathSegments(taskId);
+  return segments.at(-3) === "fork" && segments.at(-2) === "branches";
+}
+
 /**
  * Names the other tasks in the task list that holds `taskId` — the tasks its `then` may
  * target (same scope only). Resolves every id shape `updateTask` does, including lists under
- * object properties (`/do/f/fork/branches/b1`, `/do/t/catch/do/x`,
- * `/do/l/foreach/do/x`, `/do/c/with/subscription/foreach/do/x`).
+ * object properties (`/do/t/catch/do/x`, `/do/l/foreach/do/x`,
+ * `/do/c/with/subscription/foreach/do/x`).
+ *
+ * A fork branch has none: the SDK builds each branch as its own one-task list, so a `then`
+ * naming another branch makes `buildFlatGraph` throw.
  *
  * @param workflow - Workflow containing the task.
  * @param taskId - Non-indexed editor task id.
  * @returns The sibling task names in list order, excluding the task itself; `[]` when the id
- * cannot be resolved.
+ * cannot be resolved or names a fork branch.
  */
 export function getSiblingTaskNames(workflow: Specification.Workflow, taskId: string): string[] {
+  if (isForkBranchId(taskId)) return [];
   let target: TaskMutationTarget;
   try {
     target = resolveTaskMutationTarget(workflow, taskId);

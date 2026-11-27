@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { Classes, type Specification } from "@openworkflowspec/sdk";
 import { useSiblingTaskNames } from "../../../src/side-panel/forms/useSiblingTaskNames";
+import { buildFlatGraph } from "../../../src/core/workflowSdk";
 import {
   SET_EXAMPLE_WORKFLOW,
   MANAGING_GITHUB_ISSUES_WORKFLOW,
@@ -159,14 +160,25 @@ describe("useSiblingTaskNames — task lists under object properties", () => {
       id: "/do/onMessage/with/subscription/foreach/do/ackMessage",
       expected: ["handleMessage"],
     },
-    {
-      name: "fork branches",
-      workflow: NESTED_FORK_WORKFLOW,
-      id: "/do/raiseAlarm/fork/branches/notifyStaff/fork/branches/callNurse",
-      expected: ["callDoctor"],
-    },
   ])("returns the siblings inside a $name", ({ workflow, id, expected }) => {
     expect(invoke(makeModel(workflow), id)).toEqual(expected);
+  });
+
+  // The SDK builds each fork branch as its own one-task list, so a branch's `then` can name
+  // no other branch: offering one let the user pick a target that broke the graph.
+  it.each([
+    "/do/raiseAlarm/fork/branches/notifyStaff",
+    "/do/raiseAlarm/fork/branches/notifyStaff/fork/branches/callNurse",
+  ])("returns [] for the fork branch %s", (id) => {
+    expect(invoke(makeModel(NESTED_FORK_WORKFLOW), id)).toEqual([]);
+  });
+
+  it("matches the SDK: a branch's then naming another branch does not build", () => {
+    const workflow = structuredClone(NESTED_FORK_WORKFLOW);
+    const outer = workflow.do[0]!.raiseAlarm!.fork.branches[0]!.notifyStaff!;
+    // Parsed so `then` is never an object-literal key (`unicorn/no-thenable`).
+    Object.assign(outer.fork.branches[0]!.callNurse!, JSON.parse('{ "then": "callDoctor" }'));
+    expect(() => buildFlatGraph(makeModel(workflow))).toThrow(/callDoctor/);
   });
 
   it("returns the siblings inside a catch.do", () => {

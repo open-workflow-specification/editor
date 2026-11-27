@@ -22,7 +22,8 @@ import { getSiblingTaskNames } from "../../core/workflowEditing";
  * currently selected task — the targets its `then` may name (same scope only).
  *
  * `nodeId` is the non-indexed node id, resolved like `updateTask` resolves it, so task lists
- * under object properties (fork branches, `catch.do`, listen / AsyncAPI `foreach.do`) work.
+ * under object properties (`catch.do`, listen / AsyncAPI `foreach.do`) work; a fork branch
+ * has none (each branch is its own scope in the SDK).
  *
  * Note: spec-defined flow-directive values (`continue`, `exit`, `end`) are
  * **not** returned here — they are spec constants, not model tasks. The
