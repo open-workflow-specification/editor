@@ -17,6 +17,7 @@
 import * as React from "react";
 import { TextEditor } from "@openworkflowspec/text-editor";
 import type { TextEditorLanguage } from "@openworkflowspec/text-editor";
+import { DiagramEditor } from "@openworkflowspec/diagram-editor";
 import { useResolvedColorMode } from "@openworkflowspec/core";
 import type { ColorMode } from "@openworkflowspec/core";
 import "@openworkflowspec/diagram-editor/styles.css";
@@ -46,6 +47,7 @@ export const DualEditor = ({
   createLanguageServiceWorker,
   language = "json",
   isReadOnly = false,
+  locale = "en",
   colorMode = "system",
   onContentChange,
   onSplitChange,
@@ -53,6 +55,7 @@ export const DualEditor = ({
   const resolvedColorMode = useResolvedColorMode(colorMode);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [editorContent, setEditorContent] = React.useState(content);
+  const [diagramContent, setDiagramContent] = React.useState(content);
   const editorContentRef = React.useRef(content);
   const contentResetKeyRef = React.useRef(contentResetKey);
   const diagramUpdateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,13 +70,14 @@ export const DualEditor = ({
   }, [onContentChange]);
 
   React.useEffect(() => {
-    // const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
-    // contentResetKeyRef.current = contentResetKey;
-    // if (!contentResetRequested && content === editorContentRef.current) return;
-    // if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    // pendingTextContentRef.current = null;
-    // editorContentRef.current = content;
-    // setEditorContent(content);
+    const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
+    contentResetKeyRef.current = contentResetKey;
+    if (!contentResetRequested && content === editorContentRef.current) return;
+    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+    pendingTextContentRef.current = null;
+    editorContentRef.current = content;
+    setEditorContent(content);
+    setDiagramContent(content);
   }, [content, contentResetKey]);
 
   React.useEffect(
@@ -103,16 +107,27 @@ export const DualEditor = ({
   };
 
   const handleTextContentChange = React.useCallback((nextContent: string) => {
-    // if (nextContent === editorContentRef.current) return;
-    // editorContentRef.current = nextContent;
-    // setEditorContent(nextContent);
-    // if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    // pendingTextContentRef.current = nextContent;
-    // diagramUpdateTimeoutRef.current = setTimeout(() => {
-    //   diagramUpdateTimeoutRef.current = null;
-    //   pendingTextContentRef.current = null;
-    //   onContentChangeRef.current?.(nextContent);
-    // }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
+    if (nextContent === editorContentRef.current) return;
+    editorContentRef.current = nextContent;
+    setEditorContent(nextContent);
+    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+    pendingTextContentRef.current = nextContent;
+    diagramUpdateTimeoutRef.current = setTimeout(() => {
+      diagramUpdateTimeoutRef.current = null;
+      pendingTextContentRef.current = null;
+      setDiagramContent(nextContent);
+      onContentChangeRef.current?.(nextContent);
+    }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
+  }, []);
+
+  const handleDiagramContentChange = React.useCallback((nextContent: string) => {
+    if (nextContent === editorContentRef.current) return;
+    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+    pendingTextContentRef.current = null;
+    editorContentRef.current = nextContent;
+    setEditorContent(nextContent);
+    setDiagramContent(nextContent);
+    onContentChangeRef.current?.(nextContent);
   }, []);
 
   const setSplitFromPointer = (coordinate: number) => {
@@ -170,7 +185,10 @@ export const DualEditor = ({
       className={`ows-dual-editor${resolvedColorMode === "dark" ? " ows-dual-editor--dark" : ""}${isDragging ? " ows-dual-editor--dragging" : ""}${isStacked ? " ows-dual-editor--stacked" : ""}`}
       style={{ "--ows-dual-editor-split": `${split}%` } as React.CSSProperties}
     >
-      <section className="ows-dual-editor__pane ows-dual-editor__text" aria-label="Text editor">
+      <section
+        className="ows-dual-editor__pane ows-dual-editor__text nokey"
+        aria-label="Text editor"
+      >
         <TextEditor
           content={editorContent}
           language={language}
@@ -201,7 +219,16 @@ export const DualEditor = ({
       <section
         className="ows-dual-editor__pane ows-dual-editor__diagram"
         aria-label="Diagram editor"
-      ></section>
+      >
+        <DiagramEditor
+          content={diagramContent}
+          language={language}
+          isReadOnly={isReadOnly}
+          locale={locale}
+          colorMode={colorMode}
+          onContentChange={handleDiagramContentChange}
+        />
+      </section>
     </div>
   );
 };
