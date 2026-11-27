@@ -55,6 +55,7 @@ export const editorApi = {
   createWebWorker: () => ({ dispose: () => undefined }),
   registerCommand: () => ({ dispose: () => undefined }),
   setTheme: () => undefined,
+  defineTheme: () => undefined,
   setModelLanguage: () => undefined,
 };
 export const editor = editorApi;
