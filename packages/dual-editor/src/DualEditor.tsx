@@ -62,6 +62,8 @@ export const DualEditor = ({
   const diagramUpdateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingTextContentRef = React.useRef<string | null>(null);
   const onContentChangeRef = React.useRef(onContentChange);
+  // The last content reported to the host. A host passes it back as `content`, often after more typing; that echo must not overwrite the newer text
+  const reportedContentRef = React.useRef<string | null>(null);
   const [split, setSplit] = React.useState(DEFAULT_SPLIT);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isStacked, setIsStacked] = React.useState(false);
@@ -73,9 +75,11 @@ export const DualEditor = ({
   React.useEffect(() => {
     const contentResetRequested = contentResetKey !== contentResetKeyRef.current;
     contentResetKeyRef.current = contentResetKey;
-    if (!contentResetRequested && content === editorContentRef.current) return;
+    const isEcho = content === editorContentRef.current || content === reportedContentRef.current;
+    if (!contentResetRequested && isEcho) return;
     if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
     pendingTextContentRef.current = null;
+    reportedContentRef.current = null;
     editorContentRef.current = content;
     setEditorContent(content);
     setDiagramContent(content);
@@ -107,29 +111,43 @@ export const DualEditor = ({
     onSplitChange?.(nextSplit);
   };
 
-  const handleTextContentChange = React.useCallback((nextContent: string) => {
-    if (nextContent === editorContentRef.current) return;
-    editorContentRef.current = nextContent;
-    setEditorContent(nextContent);
-    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    pendingTextContentRef.current = nextContent;
-    diagramUpdateTimeoutRef.current = setTimeout(() => {
-      diagramUpdateTimeoutRef.current = null;
-      pendingTextContentRef.current = null;
-      setDiagramContent(nextContent);
-      onContentChangeRef.current?.(nextContent);
-    }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
+  // Remembered only when a callback receives it: a host without one can't echo our content.
+  const reportToHost = React.useCallback((nextContent: string) => {
+    const onChange = onContentChangeRef.current;
+    if (!onChange) return;
+    reportedContentRef.current = nextContent;
+    onChange(nextContent);
   }, []);
 
-  const handleDiagramContentChange = React.useCallback((nextContent: string) => {
-    if (nextContent === editorContentRef.current) return;
-    if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
-    pendingTextContentRef.current = null;
-    editorContentRef.current = nextContent;
-    setEditorContent(nextContent);
-    setDiagramContent(nextContent);
-    onContentChangeRef.current?.(nextContent);
-  }, []);
+  const handleTextContentChange = React.useCallback(
+    (nextContent: string) => {
+      if (nextContent === editorContentRef.current) return;
+      editorContentRef.current = nextContent;
+      setEditorContent(nextContent);
+      if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+      pendingTextContentRef.current = nextContent;
+      diagramUpdateTimeoutRef.current = setTimeout(() => {
+        diagramUpdateTimeoutRef.current = null;
+        pendingTextContentRef.current = null;
+        setDiagramContent(nextContent);
+        reportToHost(nextContent);
+      }, TEXT_TO_DIAGRAM_DEBOUNCE_MS);
+    },
+    [reportToHost],
+  );
+
+  const handleDiagramContentChange = React.useCallback(
+    (nextContent: string) => {
+      if (nextContent === editorContentRef.current) return;
+      if (diagramUpdateTimeoutRef.current) clearTimeout(diagramUpdateTimeoutRef.current);
+      pendingTextContentRef.current = null;
+      editorContentRef.current = nextContent;
+      setEditorContent(nextContent);
+      setDiagramContent(nextContent);
+      reportToHost(nextContent);
+    },
+    [reportToHost],
+  );
 
   const setSplitFromPointer = (coordinate: number) => {
     const bounds = containerRef.current?.getBoundingClientRect();
@@ -186,7 +204,10 @@ export const DualEditor = ({
       className={`ows-dual-editor${resolvedColorMode === "dark" ? " ows-dual-editor--dark" : ""}${isDragging ? " ows-dual-editor--dragging" : ""}${isStacked ? " ows-dual-editor--stacked" : ""}`}
       style={{ "--ows-dual-editor-split": `${split}%` } as React.CSSProperties}
     >
-      <section className="ows-dual-editor__pane ows-dual-editor__text" aria-label="Text editor">
+      <section
+        className="ows-dual-editor__pane ows-dual-editor__text nokey"
+        aria-label="Text editor"
+      >
         <TextEditor
           content={editorContent}
           language={language}

@@ -128,7 +128,8 @@ export const TextEditor = ({
     return () => disposable.dispose();
   }, [onContentChange, language]);
 
-  React.useEffect(() => {
+  // A layout effect runs in the same task as the render, so no keystroke lands in between.
+  React.useLayoutEffect(() => {
     const editor = editorRef.current;
 
     if (!editor || editor.getValue() === content) {
