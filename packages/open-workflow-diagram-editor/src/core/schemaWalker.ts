@@ -33,7 +33,27 @@ import { isObjectNotArray } from "./utils";
 // Catch nodes share the tryTask schema because `try.catch` is inlined there.
 // ---------------------------------------------------------------------------
 
-export const CATCH_CONTAINER_NODE_TYPE = "catch-container";
+/**
+ * Leaf node types that become a container when the graph nests tasks inside them, mapped to the
+ * container's node type: a catch with a `do`, and a task holding a task list below its own
+ * properties (listen's `foreach.do`, an AsyncAPI call's `with.subscription.foreach.do`).
+ */
+export const CONTAINER_NODE_TYPES = {
+  [GraphNodeType.Call]: "call-container",
+  [GraphNodeType.Catch]: "catch-container",
+  [GraphNodeType.Listen]: "listen-container",
+} as const;
+
+export const CATCH_CONTAINER_NODE_TYPE = CONTAINER_NODE_TYPES[GraphNodeType.Catch];
+export const CALL_CONTAINER_NODE_TYPE = CONTAINER_NODE_TYPES[GraphNodeType.Call];
+export const LISTEN_CONTAINER_NODE_TYPE = CONTAINER_NODE_TYPES[GraphNodeType.Listen];
+
+/** Returns the container node type of a leaf node type, if it has one. */
+export function getContainerNodeType(type: string): string | undefined {
+  return Object.hasOwn(CONTAINER_NODE_TYPES, type)
+    ? CONTAINER_NODE_TYPES[type as keyof typeof CONTAINER_NODE_TYPES]
+    : undefined;
+}
 
 export const NODE_TYPE_TO_DEF: Readonly<Record<string, string>> = {
   [GraphNodeType.Call]: "callTask",
@@ -52,6 +72,8 @@ export const NODE_TYPE_TO_DEF: Readonly<Record<string, string>> = {
   [GraphNodeType.Wait]: "waitTask",
   [GraphNodeType.Catch]: "tryTask",
   [CATCH_CONTAINER_NODE_TYPE]: "tryTask",
+  [CALL_CONTAINER_NODE_TYPE]: "callTask",
+  [LISTEN_CONTAINER_NODE_TYPE]: "listenTask",
 } as const;
 
 // ---------------------------------------------------------------------------

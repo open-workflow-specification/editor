@@ -16,13 +16,20 @@
 
 import { test, expect } from "@playwright/test";
 
-test("renders listen node with any badge", async ({ page }) => {
+test("renders a listen with foreach as a container holding its tasks", async ({ page }) => {
   await page.goto("/iframe.html?id=examples-workflows--listen-to-any-forever-foreach");
 
-  const node = page.getByTestId("listen-node-/do/listenToGossips");
+  const node = page.getByTestId("listen-container-node-/do/listenToGossips");
 
   await expect(node).toContainText("listenToGossips");
   await expect(node).toContainText("LISTEN");
 
-  await expect(page.getByTestId("listen-node-/do/listenToGossips-badge")).toHaveText("any");
+  await expect(page.getByTestId("listen-container-node-/do/listenToGossips-badge")).toHaveText(
+    "any",
+  );
+
+  const child = page.getByTestId("call-node-/do/listenToGossips/foreach/do/postToChatApi");
+
+  await expect(child).toBeVisible();
+  await expect(child).toContainText("postToChatApi");
 });

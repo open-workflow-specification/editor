@@ -17,7 +17,7 @@
 import * as RF from "@xyflow/react";
 import {
   buildFlatGraph,
-  CATCH_CONTAINER_NODE_TYPE,
+  getContainerNodeType,
   getDefaultCaseEdgeIds,
   getErrorTaskReferences,
   getTaskReferences,
@@ -54,8 +54,11 @@ export function edgeSourceAndTargetExist(
   return nodeIdSet.has(graphEdge.sourceId) && nodeIdSet.has(graphEdge.targetId);
 }
 
-/* Return ids of catch nodes that are containers (have child nodes with parentIds pointing to them) */
-export function getCatchContainerNodeIds(graph: sdk.FlatGraph): Set<string> {
+/**
+ * Returns the ids of nodes whose type is normally a leaf but which have child nodes (other nodes'
+ * `parentId` points to them), so they render as containers. See `CONTAINER_NODE_TYPES`.
+ */
+export function getContainerNodeIds(graph: sdk.FlatGraph): Set<string> {
   const parentIds = new Set<string>();
   for (const node of graph.nodes) {
     if (node.parentId) {
@@ -65,7 +68,7 @@ export function getCatchContainerNodeIds(graph: sdk.FlatGraph): Set<string> {
 
   const containerIds = new Set<string>();
   for (const node of graph.nodes) {
-    if (node.type === sdk.GraphNodeType.Catch && parentIds.has(node.id)) {
+    if (getContainerNodeType(node.type) !== undefined && parentIds.has(node.id)) {
       containerIds.add(node.id);
     }
   }
@@ -73,19 +76,19 @@ export function getCatchContainerNodeIds(graph: sdk.FlatGraph): Set<string> {
   return containerIds;
 }
 
-function resolveNodeType(graphNode: sdk.FlatGraphNode, catchContainerIds: Set<string>): string {
-  if (graphNode.type === sdk.GraphNodeType.Catch && catchContainerIds.has(graphNode.id)) {
-    return CATCH_CONTAINER_NODE_TYPE;
-  }
-  return graphNode.type;
+function resolveNodeType(graphNode: sdk.FlatGraphNode, containerIds: Set<string>): string {
+  const containerType = containerIds.has(graphNode.id)
+    ? getContainerNodeType(graphNode.type)
+    : undefined;
+  return containerType ?? graphNode.type;
 }
 
 function buildReactFlowNode(
   graphNode: sdk.FlatGraphNode,
-  catchContainerIds: Set<string>,
+  containerIds: Set<string>,
   erroringTaskReferences: Set<string>,
 ): RF.Node<BaseNodeData> {
-  const type = resolveNodeType(graphNode, catchContainerIds);
+  const type = resolveNodeType(graphNode, containerIds);
   // There is no corresponding react flow component implemented
   if (!Object.keys(ReactFlowNodeTypes).includes(type)) {
     throw new Error(`Unsupported React flow node type: ${type}!`);
@@ -144,12 +147,12 @@ export function buildDiagramElements(
 
   if (model) {
     const graph = buildFlatGraph(model);
-    const catchContainerIds = getCatchContainerNodeIds(graph);
+    const containerIds = getContainerNodeIds(graph);
     const erroringTaskReferences = getErrorTaskReferences(errors, getTaskReferences(graph));
     const defaultCaseEdgeIds = getDefaultCaseEdgeIds(graph);
 
     graph.nodes.forEach((graphNode) =>
-      nodes.push(buildReactFlowNode(graphNode, catchContainerIds, erroringTaskReferences)),
+      nodes.push(buildReactFlowNode(graphNode, containerIds, erroringTaskReferences)),
     );
 
     // Precompute node ID set for O(1) membership checks

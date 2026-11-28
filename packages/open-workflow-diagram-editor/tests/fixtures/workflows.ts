@@ -586,6 +586,46 @@ export const NESTED_CONTAINERS_WORKFLOW = {
 };
 
 /**
+ * Tasks holding a task list below their own properties: listen's `foreach.do` and an AsyncAPI
+ * call's `with.subscription.foreach.do`. Each renders as a container of its nested tasks; the
+ * plain listen and the http call beside them stay leaves.
+ */
+export const NESTED_TASK_LISTS_WORKFLOW = {
+  document: { dsl: "1.1.0", name: "nested-task-lists", version: "1.0.0", namespace: "default" },
+  do: [
+    {
+      onReading: {
+        listen: { to: { one: { with: { type: "com.example.reading" } } } },
+        foreach: {
+          item: "reading",
+          do: [{ storeReading: { set: { stored: true } } }, { pause: { wait: { seconds: 1 } } }],
+        },
+      },
+    },
+    {
+      onMessage: {
+        call: "asyncapi",
+        with: {
+          document: { endpoint: "https://example.com/asyncapi.json" },
+          operation: "onMessage",
+          subscription: {
+            consume: { amount: 2 },
+            foreach: {
+              do: [
+                { handleMessage: { set: { handled: true } } },
+                { ackMessage: { set: { acked: true } } },
+              ],
+            },
+          },
+        },
+      },
+    },
+    { awaitReady: { listen: { to: { one: { with: { type: "com.example.ready" } } } } } },
+    { fetch: { call: "http", with: { method: "get", endpoint: "https://example.com" } } },
+  ],
+};
+
+/**
  * Both shapes a `raise` task's error can take, side by side.
  * `raise.error` is a one-of: an inline error *definition* (an object) or a *reference*
  * (a string naming a key in `use.errors`).
