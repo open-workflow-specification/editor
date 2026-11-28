@@ -184,19 +184,110 @@ describe("DualEditor", () => {
 
     rerender(
       <DualEditor
+        content="loaded by host"
+        createLanguageServiceWorker={createLanguageServiceWorker}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    expect(screen.getByTestId("text-source")).toHaveValue("loaded by host");
+    expect(screen.getByTestId("diagram-source")).toHaveValue("loaded by host");
+
+    act(() => vi.advanceTimersByTime(TEXT_TO_DIAGRAM_DEBOUNCE_MS));
+    expect(onContentChange).toHaveBeenCalledTimes(1);
+    expect(onContentChange).toHaveBeenCalledWith("B");
+    vi.useRealTimers();
+  });
+
+  it("ignores the host passing back reported content after further typing", () => {
+    const onContentChange = vi.fn();
+    const { rerender } = renderDualEditor({ content: "A", onContentChange });
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "B" } });
+    act(() => vi.advanceTimersByTime(TEXT_TO_DIAGRAM_DEBOUNCE_MS));
+    expect(onContentChange).toHaveBeenLastCalledWith("B");
+
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "BC" } });
+    rerender(
+      <DualEditor
         content="B"
         createLanguageServiceWorker={createLanguageServiceWorker}
         onContentChange={onContentChange}
       />,
     );
 
-    expect(screen.getByTestId("text-source")).toHaveValue("B");
-    expect(screen.getByTestId("diagram-source")).toHaveValue("B");
+    expect(screen.getByTestId("text-source")).toHaveValue("BC");
 
     act(() => vi.advanceTimersByTime(TEXT_TO_DIAGRAM_DEBOUNCE_MS));
-    expect(onContentChange).toHaveBeenCalledTimes(1);
-    expect(onContentChange).toHaveBeenCalledWith("B");
+    expect(screen.getByTestId("diagram-source")).toHaveValue("BC");
+    expect(onContentChange).toHaveBeenLastCalledWith("BC");
     vi.useRealTimers();
+  });
+
+  it("ignores the host passing back a diagram edit after further typing", () => {
+    const onContentChange = vi.fn();
+    const { rerender } = renderDualEditor({ content: "A", onContentChange });
+
+    fireEvent.change(screen.getByTestId("diagram-source"), { target: { value: "from diagram" } });
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "from diagram!" } });
+    rerender(
+      <DualEditor
+        content="from diagram"
+        createLanguageServiceWorker={createLanguageServiceWorker}
+        onContentChange={onContentChange}
+      />,
+    );
+
+    expect(screen.getByTestId("text-source")).toHaveValue("from diagram!");
+  });
+
+  it("applies host content that matches unreported text when there is no callback", () => {
+    const { rerender } = renderDualEditor({ content: "A" });
+    vi.useFakeTimers();
+
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "B" } });
+    act(() => vi.advanceTimersByTime(TEXT_TO_DIAGRAM_DEBOUNCE_MS));
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "BC" } });
+    rerender(<DualEditor content="B" createLanguageServiceWorker={createLanguageServiceWorker} />);
+
+    expect(screen.getByTestId("text-source")).toHaveValue("B");
+    vi.useRealTimers();
+  });
+
+  it("applies host content that matches an unreported diagram edit when there is no callback", () => {
+    const { rerender } = renderDualEditor({ content: "A" });
+
+    fireEvent.change(screen.getByTestId("diagram-source"), { target: { value: "from diagram" } });
+    fireEvent.change(screen.getByTestId("text-source"), { target: { value: "from diagram!" } });
+    rerender(
+      <DualEditor
+        content="from diagram"
+        createLanguageServiceWorker={createLanguageServiceWorker}
+      />,
+    );
+
+    expect(screen.getByTestId("text-source")).toHaveValue("from diagram");
+  });
+
+  it("applies host content equal to an older report once newer content was loaded", () => {
+    const onContentChange = vi.fn();
+    const { rerender } = renderDualEditor({ content: "A", onContentChange });
+    const renderWith = (content: string) =>
+      rerender(
+        <DualEditor
+          content={content}
+          createLanguageServiceWorker={createLanguageServiceWorker}
+          onContentChange={onContentChange}
+        />,
+      );
+
+    fireEvent.change(screen.getByTestId("diagram-source"), { target: { value: "B" } });
+    renderWith("loaded by host");
+    renderWith("B");
+
+    expect(screen.getByTestId("text-source")).toHaveValue("B");
+    expect(screen.getByTestId("diagram-source")).toHaveValue("B");
   });
 
   it("resets to the same host content and cancels a pending text edit when the reset key changes", () => {
