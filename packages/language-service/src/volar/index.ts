@@ -31,6 +31,7 @@ import { createJsonCodeLensesPlugin } from "./json/code-lenses";
 import { createYamlSchemaLanguageServicePlugin } from "./yaml/schema";
 import { createYamlCompletionsPlugin } from "./yaml/completions";
 import { createYamlCodeLensesPlugin } from "./yaml/code-lenses";
+import { createFlowDirectivesPlugin } from "./flow-directives";
 
 export {
   createJsonSchemaLanguageServicePlugin,
@@ -39,6 +40,7 @@ export {
   createYamlSchemaLanguageServicePlugin,
   createYamlCompletionsPlugin,
   createYamlCodeLensesPlugin,
+  createFlowDirectivesPlugin,
 };
 
 export function createJsonLanguageServicePlugins() {
@@ -46,6 +48,7 @@ export function createJsonLanguageServicePlugins() {
     createJsonSchemaLanguageServicePlugin(),
     createJsonCompletionsPlugin(),
     createJsonCodeLensesPlugin(),
+    createFlowDirectivesPlugin("json"),
   ];
 }
 
@@ -54,5 +57,6 @@ export function createYamlLanguageServicePlugins() {
     createYamlSchemaLanguageServicePlugin(),
     createYamlCompletionsPlugin(),
     createYamlCodeLensesPlugin(),
+    createFlowDirectivesPlugin("yaml"),
   ];
 }
