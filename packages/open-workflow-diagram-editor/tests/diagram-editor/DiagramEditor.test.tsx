@@ -17,7 +17,11 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { DiagramEditor, DiagramEditorRef } from "../../src/diagram-editor";
 import { vi, expect, afterEach, describe, it } from "vitest";
-import { BASIC_VALID_WORKFLOW_JSON, BASIC_VALID_WORKFLOW_YAML } from "../fixtures/workflows";
+import {
+  BASIC_VALID_WORKFLOW_JSON,
+  BASIC_VALID_WORKFLOW_YAML,
+  UNTYPED_TASK_WORKFLOW_YAML,
+} from "../fixtures/workflows";
 import { t } from "../test-utils";
 import React from "react";
 
@@ -414,5 +418,279 @@ do:
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /toggle sidebar/i })).toBeInTheDocument(),
     );
+  });
+
+  describe("parseErrorDisplay", () => {
+    const staleNotice = () => screen.queryByText(t("workflowStale.title"));
+
+    it.each([undefined, "page"] as const)(
+      "replaces the diagram with the parsing error page when content becomes unparseable (%s)",
+      (parseErrorDisplay) => {
+        const { rerender } = render(
+          <DiagramEditor
+            content={BASIC_VALID_WORKFLOW_YAML}
+            locale="en"
+            isReadOnly={true}
+            {...(parseErrorDisplay && { parseErrorDisplay })}
+          />,
+        );
+
+        rerender(
+          <DiagramEditor
+            content={UNPARSEABLE_CONTENT}
+            locale="en"
+            isReadOnly={true}
+            {...(parseErrorDisplay && { parseErrorDisplay })}
+          />,
+        );
+
+        expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
+        expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+        expect(staleNotice()).not.toBeInTheDocument();
+      },
+    );
+
+    it("keeps the last valid diagram and marks it stale while content is unparseable", () => {
+      const { rerender } = render(
+        <DiagramEditor
+          content={BASIC_VALID_WORKFLOW_YAML}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+      expect(staleNotice()).not.toBeInTheDocument();
+
+      rerender(
+        <DiagramEditor
+          content={UNPARSEABLE_CONTENT}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+
+      expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
+      expect(screen.queryByText(t("workflowError.parsing.title"))).not.toBeInTheDocument();
+      // Announced politely: the notice sits inside a live region that was already mounted.
+      expect(staleNotice()?.closest('[role="status"]')).toHaveTextContent(
+        t("workflowStale.message"),
+      );
+
+      rerender(
+        <DiagramEditor
+          content={BASIC_VALID_WORKFLOW_JSON}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+
+      expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
+      expect(staleNotice()).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ["page", t("workflowError.title")],
+      ["last-valid", null],
+    ] as const)(
+      "treats a workflow the SDK cannot draw like unparseable content (%s)",
+      (parseErrorDisplay, errorTitle) => {
+        const { rerender } = render(
+          <DiagramEditor
+            content={BASIC_VALID_WORKFLOW_YAML}
+            locale="en"
+            isReadOnly={true}
+            parseErrorDisplay={parseErrorDisplay}
+          />,
+        );
+
+        rerender(
+          <DiagramEditor
+            content={UNTYPED_TASK_WORKFLOW_YAML}
+            locale="en"
+            isReadOnly={true}
+            parseErrorDisplay={parseErrorDisplay}
+          />,
+        );
+
+        if (errorTitle) {
+          expect(screen.getByText(errorTitle)).toBeInTheDocument();
+          expect(screen.getByText(/task named 'hello'/)).toBeInTheDocument();
+          expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+        } else {
+          expect(screen.getByTestId("diagram-container")).toBeInTheDocument();
+          expect(staleNotice()).toBeInTheDocument();
+        }
+      },
+    );
+
+    it("keeps undo locked when the mode switches to page while the content is broken", async () => {
+      const ref = React.createRef<DiagramEditorRef>();
+      const onContentChange = vi.fn();
+      const props = { locale: "en", isReadOnly: false, onContentChange } as const;
+      const { rerender } = render(
+        <DiagramEditor
+          ref={ref}
+          content={BASIC_VALID_WORKFLOW_JSON}
+          parseErrorDisplay="last-valid"
+          {...props}
+        />,
+      );
+      await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+      act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML));
+      rerender(
+        <DiagramEditor
+          ref={ref}
+          content={UNPARSEABLE_CONTENT}
+          parseErrorDisplay="last-valid"
+          {...props}
+        />,
+      );
+
+      rerender(
+        <DiagramEditor
+          ref={ref}
+          content={UNPARSEABLE_CONTENT}
+          parseErrorDisplay="page"
+          {...props}
+        />,
+      );
+
+      // The old diagram is still on screen, so it is still marked out of date and locked.
+      expect(staleNotice()).toBeInTheDocument();
+      expect(ref.current?.canUndo).toBe(false);
+      act(() => ref.current?.undo());
+      expect(onContentChange).not.toHaveBeenCalled();
+    });
+
+    it("locks undo and shows the notice from the first commit of each unparseable content", async () => {
+      // A host layout effect runs before the provider's passive effects: what it sees is
+      // what the first commit of a new content says.
+      const seen: { canUndo: boolean | undefined; stale: boolean }[] = [];
+      const ref = React.createRef<DiagramEditorRef>();
+      const onContentChange = vi.fn();
+      const Host = ({ content }: { content: string }) => {
+        React.useLayoutEffect(() => {
+          seen.push({ canUndo: ref.current?.canUndo, stale: staleNotice() !== null });
+          if (content !== BASIC_VALID_WORKFLOW_YAML) ref.current?.undo();
+        }, [content]);
+        return (
+          <DiagramEditor
+            ref={ref}
+            content={content}
+            locale="en"
+            isReadOnly={false}
+            parseErrorDisplay="last-valid"
+            onContentChange={onContentChange}
+          />
+        );
+      };
+      const { rerender } = render(<Host content={BASIC_VALID_WORKFLOW_JSON} />);
+      await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+      act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML));
+      rerender(<Host content={BASIC_VALID_WORKFLOW_YAML} />);
+      seen.length = 0;
+
+      rerender(<Host content={UNPARSEABLE_CONTENT} />);
+      rerender(<Host content={`${UNPARSEABLE_CONTENT},`} />);
+
+      expect(seen).toEqual([
+        { canUndo: false, stale: true },
+        { canUndo: false, stale: true },
+      ]);
+      expect(onContentChange).not.toHaveBeenCalled();
+    });
+
+    it("is no longer stale once setContent loads a valid workflow over broken content", () => {
+      const ref = React.createRef<DiagramEditorRef>();
+      const { rerender } = render(
+        <DiagramEditor
+          ref={ref}
+          content={BASIC_VALID_WORKFLOW_YAML}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+      rerender(
+        <DiagramEditor
+          ref={ref}
+          content={UNPARSEABLE_CONTENT}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+      expect(staleNotice()).toBeInTheDocument();
+
+      act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_JSON));
+
+      expect(staleNotice()).not.toBeInTheDocument();
+      expect(ref.current?.getContent()).toContain("valid-workflow-json");
+    });
+
+    it("shows the empty state, not the last diagram, when the content is cleared", () => {
+      const { rerender } = render(
+        <DiagramEditor
+          content={BASIC_VALID_WORKFLOW_YAML}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+
+      rerender(
+        <DiagramEditor
+          content={" \n"}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+
+      expect(screen.getByText(t("workflowEmpty.title"))).toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+      expect(staleNotice()).not.toBeInTheDocument();
+    });
+
+    it("shows the parsing error page when no valid diagram has been loaded yet", () => {
+      render(
+        <DiagramEditor
+          content={UNPARSEABLE_CONTENT}
+          locale="en"
+          isReadOnly={true}
+          parseErrorDisplay="last-valid"
+        />,
+      );
+
+      expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
+      expect(screen.queryByTestId("diagram-container")).not.toBeInTheDocument();
+    });
+
+    it("disables undo and redo while the diagram is stale, so the old model never overwrites the content", async () => {
+      const ref = React.createRef<DiagramEditorRef>();
+      const onContentChange = vi.fn();
+      const props = {
+        locale: "en",
+        isReadOnly: false,
+        parseErrorDisplay: "last-valid",
+        onContentChange,
+      } as const;
+      const { rerender } = render(
+        <DiagramEditor ref={ref} content={BASIC_VALID_WORKFLOW_JSON} {...props} />,
+      );
+      await waitFor(() => expect(screen.getByTestId("diagram-container")).toBeInTheDocument());
+      act(() => ref.current?.setContent(BASIC_VALID_WORKFLOW_YAML));
+      expect(ref.current?.canUndo).toBe(true);
+
+      rerender(<DiagramEditor ref={ref} content={UNPARSEABLE_CONTENT} {...props} />);
+
+      expect(ref.current?.canUndo).toBe(false);
+      act(() => ref.current?.undo());
+      act(() => ref.current?.redo());
+      expect(onContentChange).not.toHaveBeenCalled();
+      expect(ref.current?.getContent()).toContain("valid-workflow-yaml");
+    });
   });
 });

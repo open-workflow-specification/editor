@@ -23,7 +23,11 @@ import {
   serializeWorkflow,
 } from "../core";
 import type { Specification } from "@openworkflowspec/sdk";
-import { DiagramEditorProps, DiagramEditorRef } from "../diagram-editor/DiagramEditor";
+import type {
+  DiagramEditorProps,
+  DiagramEditorRef,
+  ParseErrorDisplay,
+} from "../diagram-editor/DiagramEditor";
 import { DiagramEditorContext, DiagramEditorContextType } from "./DiagramEditorContext";
 import type * as RF from "@xyflow/react";
 import { useWorkflowHistory } from "../react-flow/hooks/useWorkflowHistory";
@@ -40,6 +44,25 @@ function resolveSelectedId(model: Specification.Workflow, currentId: string | nu
   return graph.nodes.some((n) => n.id === currentId) || graph.edges.some((e) => e.id === currentId)
     ? currentId
     : null;
+}
+
+/**
+ * `parseErrorDisplay="last-valid"`: whether content that cannot be parsed or drawn leaves the
+ * current model on the canvas. Blank content never does: it is deliberate (the user cleared
+ * it), not a half-typed edit, so it shows the empty state like the standalone editor.
+ */
+function keepsLastValidModel(
+  parsedModel: Specification.Workflow | null,
+  content: string,
+  parseErrorDisplay: ParseErrorDisplay,
+  currentModel: Specification.Workflow | null,
+): boolean {
+  return (
+    parseErrorDisplay === "last-valid" &&
+    parsedModel === null &&
+    currentModel !== null &&
+    content.trim() !== ""
+  );
 }
 
 export const DiagramEditorContextProvider = React.forwardRef<
@@ -85,16 +108,20 @@ export const DiagramEditorContextProvider = React.forwardRef<
     resetHistory,
     undo: historyUndo,
     redo: historyRedo,
-    canUndo,
-    canRedo,
+    canUndo: historyCanUndo,
+    canRedo: historyCanRedo,
     pendingViewportRestore,
     clearPendingViewportRestore,
   } = useWorkflowHistory(isReadOnly);
 
+  // One parse per content string, shared by the content effect and isContentStale.
+  const parsedContent = React.useMemo(() => parseWorkflow(props.content), [props.content]);
+  const parseErrorDisplay = props.parseErrorDisplay ?? "page";
+
   // errors are shared state written by both the props.content path and setContent.
   // They are never part of a history snapshot — always reflect the last parse result.
   const [errors, setErrors] = React.useState<ReturnType<typeof parseWorkflow>["errors"]>(
-    () => parseWorkflow(props.content).errors,
+    () => parsedContent.errors,
   );
 
   // Keep a ref to the latest selectedNodeId so the effect below can read it
@@ -107,16 +134,37 @@ export const DiagramEditorContextProvider = React.forwardRef<
     selectedNodeIdRef.current = selectedNodeId;
   }, [selectedNodeId]);
 
+  // Latest-refs read by the content effect below, which must not re-run (and re-seed
+  // history) when only these change. Declared before it so they are current when it runs.
+  const modelRef = React.useRef(model);
+  const parseErrorDisplayRef = React.useRef(parseErrorDisplay);
+  React.useEffect(() => {
+    modelRef.current = model;
+    parseErrorDisplayRef.current = parseErrorDisplay;
+  });
+
   // Seed history from the external content prop using seedModel (bypasses isReadOnly guard).
   // The real viewport is set by Diagram.tsx once layout completes in edit mode.
   // In read-only mode the placeholder viewport is acceptable since fitView always runs.
   React.useEffect(() => {
-    const { model: parsedModel, errors: parsedErrors } = parseWorkflow(props.content);
+    const { model: parsedModel, errors: parsedErrors } = parsedContent;
     // This will be addressed in the editing feature branch as the implemntation is changing
     // oxlint-disable-next-line react/set-state-in-effect
-    setErrors(parsedErrors);
-    // oxlint-disable-next-line react/set-state-in-effect
     setProcessedContent(props.content);
+    if (
+      keepsLastValidModel(
+        parsedModel,
+        props.content,
+        parseErrorDisplayRef.current,
+        modelRef.current,
+      )
+    ) {
+      // Keep the last valid model, its history, selection and the errors that describe it:
+      // the host shows the error itself (e.g. in a text editor beside the diagram).
+      return;
+    }
+    // oxlint-disable-next-line react/set-state-in-effect
+    setErrors(parsedErrors);
     if (parsedModel === null) {
       // Content is unparseable — reset history to null so downstream consumers
       // (e.g. DiagramEditorContent) see model === null and render the error page
@@ -134,7 +182,23 @@ export const DiagramEditorContextProvider = React.forwardRef<
     externallySeededModelRef.current = parsedModel;
     seedModel(parsedModel, { x: 0, y: 0, zoom: 1 }, resolvedId);
     // selectedNodeIdRef is a ref (stable, mutated inline — not a dep by convention).
-  }, [props.content, resetHistory, seedModel]);
+  }, [parsedContent, props.content, resetHistory, seedModel]);
+
+  // Whether setContent has loaded a model since the content prop last changed: that model
+  // came from the host, not from the prop, so it is not stale. Reset during render (never in
+  // the content effect, which runs after the first commit)
+  const [loadedOverContent, setLoadedOverContent] = React.useState(false);
+  const [lastContent, setLastContent] = React.useState(props.content);
+  if (props.content !== lastContent) {
+    setLastContent(props.content);
+    setLoadedOverContent(false);
+  }
+
+  // Derived, not state: `true` while the canvas shows a model the current content cannot
+  // produce (it cannot be parsed or drawn). Deliberately independent of parseErrorDisplay,
+  // which only decides whether the content effect keeps the model: switching to "page" while
+  // stale leaves the old model on screen until the content changes, and it must stay locked
+  const isContentStale = !loadedOverContent && parsedContent.model === null && model !== null;
 
   const taskReferences = React.useMemo(
     () => (model ? getTaskReferences(buildFlatGraph(model)) : new Set<string>()),
@@ -152,6 +216,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
       setErrors(newErrors);
       setProcessedContent(content);
+      setLoadedOverContent(true);
 
       const newFormat: ContentFormat = content.trimStart().startsWith("{") ? "json" : "yaml";
       setDetectedContentFormat(newFormat);
@@ -166,13 +231,20 @@ export const DiagramEditorContextProvider = React.forwardRef<
 
   // Bind setSelectedNodeId into undo/redo wrappers via direct callback.
   // This keeps selection restore atomic with the history dispatch.
+  // Disabled while stale: undoing would report the old model through onContentChange,
+  // and the host would write it over the content the user is still typing.
   const undo = React.useCallback(() => {
+    if (isContentStale) return;
     historyUndo(setSelectedNodeId);
-  }, [historyUndo]);
+  }, [historyUndo, isContentStale]);
 
   const redo = React.useCallback(() => {
+    if (isContentStale) return;
     historyRedo(setSelectedNodeId);
-  }, [historyRedo]);
+  }, [historyRedo, isContentStale]);
+
+  const canUndo = historyCanUndo && !isContentStale;
+  const canRedo = historyCanRedo && !isContentStale;
 
   const getContent = React.useCallback(() => {
     if (!model) return "";
@@ -204,6 +276,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       locale,
       contentFormat,
       processedContent,
+      isContentStale,
       model,
       errors,
       nodes,
@@ -230,6 +303,7 @@ export const DiagramEditorContextProvider = React.forwardRef<
       locale,
       contentFormat,
       processedContent,
+      isContentStale,
       model,
       errors,
       nodes,

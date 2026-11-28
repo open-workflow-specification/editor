@@ -83,6 +83,16 @@ describe("ParsingErrorPage", () => {
     expect(screen.getByText(t("workflowError.parsing.title"))).toBeInTheDocument();
   });
 
+  it("Shows a non-YAML error's message under the default message", () => {
+    renderWithErrors([new Error("Unable to defined task type of task named 'hello'")]);
+
+    expect(screen.getByText(t("workflowError.title"))).toBeInTheDocument();
+    expect(screen.getByText(t("workflowError.default"))).toBeInTheDocument();
+    expect(
+      screen.getByText("Unable to defined task type of task named 'hello'"),
+    ).toBeInTheDocument();
+  });
+
   it("Falls back to default error message for ValidationError", () => {
     const validationError = createMockValidationError(
       "/do/0/checkup",

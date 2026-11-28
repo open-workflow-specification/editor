@@ -181,3 +181,18 @@ export const PARSEABLE_INVALID_WORKFLOW_YAML = `
               while: .vet != null
               do:
   `;
+
+/** Valid YAML the SDK cannot draw: `hello` has no task type, so `buildFlatGraph` throws.
+ * Typing a new task in a text editor passes through this shape. */
+export const UNTYPED_TASK_WORKFLOW_YAML = `
+  document:
+    dsl: 1.0.3
+    name: untyped-task
+    version: 1.0.0
+    namespace: default
+  do:
+  - step1:
+      set:
+        variable: 'my first workflow'
+  - hello:
+  `;

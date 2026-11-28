@@ -42,6 +42,13 @@ export const ParsingErrorPage = () => {
     );
   }
 
-  // Fallback (covers both no errors and non-YAML errors)
-  return <ErrorPage title={t("workflowError.title")} message={t("workflowError.default")} />;
+  // Fallback (covers both no errors and non-YAML errors). An Error's own message (e.g. the
+  // SDK's "Unable to defined task type…" for a workflow it cannot draw) goes in the snippet.
+  return (
+    <ErrorPage
+      title={t("workflowError.title")}
+      message={t("workflowError.default")}
+      snippet={err instanceof Error ? err.message : undefined}
+    />
+  );
 };
